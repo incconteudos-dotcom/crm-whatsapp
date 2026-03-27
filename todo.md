@@ -208,3 +208,18 @@
 - [ ] Badge de mensagens não lidas no sidebar (próxima sprint)
 - [ ] Vincular chat ao contato automaticamente (cruzar número)
 - [ ] Notificação WhatsApp automática ao confirmar agendamento
+
+## Correções Críticas de UX (Sprint Correção)
+- [ ] Card de contato inteiramente clicável → abre /contacts/:id
+- [ ] Botão WhatsApp no perfil → redireciona para /whatsapp?phone=NUMERO (módulo interno Z-API)
+- [ ] Botão Email no perfil → abre modal interno de composição com Brevo (não mailto:)
+- [ ] Botão Novo Lead → navega com ?newLead=1&contactId=X&contactName=Y e abre modal pré-preenchido
+- [ ] Botão Nova Fatura → navega com ?newInvoice=1&contactId=X e abre modal pré-preenchido
+- [ ] Botão Novo Orçamento → navega com ?newQuote=1&contactId=X e abre modal pré-preenchido
+- [ ] Botão Novo Contrato → navega com ?newContract=1&contactId=X e abre modal pré-preenchido
+- [ ] Adicionar campo de contato nos forms de criação de Faturas e Orçamentos
+- [ ] Pré-preencher email/telefone nos modais de envio por email/WhatsApp com dados do contato vinculado
+- [ ] Redesenhar perfil do cliente: layout duas colunas, sidebar com dados, tabs para entidades
+- [ ] Badge de não lidos no sidebar do WhatsApp
+- [ ] Vincular chats Z-API ao contato automaticamente (cruzar número)
+- [ ] Notificação WhatsApp automática ao confirmar agendamento

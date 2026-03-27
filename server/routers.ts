@@ -145,6 +145,31 @@ const contactsRouter = router({
   delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
     deleteContact(input.id)
   ),
+  sendEmail: protectedProcedure.input(z.object({
+    to: z.string().email(),
+    toName: z.string().optional(),
+    subject: z.string().min(1),
+    message: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const { sendEmail: sendEmailFn } = await import("./email");
+    const htmlContent = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+      <p>Olá${input.toName ? `, ${input.toName}` : ""},</p>
+      ${(input.message ?? "").split("\n").map((l: string) => `<p>${l}</p>`).join("")}
+      <hr style="margin:24px 0;border:none;border-top:1px solid #eee">
+      <p style="font-size:12px;color:#888">Enviado pelo CRM — Pátio Estúdio de Podcast</p>
+    </div>`;
+    const result = await sendEmailFn({ to: input.to, toName: input.toName, subject: input.subject, htmlContent });
+    if (!result.success) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error ?? "Falha ao enviar email" });
+    return { success: true, messageId: result.messageId };
+  }),
+  createLead: protectedProcedure.input(z.object({
+    title: z.string().min(1),
+    contactId: z.number().optional(),
+    value: z.string().optional(),
+    notes: z.string().optional(),
+  })).mutation(({ input, ctx }) =>
+    createLead({ ...input, assignedUserId: ctx.user.id })
+  ),
 });
 
 // ─── PIPELINE ROUTER ──────────────────────────────────────────────────────────

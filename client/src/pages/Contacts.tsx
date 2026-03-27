@@ -6,6 +6,7 @@ import {
   MessageSquare, MoreHorizontal, Tag, Trash2, Edit, ExternalLink
 } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -62,6 +63,7 @@ export default function Contacts() {
     onError: (e) => toast.error(e.message),
   });
 
+  const [, navigate] = useLocation();
   const isManager = user?.role === "admin" || user?.role === "gerente";
 
   return (
@@ -117,7 +119,7 @@ export default function Contacts() {
         ) : contacts && contacts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {contacts.map((contact) => (
-              <div key={contact.id} className="bg-card border border-border rounded-xl p-5 hover:border-border/80 transition-colors">
+              <div key={contact.id} onClick={() => navigate(`/contacts/${contact.id}`)} className="bg-card border border-border rounded-xl p-5 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
@@ -134,7 +136,7 @@ export default function Contacts() {
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                      <button onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-foreground transition-colors p-1">
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
                     </DropdownMenuTrigger>
