@@ -121,7 +121,7 @@ export async function updateUserWhatsappAccess(userId: number, whatsappAccess: b
   await db.update(users).set({ whatsappAccess, updatedAt: new Date() }).where(eq(users.id, userId));
 }
 
-export async function createUser(data: { name: string; email: string; role: "admin" | "gerente" | "analista" | "assistente"; whatsappAccess: boolean }) {
+export async function createUser(data: { name: string; email?: string; role: "admin" | "gerente" | "analista" | "assistente"; whatsappAccess: boolean }) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   // Generate a unique openId for admin-created users (they log in via email invitation)

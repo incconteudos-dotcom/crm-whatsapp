@@ -100,10 +100,10 @@ const usersRouter = router({
   })).mutation(({ input }) => updateUserWhatsappAccess(input.userId, input.access)),
   createByAdmin: adminProcedure.input(z.object({
     name: z.string().min(1),
-    email: z.string().email(),
+    email: z.union([z.string().email(), z.literal("")]).optional(),
     role: z.enum(["admin", "gerente", "analista", "assistente"]).default("assistente"),
     whatsappAccess: z.boolean().default(false),
-  })).mutation(({ input }) => createUser(input)),
+  })).mutation(({ input }) => createUser({ ...input, email: input.email || undefined })),
 });
 
 // ─── CONTACTS ROUTER ──────────────────────────────────────────────────────────
