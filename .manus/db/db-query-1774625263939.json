@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `contacts` (`id` int AUTO_INCREMENT NOT NULL, `name` varchar(255) NOT NULL, `email` varchar(320), `phone` varchar(32), `whatsappJid` varchar(128), `company` varchar(255), `position` varchar(128), `tags` json, `notes` text, `avatarUrl` text, `source` enum('manual','whatsapp','import','website') DEFAULT 'manual', `assignedUserId` int, `createdAt` timestamp NOT NULL DEFAULT (now()), `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `contacts_id` PRIMARY KEY(`id`));",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute CREATE TABLE IF NOT EXISTS `contacts` (`id` int AUTO_INCREMENT NOT NULL, `name` varchar(255) NOT NULL, `email` varchar(320), `phone` varchar(32), `whatsappJid` varchar(128), `company` varchar(255), `position` varchar(128), `tags` json, `notes` text, `avatarUrl` text, `source` enum('manual','whatsapp','import','website') DEFAULT 'manual', `assignedUserId` int, `createdAt` timestamp NOT NULL DEFAULT (now()), `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `contacts_id` PRIMARY KEY(`id`));",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 137
+}

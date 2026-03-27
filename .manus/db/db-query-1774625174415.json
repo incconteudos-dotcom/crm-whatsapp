@@ -1,0 +1,9 @@
+{
+  "query": "\n-- Atualizar o enum de role para os valores corretos do CRM\nALTER TABLE users MODIFY COLUMN role ENUM('admin', 'gerente', 'analista', 'assistente') NOT NULL DEFAULT 'assistente';\n\n-- Qualquer usuário com role 'user' vira 'assistente'\nUPDATE users SET role = 'assistente' WHERE role NOT IN ('admin', 'gerente', 'analista', 'assistente');\n\n-- Owner vira admin+active+whatsappAccess\nUPDATE users SET role = 'admin', status = 'active', whatsappAccess = true \nWHERE openId = (SELECT ownerOpenId FROM (SELECT openId AS ownerOpenId FROM users ORDER BY createdAt ASC LIMIT 1) AS t);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \n-- Atualizar o enum de role para os valores corretos do CRM\nALTER TABLE users MODIFY COLUMN role ENUM('admin', 'gerente', 'analista', 'assistente') NOT NULL DEFAULT 'assistente';\n\n-- Qualquer usuário com role 'user' vira 'assistente'\nUPDATE users SET role = 'assistente' WHERE role NOT IN ('admin', 'gerente', 'analista', 'assistente');\n\n-- Owner vira admin+active+whatsappAccess\nUPDATE users SET role = 'admin', status = 'active', whatsappAccess = true \nWHERE openId = (SELECT ownerOpenId FROM (SELECT openId AS ownerOpenId FROM users ORDER BY createdAt ASC LIMIT 1) AS t);\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 470
+}

@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE users\n  ADD COLUMN IF NOT EXISTS status ENUM('pending', 'active', 'rejected') NOT NULL DEFAULT 'pending',\n  ADD COLUMN IF NOT EXISTS whatsappAccess BOOLEAN NOT NULL DEFAULT false,\n  ADD COLUMN IF NOT EXISTS avatarUrl TEXT,\n  ADD COLUMN IF NOT EXISTS phone VARCHAR(32);\n\n-- Garantir que o owner seja admin e active automaticamente\nUPDATE users SET role = 'admin', status = 'active', whatsappAccess = true WHERE role = 'admin';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nALTER TABLE users\n  ADD COLUMN IF NOT EXISTS status ENUM('pending', 'active', 'rejected') NOT NULL DEFAULT 'pending',\n  ADD COLUMN IF NOT EXISTS whatsappAccess BOOLEAN NOT NULL DEFAULT false,\n  ADD COLUMN IF NOT EXISTS avatarUrl TEXT,\n  ADD COLUMN IF NOT EXISTS phone VARCHAR(32);\n\n-- Garantir que o owner seja admin e active automaticamente\nUPDATE users SET role = 'admin', status = 'active', whatsappAccess = true WHERE role = 'admin';\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 982
+}

@@ -113,6 +113,9 @@
 - [x] Testes de roles e permissões (crm.test.ts)
 - [x] Testes de contatos, pipeline, WhatsApp, faturas (15 testes passando)
 
+## Bugs
+- [x] Corrigir erro de login ao tentar acessar o CRM (colunas status/whatsappAccess/role faltando no banco - migration aplicada, 13 tabelas criadas)
+
 ## Fases Seguintes (Planejadas)
 - [ ] Integração real com WhatsApp MCP
 - [ ] Integração Stripe para pagamentos

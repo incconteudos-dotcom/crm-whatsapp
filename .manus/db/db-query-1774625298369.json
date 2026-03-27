@@ -1,0 +1,49 @@
+{
+  "query": "INSERT IGNORE INTO `pipeline_stages` (`name`, `color`, `position`, `isDefault`) VALUES ('Prospeccao', '#6366f1', 1, true), ('Qualificacao', '#8b5cf6', 2, true), ('Proposta', '#f59e0b', 3, true), ('Negociacao', '#f97316', 4, true), ('Fechamento', '#10b981', 5, true);\n\nSHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute INSERT IGNORE INTO `pipeline_stages` (`name`, `color`, `position`, `isDefault`) VALUES ('Prospeccao', '#6366f1', 1, true), ('Qualificacao', '#8b5cf6', 2, true), ('Proposta', '#f59e0b', 3, true), ('Negociacao', '#f97316', 4, true), ('Fechamento', '#10b981', 5, true);\n\nSHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "activities"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "contacts"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "contracts"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "invoices"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "leads"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "pipeline_stages"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "quotes"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "studio_bookings"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "tasks"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "users"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "whatsapp_chats"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "whatsapp_messages"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU\n__drizzle_migrations\nactivities\ncontacts\ncontracts\ninvoices\nleads\npipeline_stages\nquotes\nstudio_bookings\ntasks\nusers\nwhatsapp_chats\nwhatsapp_messages\n",
+  "stderr": "",
+  "execution_time_ms": 75
+}
