@@ -260,3 +260,18 @@ export const activities = mysqlTable("activities", {
 
 export type Activity = typeof activities.$inferSelect;
 export type InsertActivity = typeof activities.$inferInsert;
+// ─── CLIENT PORTAL TOKENS ─────────────────────────────────────────────────────
+export const clientPortalTokens = mysqlTable("client_portal_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  type: mysqlEnum("type", ["contract", "invoice", "quote"]).notNull(),
+  documentId: int("documentId").notNull(),
+  contactId: int("contactId"),
+  expiresAt: timestamp("expiresAt"),
+  usedAt: timestamp("usedAt"),
+  approvedAt: timestamp("approvedAt"),
+  signedName: varchar("signedName", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ClientPortalToken = typeof clientPortalTokens.$inferSelect;
+export type InsertClientPortalToken = typeof clientPortalTokens.$inferInsert;

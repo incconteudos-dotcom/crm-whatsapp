@@ -551,3 +551,110 @@ export async function getDashboardStats() {
     pendingUsers: pendingCount?.count ?? 0,
   };
 }
+
+// ─── ANALYTICS ────────────────────────────────────────────────────────────────
+export async function getMonthlyRevenue(months = 12) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({
+    month: sql<string>`DATE_FORMAT(paidAt, '%Y-%m')`,
+    total: sql<string>`COALESCE(SUM(total), 0)`,
+  })
+    .from(invoices)
+    .where(and(eq(invoices.status, "paid"), sql`paidAt IS NOT NULL`))
+    .groupBy(sql`DATE_FORMAT(paidAt, '%Y-%m')`)
+    .orderBy(sql`DATE_FORMAT(paidAt, '%Y-%m') DESC`)
+    .limit(months);
+  return rows.reverse();
+}
+
+export async function getTopClientsByRevenue(limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    contactId: invoices.contactId,
+    name: contacts.name,
+    email: contacts.email,
+    total: sql<string>`COALESCE(SUM(${invoices.total}), 0)`,
+    invoiceCount: sql<number>`COUNT(${invoices.id})`,
+  })
+    .from(invoices)
+    .leftJoin(contacts, eq(invoices.contactId, contacts.id))
+    .where(eq(invoices.status, "paid"))
+    .groupBy(invoices.contactId, contacts.name, contacts.email)
+    .orderBy(sql`SUM(${invoices.total}) DESC`)
+    .limit(limit);
+}
+
+export async function getLeadConversionFunnel() {
+  const db = await getDb();
+  if (!db) return { total: 0, contacted: 0, proposal: 0, won: 0, lost: 0 };
+  const [total] = await db.select({ count: sql<number>`count(*)` }).from(leads);
+  const [won] = await db.select({ count: sql<number>`count(*)` }).from(leads).where(eq(leads.status, "won"));
+  const [lost] = await db.select({ count: sql<number>`count(*)` }).from(leads).where(eq(leads.status, "lost"));
+  const stages = await db.select({ id: pipelineStages.id, name: pipelineStages.name, position: pipelineStages.position }).from(pipelineStages).orderBy(pipelineStages.position);
+  // contacted = stage 2+, proposal = stage 3+
+  const stage2 = stages[1]?.id;
+  const stage3 = stages[2]?.id;
+  const [contacted] = stage2
+    ? await db.select({ count: sql<number>`count(*)` }).from(leads).where(and(eq(leads.status, "open"), sql`stageId >= ${stage2}`))
+    : [{ count: 0 }];
+  const [proposal] = stage3
+    ? await db.select({ count: sql<number>`count(*)` }).from(leads).where(and(eq(leads.status, "open"), sql`stageId >= ${stage3}`))
+    : [{ count: 0 }];
+  return {
+    total: total?.count ?? 0,
+    contacted: contacted?.count ?? 0,
+    proposal: proposal?.count ?? 0,
+    won: won?.count ?? 0,
+    lost: lost?.count ?? 0,
+  };
+}
+
+// ─── CLIENT PORTAL ────────────────────────────────────────────────────────────
+import { clientPortalTokens, type InsertClientPortalToken } from "../drizzle/schema";
+import crypto from "crypto";
+
+export async function createPortalToken(data: { type: "contract" | "invoice" | "quote"; documentId: number; contactId?: number; expiresInDays?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + (data.expiresInDays ?? 30));
+  await db.insert(clientPortalTokens).values({ token, type: data.type, documentId: data.documentId, contactId: data.contactId, expiresAt });
+  return token;
+}
+
+export async function getPortalToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [row] = await db.select().from(clientPortalTokens).where(eq(clientPortalTokens.token, token)).limit(1);
+  return row ?? null;
+}
+
+export async function approvePortalDocument(token: string, signedName?: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(clientPortalTokens)
+    .set({ approvedAt: new Date(), signedName: signedName ?? null, usedAt: new Date() })
+    .where(eq(clientPortalTokens.token, token));
+}
+
+// ─── WHATSAPP CHAT CONTACT LINKING ────────────────────────────────────────────
+export async function linkChatToContact(jid: string) {
+  const db = await getDb();
+  if (!db) return;
+  // Extract phone from JID (e.g. "5511999999999@s.whatsapp.net" → "5511999999999")
+  const phone = jid.split("@")[0];
+  if (!phone || phone.length < 8) return;
+  // Try to find contact by phone (strip non-digits and match last 11 digits)
+  const allContacts = await db.select({ id: contacts.id, phone: contacts.phone }).from(contacts).where(sql`phone IS NOT NULL`);
+  const match = allContacts.find(c => {
+    const cp = (c.phone ?? "").replace(/\D/g, "");
+    const pp = phone.replace(/\D/g, "");
+    return cp === pp || cp.endsWith(pp.slice(-11)) || pp.endsWith(cp.slice(-11));
+  });
+  if (match) {
+    await db.update(whatsappChats).set({ contactId: match.id }).where(eq(whatsappChats.jid, jid));
+  }
+}

@@ -17,6 +17,9 @@ import {
   getTasks, createTask, updateTask,
   getRecentActivities, createActivity,
   getDashboardStats,
+  getMonthlyRevenue, getTopClientsByRevenue, getLeadConversionFunnel,
+  createPortalToken, getPortalToken, approvePortalDocument,
+  linkChatToContact,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -573,6 +576,59 @@ const dashboardRouter = router({
   activities: protectedProcedure.query(() => getRecentActivities(20)),
 });
 
+// ─── ANALYTICS ROUTER ───────────────────────────────────────────────────────
+const analyticsRouter = router({
+  monthlyRevenue: protectedProcedure.query(() => getMonthlyRevenue(12)),
+  topClients: protectedProcedure.query(() => getTopClientsByRevenue(10)),
+  conversionFunnel: protectedProcedure.query(() => getLeadConversionFunnel()),
+});
+
+// ─── CLIENT PORTAL ROUTER ────────────────────────────────────────────────────
+const portalRouter = router({
+  generateToken: protectedProcedure.input(z.object({
+    type: z.enum(["contract", "invoice", "quote"]),
+    documentId: z.number(),
+    contactId: z.number().optional(),
+    expiresInDays: z.number().optional(),
+  })).mutation(({ input }) => createPortalToken(input).then(token => ({ token }))),
+
+  getDocument: publicProcedure.input(z.object({ token: z.string() })).query(async ({ input }) => {
+    const row = await getPortalToken(input.token);
+    if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Link inválido ou expirado" });
+    if (row.expiresAt && new Date(row.expiresAt) < new Date()) throw new TRPCError({ code: "FORBIDDEN", message: "Link expirado" });
+    if (row.type === "contract") {
+      const doc = await getContractById(row.documentId);
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND" });
+      return { type: "contract" as const, token: row, document: doc };
+    }
+    if (row.type === "invoice") {
+      const doc = await getInvoiceById(row.documentId);
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND" });
+      return { type: "invoice" as const, token: row, document: doc };
+    }
+    if (row.type === "quote") {
+      const allQuotes = await getQuotes();
+      const doc = allQuotes.find(q => q.id === row.documentId);
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND" });
+      return { type: "quote" as const, token: row, document: doc };
+    }
+    throw new TRPCError({ code: "BAD_REQUEST" });
+  }),
+
+  approve: publicProcedure.input(z.object({
+    token: z.string(),
+    signedName: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const row = await getPortalToken(input.token);
+    if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Link inválido" });
+    if (row.expiresAt && new Date(row.expiresAt) < new Date()) throw new TRPCError({ code: "FORBIDDEN", message: "Link expirado" });
+    await approvePortalDocument(input.token, input.signedName);
+    if (row.type === "contract") await updateContract(row.documentId, { status: "signed", signedAt: new Date(), signerName: input.signedName });
+    if (row.type === "quote") await updateQuote(row.documentId, { status: "accepted" });
+    return { success: true };
+  }),
+});
+
 // ─── STRIPE ROUTER ───────────────────────────────────────────────────────────
 const stripeRouter = router({
   // Lista os produtos do catálogo do estúdio
@@ -884,6 +940,8 @@ export const appRouter = router({
   ai: aiRouter,
   settings: settingsRouter,
   documents: documentsRouter,
+  analytics: analyticsRouter,
+  portal: portalRouter,
 });
 
 export type AppRouter = typeof appRouter;

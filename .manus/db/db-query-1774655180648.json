@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `client_portal_tokens` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`token` varchar(64) NOT NULL,\n\t`type` enum('contract','invoice','quote') NOT NULL,\n\t`documentId` int NOT NULL,\n\t`contactId` int,\n\t`expiresAt` timestamp,\n\t`usedAt` timestamp,\n\t`approvedAt` timestamp,\n\t`signedName` varchar(255),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `client_portal_tokens_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `client_portal_tokens_token_unique` UNIQUE(`token`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute CREATE TABLE `client_portal_tokens` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`token` varchar(64) NOT NULL,\n\t`type` enum('contract','invoice','quote') NOT NULL,\n\t`documentId` int NOT NULL,\n\t`contactId` int,\n\t`expiresAt` timestamp,\n\t`usedAt` timestamp,\n\t`approvedAt` timestamp,\n\t`signedName` varchar(255),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `client_portal_tokens_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `client_portal_tokens_token_unique` UNIQUE(`token`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 152
+}

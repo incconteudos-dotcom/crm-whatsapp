@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 import {
   FileText, Plus, Sparkles, CheckCircle, Clock, Send, XCircle,
   Mail, Loader2, MessageSquare, Download, User, Calendar, DollarSign,
-  FileSignature, ChevronRight,
+  FileSignature, ChevronRight, Search, X as XIcon, Link, Copy,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -70,8 +70,28 @@ const statusConfig: Record<string, { label: string; icon: React.ReactNode; badge
   },
 };
 
+function exportContractsCSV(contracts: ContractWithContact[]) {
+  const header = ["Título", "Cliente", "Status", "Valor", "Válido até", "Criado em"];
+  const rows = contracts.map(c => [
+    c.title, c.contactName ?? c.signerName ?? "",
+    ({ draft: "Rascunho", sent: "Enviado", signed: "Assinado", cancelled: "Cancelado" } as Record<string, string>)[c.status ?? "draft"] ?? c.status,
+    c.value ? Number(c.value).toFixed(2) : "",
+    c.validUntil ? format(new Date(c.validUntil), "dd/MM/yyyy", { locale: ptBR }) : "",
+    format(new Date(c.createdAt), "dd/MM/yyyy", { locale: ptBR }),
+  ]);
+  const csv = [header, ...rows].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "contratos.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Contracts() {
   const [, navigate] = useLocation();
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [selectedContract, setSelectedContract] = useState<ContractWithContact | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -97,6 +117,30 @@ export default function Contracts() {
   const utils = trpc.useUtils();
   const { data: contracts, isLoading } = trpc.contracts.list.useQuery();
   const { data: contacts } = trpc.contacts.list.useQuery({});
+
+  const [portalLink, setPortalLink] = useState<string | null>(null);
+  const generatePortalMutation = trpc.portal.generateToken.useMutation({
+    onSuccess: (data: { token: string }) => {
+      const link = `${window.location.origin}/portal/${data.token}`;
+      setPortalLink(link);
+      navigator.clipboard.writeText(link).then(() => toast.success("Link copiado para a área de transferência!"));
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const filteredContracts = useMemo(() => {
+    if (!contracts) return [];
+    return (contracts as ContractWithContact[]).filter(c => {
+      if (filterStatus !== "all" && c.status !== filterStatus) return false;
+      if (filterSearch) {
+        const s = filterSearch.toLowerCase();
+        if (!c.title.toLowerCase().includes(s) && !(c.contactName ?? "").toLowerCase().includes(s) && !(c.signerName ?? "").toLowerCase().includes(s)) return false;
+      }
+      if (filterDateFrom && new Date(c.createdAt) < new Date(filterDateFrom)) return false;
+      if (filterDateTo && new Date(c.createdAt) > new Date(filterDateTo + "T23:59:59")) return false;
+      return true;
+    });
+  }, [contracts, filterStatus, filterSearch, filterDateFrom, filterDateTo]);
 
   const createMutation = trpc.contracts.create.useMutation({
     onSuccess: () => {
@@ -231,6 +275,32 @@ export default function Contracts() {
           </div>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 items-center mb-6">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input placeholder="Buscar título ou cliente..." value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="pl-9 h-9 text-sm" />
+          </div>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="h-9 px-3 rounded-md border border-border bg-input text-sm text-foreground">
+            <option value="all">Todos os status</option>
+            <option value="draft">Rascunho</option>
+            <option value="sent">Enviado</option>
+            <option value="signed">Assinado</option>
+            <option value="cancelled">Cancelado</option>
+          </select>
+          <Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="h-9 w-36 text-sm" />
+          <Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="h-9 w-36 text-sm" />
+          <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={() => exportContractsCSV(filteredContracts)}>
+            <Download className="w-3.5 h-3.5" /> CSV
+          </Button>
+          {(filterStatus !== "all" || filterSearch || filterDateFrom || filterDateTo) && (
+            <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={() => { setFilterStatus("all"); setFilterSearch(""); setFilterDateFrom(""); setFilterDateTo(""); }}>
+              <XIcon className="w-3.5 h-3.5 mr-1" /> Limpar
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground ml-auto">{filteredContracts.length} resultado{filteredContracts.length !== 1 ? "s" : ""}</span>
+        </div>
+
         {/* Grid of contract cards */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -238,9 +308,9 @@ export default function Contracts() {
               <div key={i} className="bg-card border border-border rounded-xl p-5 animate-pulse h-36" />
             ))}
           </div>
-        ) : contracts && contracts.length > 0 ? (
+        ) : filteredContracts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {(contracts as ContractWithContact[]).map((contract) => {
+            {filteredContracts.map((contract) => {
               const status = statusConfig[contract.status ?? "draft"] ?? statusConfig.draft;
               return (
                 <div
@@ -441,7 +511,25 @@ export default function Contracts() {
                       Cancelar
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-purple-500/40 text-purple-300 hover:bg-purple-500/10"
+                    onClick={() => { setPortalLink(null); generatePortalMutation.mutate({ type: "contract", documentId: selectedContract.id, contactId: selectedContract.contactId ?? undefined }); }}
+                    disabled={generatePortalMutation.isPending}
+                  >
+                    {generatePortalMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Link className="w-3.5 h-3.5 mr-1.5" />}
+                    Link do Portal
+                  </Button>
                 </div>
+                {portalLink && (
+                  <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 mb-2">
+                    <p className="text-xs text-purple-300 truncate flex-1">{portalLink}</p>
+                    <Button size="sm" variant="ghost" className="shrink-0 h-7 px-2" onClick={() => { navigator.clipboard.writeText(portalLink); toast.success("Copiado!"); }}>
+                      <Copy className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                )}
 
                 <Separator className="mb-4" />
 

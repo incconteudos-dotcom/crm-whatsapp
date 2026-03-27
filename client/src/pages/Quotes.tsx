@@ -3,9 +3,9 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import {
   BookOpen, Plus, CheckCircle, XCircle, Send, Clock, Mail, Loader2,
-  MessageSquare, ArrowRight, User, DollarSign, Calendar, X, FileText
+  MessageSquare, ArrowRight, User, DollarSign, Calendar, X, FileText, Download, Search, Link, Copy,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,8 +37,30 @@ const fmt = (v: string | number | null | undefined) =>
     typeof v === "string" ? parseFloat(v) : (v ?? 0)
   );
 
+function exportQuotesCSV(quotes: any[]) {
+  const header = ["Número", "Cliente", "Status", "Total", "Válido até", "Criado em"];
+  const rows = quotes.map(q => [
+    q.number, q.contactName ?? "",
+    ({ draft: "Rascunho", sent: "Enviado", accepted: "Aceito", rejected: "Recusado", expired: "Expirado" } as Record<string, string>)[q.status ?? "draft"] ?? q.status,
+    parseFloat(q.total ?? "0").toFixed(2),
+    q.validUntil ? format(new Date(q.validUntil), "dd/MM/yyyy", { locale: ptBR }) : "",
+    format(new Date(q.createdAt), "dd/MM/yyyy", { locale: ptBR }),
+  ]);
+  const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "orcamentos.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Quotes() {
   const [, navigate] = useLocation();
+
+  // Filters
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
 
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
@@ -60,6 +82,30 @@ export default function Quotes() {
   const utils = trpc.useUtils();
   const { data: quotes, isLoading } = trpc.quotes.list.useQuery();
   const selectedQuote = quotes?.find(q => q.id === selectedId) ?? null;
+
+  const [portalLink, setPortalLink] = useState<string | null>(null);
+  const generatePortalMutation = trpc.portal.generateToken.useMutation({
+    onSuccess: (data: { token: string }) => {
+      const link = `${window.location.origin}/portal/${data.token}`;
+      setPortalLink(link);
+      navigator.clipboard.writeText(link).then(() => toast.success("Link copiado para a área de transferência!"));
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const filteredQuotes = useMemo(() => {
+    if (!quotes) return [];
+    return quotes.filter(q => {
+      if (filterStatus !== "all" && q.status !== filterStatus) return false;
+      if (filterSearch) {
+        const s = filterSearch.toLowerCase();
+        if (!q.number.toLowerCase().includes(s) && !(q.contactName ?? "").toLowerCase().includes(s)) return false;
+      }
+      if (filterDateFrom && new Date(q.createdAt) < new Date(filterDateFrom)) return false;
+      if (filterDateTo && new Date(q.createdAt) > new Date(filterDateTo + "T23:59:59")) return false;
+      return true;
+    });
+  }, [quotes, filterStatus, filterSearch, filterDateFrom, filterDateTo]);
 
   const createMutation = trpc.quotes.create.useMutation({
     onSuccess: () => {
@@ -156,6 +202,33 @@ export default function Quotes() {
           </Button>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input placeholder="Buscar número ou cliente..." value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="pl-9 h-9 text-sm" />
+          </div>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="h-9 px-3 rounded-md border border-border bg-input text-sm text-foreground">
+            <option value="all">Todos os status</option>
+            <option value="draft">Rascunho</option>
+            <option value="sent">Enviado</option>
+            <option value="accepted">Aceito</option>
+            <option value="rejected">Recusado</option>
+            <option value="expired">Expirado</option>
+          </select>
+          <Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="h-9 w-36 text-sm" />
+          <Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="h-9 w-36 text-sm" />
+          <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={() => exportQuotesCSV(filteredQuotes)}>
+            <Download className="w-3.5 h-3.5" /> CSV
+          </Button>
+          {(filterStatus !== "all" || filterSearch || filterDateFrom || filterDateTo) && (
+            <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={() => { setFilterStatus("all"); setFilterSearch(""); setFilterDateFrom(""); setFilterDateTo(""); }}>
+              <X className="w-3.5 h-3.5 mr-1" /> Limpar
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground ml-auto">{filteredQuotes.length} resultado{filteredQuotes.length !== 1 ? "s" : ""}</span>
+        </div>
+
         {/* Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -163,9 +236,9 @@ export default function Quotes() {
               <div key={i} className="bg-card border border-border rounded-xl p-5 animate-pulse h-36" />
             ))}
           </div>
-        ) : quotes && quotes.length > 0 ? (
+        ) : filteredQuotes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quotes.map((q) => {
+            {filteredQuotes.map((q) => {
               const sc = statusConfig[q.status ?? "draft"];
               return (
                 <div
@@ -358,6 +431,23 @@ export default function Quotes() {
                       <Button variant="outline" className="w-full gap-2 text-orange-400 border-orange-500/30 hover:bg-orange-500/10" onClick={() => { updateMutation.mutate({ id: selectedQuote.id, status: "expired" }); setSelectedId(null); }}>
                         <Clock className="w-4 h-4" /> Marcar como Expirado
                       </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 border-purple-500/40 text-purple-300 hover:bg-purple-500/10"
+                      onClick={() => { setPortalLink(null); generatePortalMutation.mutate({ type: "quote", documentId: selectedQuote.id, contactId: selectedQuote.contactId ?? undefined }); }}
+                      disabled={generatePortalMutation.isPending}
+                    >
+                      {generatePortalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link className="w-4 h-4" />}
+                      Gerar Link do Portal
+                    </Button>
+                    {portalLink && (
+                      <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
+                        <p className="text-xs text-purple-300 truncate flex-1">{portalLink}</p>
+                        <Button size="sm" variant="ghost" className="shrink-0 h-7 px-2" onClick={() => { navigator.clipboard.writeText(portalLink); toast.success("Copiado!"); }}>
+                          <Copy className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>

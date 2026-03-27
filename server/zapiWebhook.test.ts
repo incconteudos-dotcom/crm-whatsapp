@@ -8,6 +8,7 @@ vi.mock("./db", () => ({
   upsertWhatsappChat: vi.fn().mockResolvedValue(undefined),
   upsertWhatsappMessage: vi.fn().mockResolvedValue(undefined),
   getWhatsappChats: vi.fn().mockResolvedValue([]),
+  linkChatToContact: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { zapiWebhookHandler } from "./zapiWebhook";

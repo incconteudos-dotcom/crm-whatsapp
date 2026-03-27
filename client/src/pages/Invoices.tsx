@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 import {
   Receipt, Plus, CheckCircle, Send, CreditCard, SplitSquareHorizontal,
   ExternalLink, Copy, Loader2, AlertCircle, Mail, MessageSquare,
-  User, DollarSign, Calendar, Clock, ArrowRight, X,
+  User, DollarSign, Calendar, Clock, ArrowRight, X, Filter, Download, Search,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,8 +38,30 @@ const fmt = (v: string | number | null | undefined) =>
     typeof v === "string" ? parseFloat(v) : (v ?? 0)
   );
 
+function exportInvoicesCSV(invoices: any[]) {
+  const header = ["Número", "Cliente", "Status", "Total", "Vencimento", "Criada em"];
+  const rows = invoices.map(i => [
+    i.number, i.contactName ?? "",
+    ({ draft: "Rascunho", sent: "Enviada", paid: "Paga", overdue: "Vencida", cancelled: "Cancelada" } as Record<string, string>)[i.status ?? "draft"] ?? i.status,
+    parseFloat(i.total ?? "0").toFixed(2),
+    i.dueDate ? format(new Date(i.dueDate), "dd/MM/yyyy", { locale: ptBR }) : "",
+    format(new Date(i.createdAt), "dd/MM/yyyy", { locale: ptBR }),
+  ]);
+  const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "faturas.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Invoices() {
   const [, navigate] = useLocation();
+
+  // Filters
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
 
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
@@ -65,6 +87,20 @@ export default function Invoices() {
   const utils = trpc.useUtils();
   const { data: invoices, isLoading } = trpc.invoices.list.useQuery();
   const selectedInvoice = invoices?.find(i => i.id === selectedId) ?? null;
+
+  const filteredInvoices = useMemo(() => {
+    if (!invoices) return [];
+    return invoices.filter(i => {
+      if (filterStatus !== "all" && i.status !== filterStatus) return false;
+      if (filterSearch) {
+        const q = filterSearch.toLowerCase();
+        if (!i.number.toLowerCase().includes(q) && !(i.contactName ?? "").toLowerCase().includes(q)) return false;
+      }
+      if (filterDateFrom && new Date(i.createdAt) < new Date(filterDateFrom)) return false;
+      if (filterDateTo && new Date(i.createdAt) > new Date(filterDateTo + "T23:59:59")) return false;
+      return true;
+    });
+  }, [invoices, filterStatus, filterSearch, filterDateFrom, filterDateTo]);
 
   const createMutation = trpc.invoices.create.useMutation({
     onSuccess: () => {
@@ -184,6 +220,33 @@ export default function Invoices() {
           </Button>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input placeholder="Buscar número ou cliente..." value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="pl-9 h-9 text-sm" />
+          </div>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="h-9 px-3 rounded-md border border-border bg-input text-sm text-foreground">
+            <option value="all">Todos os status</option>
+            <option value="draft">Rascunho</option>
+            <option value="sent">Enviada</option>
+            <option value="paid">Paga</option>
+            <option value="overdue">Vencida</option>
+            <option value="cancelled">Cancelada</option>
+          </select>
+          <Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="h-9 w-36 text-sm" placeholder="De" />
+          <Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="h-9 w-36 text-sm" placeholder="Até" />
+          <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={() => exportInvoicesCSV(filteredInvoices)}>
+            <Download className="w-3.5 h-3.5" /> CSV
+          </Button>
+          {(filterStatus !== "all" || filterSearch || filterDateFrom || filterDateTo) && (
+            <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={() => { setFilterStatus("all"); setFilterSearch(""); setFilterDateFrom(""); setFilterDateTo(""); }}>
+              <X className="w-3.5 h-3.5 mr-1" /> Limpar
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground ml-auto">{filteredInvoices.length} resultado{filteredInvoices.length !== 1 ? "s" : ""}</span>
+        </div>
+
         {/* Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -191,9 +254,9 @@ export default function Invoices() {
               <div key={i} className="bg-card border border-border rounded-xl p-5 animate-pulse h-36" />
             ))}
           </div>
-        ) : invoices && invoices.length > 0 ? (
+        ) : filteredInvoices.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {invoices.map((inv) => {
+            {filteredInvoices.map((inv) => {
               const sc = statusConfig[inv.status ?? "draft"];
               return (
                 <div

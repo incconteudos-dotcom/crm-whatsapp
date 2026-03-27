@@ -210,9 +210,9 @@
 - [ ] Notificação WhatsApp automática ao confirmar agendamento
 
 ## Correções Críticas de UX (Sprint Correção)
-- [ ] Card de contato inteiramente clicável → abre /contacts/:id
-- [ ] Botão WhatsApp no perfil → redireciona para /whatsapp?phone=NUMERO (módulo interno Z-API)
-- [ ] Botão Email no perfil → abre modal interno de composição com Brevo (não mailto:)
+- [x] Card de contato inteiramente clicável → abre /contacts/:id
+- [x] Botão WhatsApp no perfil → redireciona para /whatsapp?phone=NUMERO (módulo interno Z-API)
+- [x] Botão Email no perfil → abre modal interno de composição com Brevo (não mailto:)
 - [ ] Botão Novo Lead → navega com ?newLead=1&contactId=X&contactName=Y e abre modal pré-preenchido
 - [ ] Botão Nova Fatura → navega com ?newInvoice=1&contactId=X e abre modal pré-preenchido
 - [ ] Botão Novo Orçamento → navega com ?newQuote=1&contactId=X e abre modal pré-preenchido
@@ -237,7 +237,7 @@
 - [ ] Corrigir geração de PDF de faturas para envio via WhatsApp
 - [ ] Corrigir geração de PDF de contratos para envio via WhatsApp
 - [ ] Implementar conversão de orçamento aprovado em fatura (botão "Converter em Fatura")
-- [ ] Ao criar fatura, permitir selecionar orçamento aprovado para pré-preencher itens
+- [x] Ao criar fatura, permitir selecionar orçamento aprovado para pré-preencher itens
 - [ ] Ao criar contrato, exigir/sugerir fatura criada ou paga vinculada
 - [ ] Pipeline: exibir coluna/seção de leads perdidos
 - [ ] Pipeline: permitir excluir lead
@@ -248,3 +248,44 @@
 - [ ] Contratos: drawer com PDF, email/WhatsApp pré-preenchido, alterar status, excluir
 - [ ] Badge de mensagens não lidas no sidebar ao lado de "WhatsApp"
 - [ ] Notificação automática Z-API ao confirmar agendamento no Estúdio
+
+## Sprint Backlog Completo — Implementação Total
+
+### UX Crítica
+- [x] Card de contato inteiramente clicável → abre /contacts/:id
+- [x] Botão WhatsApp no perfil → redireciona para /whatsapp?phone=NUMERO
+- [x] Botão Email no perfil → abre modal interno de composição Brevo
+- [x] Botão Novo Lead/Fatura/Orçamento/Contrato no perfil → pré-preenchido via query params
+- [x] Drawer de detalhe em Faturas (clicável, email/WA pré-preenchido, link Stripe)
+- [x] Drawer de detalhe em Orçamentos (clicável, email/WA pré-preenchido, converter em fatura)
+- [x] Correção de geração de PDF para envio via WhatsApp
+
+### Analytics Completo
+- [x] Gráfico de receita mensal (linha, últimos 12 meses)
+- [x] Funil de conversão de leads
+- [x] Ranking de clientes por valor total (top 10)
+
+### Filtros + CSV
+- [x] Filtros em Contratos: status, período, valor + exportação CSV
+- [x] Filtros em Faturas: status, período, valor + exportação CSV
+- [x] Filtros em Orçamentos: status, período, valor + exportação CSV
+
+### Pipeline Melhorado
+- [x] Drawer completo do lead (editar, mover, excluir, vincular documentos)
+- [x] Coluna de leads perdidos no kanban
+- [x] Exclusão de lead
+
+### Conversão Orçamento → Fatura
+- [x] Botão "Converter em Fatura" no drawer de orçamento aprovado
+- [x] Ao criar fatura, permitir selecionar orçamento aprovado para pré-preencher itens
+
+### Portal do Cliente
+- [x] Schema: tabela client_portal_tokens
+- [x] Backend: gerar token, buscar documento por token, registrar aprovação/assinatura
+- [x] Rota pública /portal/:token (sem autenticação)
+- [x] Página portal: visualizar/assinar contrato, aprovar orçamento, pagar fatura
+
+### Vinculação Automática de Chats
+- [x] Ao receber mensagem via webhook, cruzar número com tabela contacts
+- [x] Salvar contactId no whatsappChats quando encontrado
+- [x] Exibir nome do contato na lista de chats WhatsApp

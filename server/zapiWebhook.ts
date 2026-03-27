@@ -13,6 +13,7 @@ import {
   upsertWhatsappChat,
   upsertWhatsappMessage,
   getWhatsappChats,
+  linkChatToContact,
 } from "./db";
 
 // ─── Z-API payload types ─────────────────────────────────────────────────────
@@ -108,6 +109,11 @@ export async function zapiWebhookHandler(req: Request, res: Response) {
       unreadCount: isFromMe ? 0 : 1,
       isGroup: chatJid.endsWith("@g.us") || chatJid.includes("-"),
     });
+
+    // Auto-link chat to contact by phone number (runs in background, non-blocking)
+    if (!isFromMe && !chatJid.endsWith("@g.us")) {
+      linkChatToContact(chatJid).catch(() => {});
+    }
 
     // Upsert the message
     await upsertWhatsappMessage({
