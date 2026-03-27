@@ -58,11 +58,28 @@ export interface ZApiMessageResult {
   messageId: string;
 }
 
+// Real Z-API /chats response shape (verified against live API)
+export interface ZApiChatRaw {
+  phone: string;            // e.g. "5511999999999"
+  name?: string;
+  lastMessageTime?: string; // Unix ms as string, e.g. "1774638628000"
+  messagesUnread?: string;  // number as string
+  unread?: string;
+  isGroup?: boolean;
+  lid?: string;
+  pinned?: string;
+  archived?: string;
+  isMuted?: string;
+  isMarkedSpam?: string;
+  isGroupAnnouncement?: boolean;
+}
+
+// Normalised shape used internally
 export interface ZApiChat {
   phone: string;
   name?: string;
   lastMessage?: string;
-  lastMessageTimestamp?: number;
+  lastMessageTimestamp?: number; // Unix ms (number)
   unreadMessages?: number;
   isGroup?: boolean;
   profilePicture?: string;
@@ -161,13 +178,24 @@ export async function sendImage(
  */
 export async function getChats(page: number = 0, pageSize: number = 50): Promise<ZApiChat[]> {
   try {
-    const data = await zapiRequest<ZApiChat[] | { value: ZApiChat[] }>(
+    const raw = await zapiRequest<ZApiChatRaw[] | { value: ZApiChatRaw[] }>(
       "GET",
       `/chats?page=${page}&pageSize=${pageSize}`
     );
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object" && "value" in data) return (data as { value: ZApiChat[] }).value;
-    return [];
+    const rawArray: ZApiChatRaw[] = Array.isArray(raw)
+      ? raw
+      : (raw && typeof raw === "object" && "value" in raw ? (raw as { value: ZApiChatRaw[] }).value : []);
+
+    // Normalise: filter out items without a phone, convert string fields to proper types
+    return rawArray
+      .filter((c) => !!c.phone)
+      .map((c) => ({
+        phone: c.phone,
+        name: c.name,
+        lastMessageTimestamp: c.lastMessageTime ? parseInt(c.lastMessageTime, 10) : undefined,
+        unreadMessages: c.messagesUnread ? parseInt(c.messagesUnread, 10) : (c.unread ? parseInt(c.unread, 10) : 0),
+        isGroup: c.isGroup ?? false,
+      }));
   } catch {
     return [];
   }

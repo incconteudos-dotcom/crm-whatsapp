@@ -177,3 +177,6 @@
 - [x] Webhook Z-API em /api/zapi/webhook para receber mensagens em tempo real
 - [x] Sincronizar conversas e mensagens recebidas via webhook no banco
 - [x] Testes unitários do webhook Z-API (6 testes passando, total 29 testes)
+
+## Bugs Ativos
+- [x] syncChats: jid inserido como null — corrigido mapeamento ZApiChatRaw (lastMessageTime, messagesUnread como strings) e adicionado filtro .filter(c => !!c.phone)
