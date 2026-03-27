@@ -223,3 +223,10 @@
 - [ ] Badge de não lidos no sidebar do WhatsApp
 - [ ] Vincular chats Z-API ao contato automaticamente (cruzar número)
 - [ ] Notificação WhatsApp automática ao confirmar agendamento
+
+## Melhorias Orçamentos e Faturas (Sprint Atual)
+- [ ] Quotes: email pré-preenchido com email do contato vinculado ao orçamento
+- [ ] Quotes: card clicável abre drawer/sheet de detalhe completo (itens, status, ações)
+- [ ] Quotes: drawer com botões Enviar Email, Enviar WhatsApp, Alterar Status, Converter em Fatura, Baixar PDF
+- [ ] Invoices: mesmo padrão de drawer de detalhe + email pré-preenchido com contato
+- [ ] Invoices: botão de link de pagamento Stripe no drawer

@@ -3,7 +3,8 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import {
   Receipt, Plus, CheckCircle, Send, CreditCard, SplitSquareHorizontal,
-  ExternalLink, Copy, Loader2, AlertCircle, Mail,
+  ExternalLink, Copy, Loader2, AlertCircle, Mail, MessageSquare,
+  User, DollarSign, Calendar, Clock, ArrowRight, X,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,42 +20,58 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useLocation } from "wouter";
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-  draft:     { label: "Rascunho", color: "bg-gray-500/20 text-gray-400" },
-  sent:      { label: "Enviada",  color: "bg-blue-500/20 text-blue-400" },
-  paid:      { label: "Paga",     color: "bg-green-500/20 text-green-400" },
-  overdue:   { label: "Vencida",  color: "bg-red-500/20 text-red-400" },
-  cancelled: { label: "Cancelada",color: "bg-gray-500/20 text-gray-400" },
+const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  draft:     { label: "Rascunho",  color: "bg-gray-500/20 text-gray-300 border-gray-500/30",     icon: <Receipt className="w-3 h-3" /> },
+  sent:      { label: "Enviada",   color: "bg-blue-500/20 text-blue-300 border-blue-500/30",     icon: <Send className="w-3 h-3" /> },
+  paid:      { label: "Paga",      color: "bg-green-500/20 text-green-300 border-green-500/30",  icon: <CheckCircle className="w-3 h-3" /> },
+  overdue:   { label: "Vencida",   color: "bg-red-500/20 text-red-300 border-red-500/30",        icon: <Clock className="w-3 h-3" /> },
+  cancelled: { label: "Cancelada", color: "bg-gray-500/20 text-gray-300 border-gray-500/30",     icon: <X className="w-3 h-3" /> },
 };
 
 type InvoiceItem = { description: string; quantity: number; unitPrice: number; total: number };
 type SplitLinks = { installment1: { url: string }; installment2: { url: string } };
 
-export default function Invoices() {
-  const [createOpen, setCreateOpen]   = useState(false);
-  const [payOpen, setPayOpen]         = useState(false);
-  const [splitLinks, setSplitLinks]   = useState<SplitLinks | null>(null);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
-  const [items, setItems]             = useState<InvoiceItem[]>([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
-  const [notes, setNotes]             = useState("");
+const fmt = (v: string | number | null | undefined) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    typeof v === "string" ? parseFloat(v) : (v ?? 0)
+  );
 
-  // Email modal state
-  const [emailOpen, setEmailOpen]     = useState(false);
+export default function Invoices() {
+  const [, navigate] = useLocation();
+
+  // Create modal
+  const [createOpen, setCreateOpen] = useState(false);
+  const [items, setItems] = useState<InvoiceItem[]>([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
+  const [notes, setNotes] = useState("");
+
+  // Detail sheet
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  // Payment modals
+  const [payOpen, setPayOpen] = useState(false);
+  const [splitLinks, setSplitLinks] = useState<SplitLinks | null>(null);
+  const [payInvoiceId, setPayInvoiceId] = useState<number | null>(null);
+
+  // Email modal
+  const [emailOpen, setEmailOpen] = useState(false);
   const [emailInvoiceId, setEmailInvoiceId] = useState<number | null>(null);
-  const [emailTo, setEmailTo]         = useState("");
-  const [emailName, setEmailName]     = useState("");
+  const [emailTo, setEmailTo] = useState("");
+  const [emailName, setEmailName] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
 
   const utils = trpc.useUtils();
   const { data: invoices, isLoading } = trpc.invoices.list.useQuery();
+  const selectedInvoice = invoices?.find(i => i.id === selectedId) ?? null;
 
   const createMutation = trpc.invoices.create.useMutation({
     onSuccess: () => {
       toast.success("Fatura criada!");
       setCreateOpen(false);
       setItems([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
+      setNotes("");
       utils.invoices.list.invalidate();
     },
     onError: (e) => toast.error(e.message),
@@ -85,10 +103,41 @@ export default function Invoices() {
     onSuccess: () => {
       toast.success("Email enviado com sucesso!");
       setEmailOpen(false);
-      setEmailTo(""); setEmailName(""); setEmailSubject(""); setEmailMessage("");
     },
-    onError: (e) => toast.error(`Erro ao enviar email: ${e.message}`),
+    onError: (e) => toast.error(`Erro: ${e.message}`),
   });
+
+  const sendWhatsAppMutation = trpc.documents.sendByWhatsapp.useMutation({
+    onSuccess: (data) => {
+      if (data.success) toast.success("Fatura enviada via WhatsApp!");
+      else toast.warning(data.message);
+    },
+    onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const openEmailModal = (invoiceId: number) => {
+    const inv = invoices?.find(x => x.id === invoiceId);
+    setEmailInvoiceId(invoiceId);
+    setEmailTo(inv?.contactEmail ?? "");
+    setEmailName(inv?.contactName ?? "");
+    setEmailSubject(`Fatura ${inv?.number ?? ""}`);
+    setEmailMessage("");
+    setSelectedId(null);
+    setEmailOpen(true);
+  };
+
+  const handleSendWhatsApp = (invoiceId: number) => {
+    const inv = invoices?.find(x => x.id === invoiceId);
+    if (!inv?.contactPhone) { toast.error("Contato sem telefone cadastrado."); return; }
+    const phone = inv.contactPhone.replace(/\D/g, "");
+    const jid = phone.startsWith("55") ? `${phone}@s.whatsapp.net` : `55${phone}@s.whatsapp.net`;
+    sendWhatsAppMutation.mutate({
+      type: "invoice", documentId: invoiceId,
+      recipientJid: jid,
+      message: inv.contactName ? `Olá ${inv.contactName}, segue a fatura ${inv.number}.` : undefined,
+    });
+    setSelectedId(null);
+  };
 
   const handlePayFull = (invoiceId: number) => {
     checkoutMutation.mutate({ invoiceId, origin: window.location.origin });
@@ -96,28 +145,10 @@ export default function Invoices() {
 
   const handlePaySplit = (invoiceId: number) => {
     setSplitLinks(null);
-    setSelectedInvoiceId(invoiceId);
+    setPayInvoiceId(invoiceId);
     splitMutation.mutate({ invoiceId, origin: window.location.origin });
     setPayOpen(true);
-  };
-
-  const openEmailModal = (invoiceId: number) => {
-    setEmailInvoiceId(invoiceId);
-    setEmailSubject("");
-    setEmailMessage("");
-    setEmailOpen(true);
-  };
-
-  const handleSendEmail = () => {
-    if (!emailInvoiceId || !emailTo) return;
-    sendEmailMutation.mutate({
-      type: "invoice",
-      documentId: emailInvoiceId,
-      recipientEmail: emailTo,
-      recipientName: emailName || undefined,
-      subject: emailSubject || undefined,
-      message: emailMessage || undefined,
-    });
+    setSelectedId(null);
   };
 
   const copyLink = (url: string) => {
@@ -128,291 +159,365 @@ export default function Invoices() {
   const updateItem = (idx: number, field: keyof InvoiceItem, value: string | number) => {
     setItems(prev => prev.map((item, i) => {
       if (i !== idx) return item;
-      const updated = { ...item, [field]: value };
-      if (field === "quantity" || field === "unitPrice") {
-        updated.total = Number(updated.quantity) * Number(updated.unitPrice);
-      }
-      return updated;
+      const u = { ...item, [field]: value };
+      if (field === "quantity" || field === "unitPrice") u.total = Number(u.quantity) * Number(u.unitPrice);
+      return u;
     }));
   };
 
-  const total = items.reduce((sum, i) => sum + i.total, 0);
+  const total = items.reduce((s, i) => s + i.total, 0);
 
   return (
     <CRMLayout>
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-green-400" />
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <Receipt className="w-6 h-6 text-green-400" />
               Faturas
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{invoices?.length ?? 0} faturas</p>
+            <p className="text-sm text-muted-foreground mt-0.5">{invoices?.length ?? 0} fatura{(invoices?.length ?? 0) !== 1 ? "s" : ""}</p>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Fatura
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> Nova Fatura
           </Button>
         </div>
 
-        {/* List */}
+        {/* Grid */}
         {isLoading ? (
-          <div className="space-y-3">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-card border border-border rounded-xl p-5 h-24 animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-xl p-5 animate-pulse h-36" />
             ))}
           </div>
         ) : invoices && invoices.length > 0 ? (
-          <div className="space-y-3">
-            {invoices.map((inv) => (
-              <div key={inv.id} className="bg-card border border-border rounded-xl p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <p className="text-sm font-semibold text-foreground">{inv.number}</p>
-                      <span className={cn("text-xs px-2 py-0.5 rounded-full", statusConfig[inv.status ?? "draft"]?.color)}>
-                        {statusConfig[inv.status ?? "draft"]?.label}
-                      </span>
-                      {inv.paymentPlan === "installment_50_50" && (
-                        <Badge variant="secondary" className="text-xs">50% / 50%</Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="text-lg font-bold text-green-400">
-                        R$ {Number(inv.total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </span>
-                      {inv.dueDate && (
-                        <span className="text-xs text-muted-foreground">
-                          Vence: {format(new Date(inv.dueDate), "dd/MM/yyyy", { locale: ptBR })}
-                        </span>
-                      )}
-                      {inv.paidAt && (
-                        <span className="text-xs text-green-400">
-                          Pago em: {format(new Date(inv.paidAt), "dd/MM/yyyy", { locale: ptBR })}
-                        </span>
-                      )}
-                    </div>
-                    {/* Payment link badge */}
-                    {inv.stripePaymentUrl && inv.status !== "paid" && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs text-violet-400 font-mono truncate max-w-xs">
-                          {inv.stripePaymentUrl.slice(0, 60)}...
-                        </span>
-                        <button
-                          onClick={() => copyLink(inv.stripePaymentUrl!)}
-                          className="text-slate-500 hover:text-white transition-colors"
-                        >
-                          <Copy className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={() => window.open(inv.stripePaymentUrl!, "_blank")}
-                          className="text-slate-500 hover:text-white transition-colors"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {invoices.map((inv) => {
+              const sc = statusConfig[inv.status ?? "draft"];
+              return (
+                <div
+                  key={inv.id}
+                  onClick={() => setSelectedId(inv.id)}
+                  className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/5 transition-all group"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border", sc.color)}>
+                      {sc.icon} {sc.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-mono">{inv.number}</span>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex flex-col gap-2 shrink-0">
-                    {inv.status === "draft" && (
-                      <Button size="sm" variant="outline" onClick={() => updateMutation.mutate({ id: inv.id, status: "sent" })}>
-                        <Send className="w-3.5 h-3.5 mr-1.5" />Enviar
-                      </Button>
-                    )}
-                    {/* Send by Email */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-blue-500/40 text-blue-300 hover:bg-blue-500/10"
-                      onClick={() => openEmailModal(inv.id)}
-                    >
-                      <Mail className="w-3.5 h-3.5 mr-1.5" />
-                      Enviar por Email
-                    </Button>
-                    {(inv.status === "sent" || inv.status === "draft") && (
-                      <>
-                        <Button
-                          size="sm"
-                          className="bg-violet-600 hover:bg-violet-700 text-white"
-                          onClick={() => handlePayFull(inv.id)}
-                          disabled={checkoutMutation.isPending}
-                        >
-                          {checkoutMutation.isPending ? (
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                          ) : (
-                            <CreditCard className="w-3.5 h-3.5 mr-1.5" />
-                          )}
-                          Pagar Integral
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-violet-500/40 text-violet-300 hover:bg-violet-500/10"
-                          onClick={() => handlePaySplit(inv.id)}
-                          disabled={splitMutation.isPending}
-                        >
-                          {splitMutation.isPending && selectedInvoiceId === inv.id ? (
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                          ) : (
-                            <SplitSquareHorizontal className="w-3.5 h-3.5 mr-1.5" />
-                          )}
-                          50% / 50%
-                        </Button>
-                      </>
-                    )}
-                    {inv.status === "sent" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
-                        onClick={() => updateMutation.mutate({ id: inv.id, status: "paid", paidAt: new Date() })}
-                      >
-                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />Confirmar Pago
-                      </Button>
-                    )}
+                  {inv.contactName && (
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <User className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-sm font-medium text-foreground">{inv.contactName}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <DollarSign className="w-3.5 h-3.5 text-green-400" />
+                    <span className="text-xl font-bold text-foreground">{fmt(inv.total)}</span>
+                  </div>
+
+                  {inv.items && inv.items.length > 0 && (
+                    <p className="text-xs text-muted-foreground mb-3 truncate">
+                      {inv.items.length} item{inv.items.length !== 1 ? "s" : ""}: {inv.items[0].description}
+                      {inv.items.length > 1 ? ` +${inv.items.length - 1}` : ""}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                    <span className="text-xs text-muted-foreground">
+                      {inv.dueDate
+                        ? `Vence ${format(new Date(inv.dueDate), "dd/MM/yyyy", { locale: ptBR })}`
+                        : format(new Date(inv.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                    <span className="text-xs text-green-400 group-hover:text-green-300 flex items-center gap-1 transition-colors">
+                      Ver detalhes <ArrowRight className="w-3 h-3" />
+                    </span>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Receipt className="w-12 h-12 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">Nenhuma fatura criada</p>
-            <Button className="mt-4" onClick={() => setCreateOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />Nova Fatura
-            </Button>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Receipt className="w-12 h-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-medium mb-1">Nenhuma fatura ainda</p>
+            <p className="text-sm text-muted-foreground mb-4">Crie sua primeira fatura para um cliente</p>
+            <Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-2" />Nova Fatura</Button>
           </div>
         )}
       </div>
 
-      {/* Send by Email Dialog */}
+      {/* ─── DETAIL SHEET ─────────────────────────────────────────────── */}
+      <Sheet open={!!selectedInvoice} onOpenChange={(o) => { if (!o) setSelectedId(null); }}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          {selectedInvoice && (() => {
+            const sc = statusConfig[selectedInvoice.status ?? "draft"];
+            return (
+              <>
+                <SheetHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <SheetTitle className="text-lg font-bold">{selectedInvoice.number}</SheetTitle>
+                    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", sc.color)}>
+                      {sc.icon} {sc.label}
+                    </span>
+                  </div>
+                </SheetHeader>
+
+                <div className="space-y-5">
+                  {/* Contact */}
+                  {selectedInvoice.contactName && (
+                    <div
+                      className="bg-muted/30 rounded-lg p-4 space-y-1 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => { setSelectedId(null); navigate(`/contacts/${selectedInvoice.contactId}`); }}
+                    >
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Cliente</p>
+                      <p className="font-semibold text-foreground">{selectedInvoice.contactName}</p>
+                      {selectedInvoice.contactEmail && <p className="text-sm text-muted-foreground">{selectedInvoice.contactEmail}</p>}
+                      {selectedInvoice.contactPhone && <p className="text-sm text-muted-foreground">{selectedInvoice.contactPhone}</p>}
+                      <p className="text-xs text-green-400 mt-1">Ver perfil completo →</p>
+                    </div>
+                  )}
+
+                  {/* Items */}
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-3">Itens</p>
+                    <div className="space-y-2">
+                      {(selectedInvoice.items ?? []).map((item, i) => (
+                        <div key={i} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2.5">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{item.description}</p>
+                            <p className="text-xs text-muted-foreground">{item.quantity}x {fmt(item.unitPrice)}</p>
+                          </div>
+                          <p className="text-sm font-semibold ml-3">{fmt(item.total)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Totals */}
+                  <div className="bg-muted/20 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between font-bold text-base">
+                      <span>Total</span>
+                      <span>{fmt(selectedInvoice.total)}</span>
+                    </div>
+                    {selectedInvoice.paidAt && (
+                      <div className="flex justify-between text-sm text-green-400">
+                        <span>Pago em</span>
+                        <span>{format(new Date(selectedInvoice.paidAt), "dd/MM/yyyy", { locale: ptBR })}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dates */}
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Criada em {format(new Date(selectedInvoice.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                    </div>
+                    {selectedInvoice.dueDate && (
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        Vence em {format(new Date(selectedInvoice.dueDate), "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Stripe payment link */}
+                  {selectedInvoice.stripePaymentUrl && selectedInvoice.status !== "paid" && (
+                    <div className="bg-violet-500/10 border border-violet-500/20 rounded-lg p-3">
+                      <p className="text-xs text-violet-300 font-medium mb-2">Link de pagamento gerado</p>
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1 bg-violet-600 hover:bg-violet-700 gap-1.5" onClick={() => window.open(selectedInvoice.stripePaymentUrl!, "_blank")}>
+                          <ExternalLink className="w-3.5 h-3.5" /> Abrir link
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => copyLink(selectedInvoice.stripePaymentUrl!)}>
+                          <Copy className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedInvoice.notes && (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">Observações</p>
+                      <p className="text-sm bg-muted/20 rounded-lg p-3">{selectedInvoice.notes}</p>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* Actions */}
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Ações</p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" className="gap-2 justify-start" onClick={() => openEmailModal(selectedInvoice.id)}>
+                        <Mail className="w-4 h-4 text-blue-400" /> Enviar Email
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="gap-2 justify-start"
+                        onClick={() => handleSendWhatsApp(selectedInvoice.id)}
+                        disabled={sendWhatsAppMutation.isPending}
+                      >
+                        <MessageSquare className="w-4 h-4 text-green-400" /> WhatsApp
+                      </Button>
+                    </div>
+
+                    {/* Payment actions */}
+                    {(selectedInvoice.status === "draft" || selectedInvoice.status === "sent") && (
+                      <div className="space-y-2">
+                        <Button
+                          className="w-full gap-2 bg-violet-600 hover:bg-violet-700"
+                          onClick={() => handlePayFull(selectedInvoice.id)}
+                          disabled={checkoutMutation.isPending}
+                        >
+                          {checkoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                          Gerar Link de Pagamento Integral
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full gap-2 border-violet-500/30 text-violet-300 hover:bg-violet-500/10"
+                          onClick={() => handlePaySplit(selectedInvoice.id)}
+                          disabled={splitMutation.isPending}
+                        >
+                          {splitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <SplitSquareHorizontal className="w-4 h-4" />}
+                          Pagamento 50% / 50%
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Status transitions */}
+                    {selectedInvoice.status === "draft" && (
+                      <Button className="w-full gap-2" variant="outline" onClick={() => { updateMutation.mutate({ id: selectedInvoice.id, status: "sent" }); setSelectedId(null); }}>
+                        <Send className="w-4 h-4" /> Marcar como Enviada
+                      </Button>
+                    )}
+                    {selectedInvoice.status === "sent" && (
+                      <Button className="w-full gap-2 bg-green-600 hover:bg-green-700" onClick={() => { updateMutation.mutate({ id: selectedInvoice.id, status: "paid", paidAt: new Date() }); setSelectedId(null); }}>
+                        <CheckCircle className="w-4 h-4" /> Confirmar Pagamento Recebido
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
+
+      {/* ─── EMAIL MODAL ──────────────────────────────────────────────── */}
       <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
-        <DialogContent className="bg-card border-border max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-blue-400" />
-              Enviar Fatura por Email
+              <Mail className="w-5 h-5 text-blue-400" /> Enviar Fatura por Email
             </DialogTitle>
-            <DialogDescription>
-              A fatura será enviada com um template profissional via Brevo.
-            </DialogDescription>
+            <DialogDescription>A fatura será enviada com template profissional via Brevo.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
+            <div className="space-y-1.5">
               <Label>Email do destinatário *</Label>
-              <Input
-                className="mt-1.5 bg-input border-border"
-                type="email"
-                placeholder="cliente@exemplo.com"
-                value={emailTo}
-                onChange={(e) => setEmailTo(e.target.value)}
-              />
+              <Input type="email" placeholder="cliente@email.com" value={emailTo} onChange={e => setEmailTo(e.target.value)} />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>Nome do destinatário</Label>
-              <Input
-                className="mt-1.5 bg-input border-border"
-                placeholder="Nome do cliente"
-                value={emailName}
-                onChange={(e) => setEmailName(e.target.value)}
-              />
+              <Input placeholder="Nome do cliente" value={emailName} onChange={e => setEmailName(e.target.value)} />
             </div>
-            <div>
-              <Label>Assunto (opcional)</Label>
-              <Input
-                className="mt-1.5 bg-input border-border"
-                placeholder="Deixe em branco para usar o padrão"
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-              />
+            <div className="space-y-1.5">
+              <Label>Assunto</Label>
+              <Input placeholder="Assunto do email" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} />
             </div>
-            <div>
-              <Label>Mensagem adicional (opcional)</Label>
-              <Textarea
-                className="mt-1.5 bg-input border-border resize-none"
-                placeholder="Observações que aparecerão na fatura..."
-                rows={3}
-                value={emailMessage}
-                onChange={(e) => setEmailMessage(e.target.value)}
-              />
+            <div className="space-y-1.5">
+              <Label>Mensagem adicional</Label>
+              <Textarea placeholder="Mensagem personalizada (opcional)..." value={emailMessage} onChange={e => setEmailMessage(e.target.value)} rows={3} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmailOpen(false)}>Cancelar</Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={handleSendEmail}
+              onClick={() => {
+                if (!emailInvoiceId || !emailTo) return;
+                sendEmailMutation.mutate({
+                  type: "invoice", documentId: emailInvoiceId,
+                  recipientEmail: emailTo, recipientName: emailName || undefined,
+                  subject: emailSubject || undefined, message: emailMessage || undefined,
+                });
+              }}
               disabled={!emailTo || sendEmailMutation.isPending}
+              className="gap-2"
             >
-              {sendEmailMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando...</>
-              ) : (
-                <><Mail className="w-4 h-4 mr-2" />Enviar Email</>
-              )}
+              {sendEmailMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              Enviar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Create Invoice Dialog */}
+      {/* ─── CREATE MODAL ─────────────────────────────────────────────── */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="bg-card border-border max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nova Fatura</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-green-400" /> Nova Fatura
+            </DialogTitle>
             <DialogDescription>Adicione os itens e crie a fatura para o cliente.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-sm font-medium mb-2 block">Itens da Fatura</Label>
-              {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 mb-2">
-                  <Input className="col-span-5 bg-input border-border text-sm" placeholder="Descrição" value={item.description} onChange={(e) => updateItem(idx, "description", e.target.value)} />
-                  <Input className="col-span-2 bg-input border-border text-sm" type="number" placeholder="Qtd" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", Number(e.target.value))} />
-                  <Input className="col-span-2 bg-input border-border text-sm" type="number" placeholder="Valor" value={item.unitPrice} onChange={(e) => updateItem(idx, "unitPrice", Number(e.target.value))} />
-                  <div className="col-span-2 flex items-center text-sm text-green-400 font-medium">
-                    R$ {item.total.toFixed(2)}
+              <Label className="mb-2 block">Itens da fatura</Label>
+              <div className="space-y-2">
+                {items.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                    <Input className="col-span-5" placeholder="Descrição" value={item.description} onChange={e => updateItem(idx, "description", e.target.value)} />
+                    <Input className="col-span-2" type="number" placeholder="Qtd" value={item.quantity} onChange={e => updateItem(idx, "quantity", Number(e.target.value))} />
+                    <Input className="col-span-3" type="number" placeholder="Valor unit." value={item.unitPrice} onChange={e => updateItem(idx, "unitPrice", Number(e.target.value))} />
+                    <div className="col-span-1 text-xs text-muted-foreground text-right">{fmt(item.total)}</div>
+                    <button onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))} className="col-span-1 text-muted-foreground hover:text-destructive">
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                  <button onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))} className="col-span-1 text-muted-foreground hover:text-destructive transition-colors text-xs">✕</button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={() => setItems(prev => [...prev, { description: "", quantity: 1, unitPrice: 0, total: 0 }])}>
-                <Plus className="w-3.5 h-3.5 mr-1.5" />Adicionar Item
+                ))}
+              </div>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => setItems(prev => [...prev, { description: "", quantity: 1, unitPrice: 0, total: 0 }])}>
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Adicionar item
               </Button>
             </div>
-            <div className="flex justify-end">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold text-green-400">R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-              </div>
+
+            <div className="bg-muted/20 rounded-lg p-4 flex justify-between items-center">
+              <span className="text-muted-foreground">Total</span>
+              <span className="text-xl font-bold">{fmt(total)}</span>
             </div>
-            <div>
-              <Label>Notas</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observações..." className="mt-1.5 bg-input border-border resize-none" rows={2} />
+
+            <div className="space-y-1.5">
+              <Label>Observações</Label>
+              <Textarea placeholder="Condições, observações..." value={notes} onChange={e => setNotes(e.target.value)} rows={3} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={() => createMutation.mutate({ items, notes: notes || undefined })} disabled={items.length === 0 || createMutation.isPending}>
-              {createMutation.isPending ? "Criando..." : "Criar Fatura"}
+            <Button onClick={() => createMutation.mutate({ items, notes: notes || undefined })} disabled={items.length === 0 || createMutation.isPending} className="gap-2">
+              {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              Criar Fatura
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Split Payment Links Dialog */}
+      {/* ─── SPLIT PAYMENT MODAL ──────────────────────────────────────── */}
       <Dialog open={payOpen} onOpenChange={(o) => { setPayOpen(o); if (!o) setSplitLinks(null); }}>
-        <DialogContent className="bg-card border-border max-w-lg">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <SplitSquareHorizontal className="w-5 h-5 text-violet-400" />
               Pagamento 50% / 50%
             </DialogTitle>
             <DialogDescription>
-              Dois links de pagamento foram gerados. Envie o primeiro para liberar o agendamento e o segundo para quitação.
+              Dois links foram gerados. Envie o primeiro para confirmar o agendamento e o segundo para quitação.
             </DialogDescription>
           </DialogHeader>
 
@@ -423,63 +528,34 @@ export default function Invoices() {
             </div>
           ) : splitLinks ? (
             <div className="space-y-4">
-              {/* Parcela 1 */}
               <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-4">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-semibold text-violet-300">Parcela 1/2 — Entrada (50%)</p>
                   <Badge variant="secondary" className="text-xs">Libera Agenda</Badge>
                 </div>
-                <p className="text-xs text-slate-400 mb-3">
-                  Envie este link ao cliente para confirmar o agendamento.
-                </p>
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-violet-600 hover:bg-violet-700"
-                    onClick={() => window.open(splitLinks.installment1.url, "_blank")}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                    Abrir Link
+                  <Button size="sm" className="flex-1 bg-violet-600 hover:bg-violet-700" onClick={() => window.open(splitLinks.installment1.url, "_blank")}>
+                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Link
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => copyLink(splitLinks.installment1.url)}
-                  >
-                    <Copy className="w-3.5 h-3.5 mr-1.5" />
-                    Copiar
+                  <Button size="sm" variant="outline" onClick={() => copyLink(splitLinks.installment1.url)}>
+                    <Copy className="w-3.5 h-3.5 mr-1.5" /> Copiar
                   </Button>
                 </div>
               </div>
 
-              <Separator className="bg-border" />
+              <Separator />
 
-              {/* Parcela 2 */}
-              <div className="rounded-lg border border-slate-600/40 bg-slate-800/30 p-4">
+              <div className="rounded-lg border border-border/40 bg-muted/20 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold text-slate-300">Parcela 2/2 — Saldo (50%)</p>
+                  <p className="text-sm font-semibold">Parcela 2/2 — Saldo (50%)</p>
                   <Badge variant="outline" className="text-xs">Até o dia da sessão</Badge>
                 </div>
-                <p className="text-xs text-slate-400 mb-3">
-                  Envie este link próximo à data da sessão para quitação.
-                </p>
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => window.open(splitLinks.installment2.url, "_blank")}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                    Abrir Link
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => window.open(splitLinks.installment2.url, "_blank")}>
+                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Link
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => copyLink(splitLinks.installment2.url)}
-                  >
-                    <Copy className="w-3.5 h-3.5 mr-1.5" />
-                    Copiar
+                  <Button size="sm" variant="outline" onClick={() => copyLink(splitLinks.installment2.url)}>
+                    <Copy className="w-3.5 h-3.5 mr-1.5" /> Copiar
                   </Button>
                 </div>
               </div>
@@ -494,9 +570,7 @@ export default function Invoices() {
           ) : null}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setPayOpen(false); setSplitLinks(null); }}>
-              Fechar
-            </Button>
+            <Button variant="outline" onClick={() => { setPayOpen(false); setSplitLinks(null); }}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -313,7 +313,35 @@ export async function updateContract(id: number, data: Partial<InsertContract>) 
 export async function getInvoices() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(invoices).orderBy(desc(invoices.createdAt));
+  return db
+    .select({
+      id: invoices.id,
+      number: invoices.number,
+      contactId: invoices.contactId,
+      leadId: invoices.leadId,
+      assignedUserId: invoices.assignedUserId,
+      status: invoices.status,
+      items: invoices.items,
+      subtotal: invoices.subtotal,
+      tax: invoices.tax,
+      total: invoices.total,
+      currency: invoices.currency,
+      dueDate: invoices.dueDate,
+      paidAt: invoices.paidAt,
+      fileUrl: invoices.fileUrl,
+      notes: invoices.notes,
+      stripePaymentIntentId: invoices.stripePaymentIntentId,
+      stripePaymentUrl: invoices.stripePaymentUrl,
+      paymentPlan: invoices.paymentPlan,
+      createdAt: invoices.createdAt,
+      updatedAt: invoices.updatedAt,
+      contactName: contacts.name,
+      contactEmail: contacts.email,
+      contactPhone: contacts.phone,
+    })
+    .from(invoices)
+    .leftJoin(contacts, eq(invoices.contactId, contacts.id))
+    .orderBy(desc(invoices.createdAt));
 }
 
 export async function getInvoiceById(id: number) {
@@ -340,7 +368,32 @@ export async function updateInvoice(id: number, data: Partial<InsertInvoice>) {
 export async function getQuotes() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(quotes).orderBy(desc(quotes.createdAt));
+  return db
+    .select({
+      id: quotes.id,
+      number: quotes.number,
+      contactId: quotes.contactId,
+      leadId: quotes.leadId,
+      assignedUserId: quotes.assignedUserId,
+      status: quotes.status,
+      items: quotes.items,
+      subtotal: quotes.subtotal,
+      discount: quotes.discount,
+      tax: quotes.tax,
+      total: quotes.total,
+      currency: quotes.currency,
+      validUntil: quotes.validUntil,
+      fileUrl: quotes.fileUrl,
+      notes: quotes.notes,
+      createdAt: quotes.createdAt,
+      updatedAt: quotes.updatedAt,
+      contactName: contacts.name,
+      contactEmail: contacts.email,
+      contactPhone: contacts.phone,
+    })
+    .from(quotes)
+    .leftJoin(contacts, eq(quotes.contactId, contacts.id))
+    .orderBy(desc(quotes.createdAt));
 }
 
 export async function createQuote(data: InsertQuote) {

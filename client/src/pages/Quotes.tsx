@@ -1,59 +1,79 @@
 import CRMLayout from "@/components/CRMLayout";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { BookOpen, Plus, CheckCircle, XCircle, Send, Clock, Mail, Loader2 } from "lucide-react";
+import {
+  BookOpen, Plus, CheckCircle, XCircle, Send, Clock, Mail, Loader2,
+  MessageSquare, ArrowRight, User, DollarSign, Calendar, X
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useLocation } from "wouter";
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-  draft: { label: "Rascunho", color: "bg-gray-500/20 text-gray-400" },
-  sent: { label: "Enviado", color: "bg-blue-500/20 text-blue-400" },
-  accepted: { label: "Aceito", color: "bg-green-500/20 text-green-400" },
-  rejected: { label: "Recusado", color: "bg-red-500/20 text-red-400" },
-  expired: { label: "Expirado", color: "bg-gray-500/20 text-gray-400" },
+const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  draft:    { label: "Rascunho",  color: "bg-gray-500/20 text-gray-300 border-gray-500/30",    icon: <BookOpen className="w-3 h-3" /> },
+  sent:     { label: "Enviado",   color: "bg-blue-500/20 text-blue-300 border-blue-500/30",    icon: <Send className="w-3 h-3" /> },
+  accepted: { label: "Aceito",    color: "bg-green-500/20 text-green-300 border-green-500/30", icon: <CheckCircle className="w-3 h-3" /> },
+  rejected: { label: "Recusado",  color: "bg-red-500/20 text-red-300 border-red-500/30",       icon: <XCircle className="w-3 h-3" /> },
+  expired:  { label: "Expirado",  color: "bg-orange-500/20 text-orange-300 border-orange-500/30", icon: <Clock className="w-3 h-3" /> },
 };
 
 type QuoteItem = { description: string; quantity: number; unitPrice: number; total: number };
 
+const fmt = (v: string | number | null | undefined) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    typeof v === "string" ? parseFloat(v) : (v ?? 0)
+  );
+
 export default function Quotes() {
+  const [, navigate] = useLocation();
+
+  // Create modal
   const [createOpen, setCreateOpen] = useState(false);
   const [items, setItems] = useState<QuoteItem[]>([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
   const [discount, setDiscount] = useState("0");
   const [notes, setNotes] = useState("");
 
-  // Email modal state
-  const [emailOpen, setEmailOpen]     = useState(false);
+  // Detail sheet
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  // Email modal
+  const [emailOpen, setEmailOpen] = useState(false);
   const [emailQuoteId, setEmailQuoteId] = useState<number | null>(null);
-  const [emailTo, setEmailTo]         = useState("");
-  const [emailName, setEmailName]     = useState("");
+  const [emailTo, setEmailTo] = useState("");
+  const [emailName, setEmailName] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
 
   const utils = trpc.useUtils();
   const { data: quotes, isLoading } = trpc.quotes.list.useQuery();
+  const selectedQuote = quotes?.find(q => q.id === selectedId) ?? null;
 
   const createMutation = trpc.quotes.create.useMutation({
     onSuccess: () => {
       toast.success("Orçamento criado!");
       setCreateOpen(false);
       setItems([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
-      setDiscount("0");
+      setDiscount("0"); setNotes("");
       utils.quotes.list.invalidate();
     },
     onError: (e) => toast.error(e.message),
   });
 
   const updateMutation = trpc.quotes.update.useMutation({
-    onSuccess: () => { toast.success("Orçamento atualizado!"); utils.quotes.list.invalidate(); },
+    onSuccess: () => { toast.success("Status atualizado!"); utils.quotes.list.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -61,237 +81,364 @@ export default function Quotes() {
     onSuccess: () => {
       toast.success("Email enviado com sucesso!");
       setEmailOpen(false);
-      setEmailTo(""); setEmailName(""); setEmailSubject(""); setEmailMessage("");
     },
-    onError: (e) => toast.error(`Erro ao enviar email: ${e.message}`),
+    onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const sendWhatsAppMutation = trpc.documents.sendByWhatsapp.useMutation({
+    onSuccess: (data) => {
+      if (data.success) toast.success("Orçamento enviado via WhatsApp!");
+      else toast.warning(data.message);
+    },
+    onError: (e) => toast.error(`Erro: ${e.message}`),
   });
 
   const openEmailModal = (quoteId: number) => {
+    const q = quotes?.find(x => x.id === quoteId);
     setEmailQuoteId(quoteId);
-    setEmailSubject("");
+    setEmailTo(q?.contactEmail ?? "");
+    setEmailName(q?.contactName ?? "");
+    setEmailSubject(`Orçamento ${q?.number ?? ""}`);
     setEmailMessage("");
+    setSelectedId(null);
     setEmailOpen(true);
   };
 
-  const handleSendEmail = () => {
-    if (!emailQuoteId || !emailTo) return;
-    sendEmailMutation.mutate({
-      type: "quote",
-      documentId: emailQuoteId,
-      recipientEmail: emailTo,
-      recipientName: emailName || undefined,
-      subject: emailSubject || undefined,
-      message: emailMessage || undefined,
+  const handleSendWhatsApp = (quoteId: number) => {
+    const q = quotes?.find(x => x.id === quoteId);
+    if (!q?.contactPhone) { toast.error("Contato sem telefone cadastrado."); return; }
+    const phone = q.contactPhone.replace(/\D/g, "");
+    const jid = phone.startsWith("55") ? `${phone}@s.whatsapp.net` : `55${phone}@s.whatsapp.net`;
+    sendWhatsAppMutation.mutate({
+      type: "quote", documentId: quoteId,
+      recipientJid: jid,
+      message: q.contactName ? `Olá ${q.contactName}, segue o orçamento ${q.number}.` : undefined,
     });
+    setSelectedId(null);
   };
 
   const updateItem = (idx: number, field: keyof QuoteItem, value: string | number) => {
     setItems(prev => prev.map((item, i) => {
       if (i !== idx) return item;
-      const updated = { ...item, [field]: value };
-      if (field === "quantity" || field === "unitPrice") {
-        updated.total = Number(updated.quantity) * Number(updated.unitPrice);
-      }
-      return updated;
+      const u = { ...item, [field]: value };
+      if (field === "quantity" || field === "unitPrice") u.total = Number(u.quantity) * Number(u.unitPrice);
+      return u;
     }));
   };
 
-  const subtotal = items.reduce((sum, i) => sum + i.total, 0);
+  const subtotal = items.reduce((s, i) => s + i.total, 0);
   const total = subtotal - Number(discount);
 
   return (
     <CRMLayout>
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-cyan-400" />
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <BookOpen className="w-6 h-6 text-cyan-400" />
               Orçamentos
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{quotes?.length ?? 0} orçamentos</p>
+            <p className="text-sm text-muted-foreground mt-0.5">{quotes?.length ?? 0} orçamento{(quotes?.length ?? 0) !== 1 ? "s" : ""}</p>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Orçamento
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> Novo Orçamento
           </Button>
         </div>
 
+        {/* Grid */}
         {isLoading ? (
-          <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-card border border-border rounded-xl animate-pulse" />)}</div>
-        ) : quotes && quotes.length > 0 ? (
-          <div className="space-y-3">
-            {quotes.map((q) => (
-              <div key={q.id} className="bg-card border border-border rounded-xl p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <p className="text-sm font-semibold text-foreground">{q.number}</p>
-                      <span className={cn("text-xs px-2 py-0.5 rounded-full", statusConfig[q.status ?? "draft"]?.color)}>
-                        {statusConfig[q.status ?? "draft"]?.label}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-lg font-bold text-cyan-400">
-                        R$ {Number(q.total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </span>
-                      {q.validUntil && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          Válido até {format(new Date(q.validUntil), "dd/MM/yyyy", { locale: ptBR })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 flex-wrap justify-end">
-                    {/* Send by Email - always visible */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-blue-500/40 text-blue-300 hover:bg-blue-500/10"
-                      onClick={() => openEmailModal(q.id)}
-                    >
-                      <Mail className="w-3.5 h-3.5 mr-1.5" />
-                      Email
-                    </Button>
-                    {q.status === "draft" && (
-                      <Button size="sm" variant="outline" onClick={() => updateMutation.mutate({ id: q.id, status: "sent" })}>
-                        <Send className="w-3.5 h-3.5 mr-1.5" />Enviar
-                      </Button>
-                    )}
-                    {q.status === "sent" && (
-                      <>
-                        <Button size="sm" onClick={() => updateMutation.mutate({ id: q.id, status: "accepted" })}>
-                          <CheckCircle className="w-3.5 h-3.5 mr-1.5" />Aceitar
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => updateMutation.mutate({ id: q.id, status: "rejected" })}>
-                          <XCircle className="w-3.5 h-3.5 mr-1.5" />Recusar
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-xl p-5 animate-pulse h-36" />
             ))}
           </div>
+        ) : quotes && quotes.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {quotes.map((q) => {
+              const sc = statusConfig[q.status ?? "draft"];
+              return (
+                <div
+                  key={q.id}
+                  onClick={() => setSelectedId(q.id)}
+                  className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/5 transition-all group"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border", sc.color)}>
+                      {sc.icon} {sc.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-mono">{q.number}</span>
+                  </div>
+
+                  {q.contactName && (
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <User className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-sm font-medium text-foreground">{q.contactName}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <DollarSign className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="text-xl font-bold text-foreground">{fmt(q.total)}</span>
+                  </div>
+
+                  {q.items && q.items.length > 0 && (
+                    <p className="text-xs text-muted-foreground mb-3 truncate">
+                      {q.items.length} item{q.items.length !== 1 ? "s" : ""}: {q.items[0].description}
+                      {q.items.length > 1 ? ` +${q.items.length - 1}` : ""}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(q.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                    <span className="text-xs text-cyan-400 group-hover:text-cyan-300 flex items-center gap-1 transition-colors">
+                      Ver detalhes <ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <BookOpen className="w-12 h-12 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">Nenhum orçamento criado</p>
-            <Button className="mt-4" onClick={() => setCreateOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />Novo Orçamento
-            </Button>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <BookOpen className="w-12 h-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-medium mb-1">Nenhum orçamento ainda</p>
+            <p className="text-sm text-muted-foreground mb-4">Crie seu primeiro orçamento para um cliente</p>
+            <Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-2" />Novo Orçamento</Button>
           </div>
         )}
       </div>
 
-      {/* Send by Email Dialog */}
+      {/* ─── DETAIL SHEET ─────────────────────────────────────────────── */}
+      <Sheet open={!!selectedQuote} onOpenChange={(o) => { if (!o) setSelectedId(null); }}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          {selectedQuote && (() => {
+            const sc = statusConfig[selectedQuote.status ?? "draft"];
+            return (
+              <>
+                <SheetHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <SheetTitle className="text-lg font-bold">{selectedQuote.number}</SheetTitle>
+                    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", sc.color)}>
+                      {sc.icon} {sc.label}
+                    </span>
+                  </div>
+                </SheetHeader>
+
+                <div className="space-y-5">
+                  {/* Contact */}
+                  {selectedQuote.contactName && (
+                    <div
+                      className="bg-muted/30 rounded-lg p-4 space-y-1 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => { setSelectedId(null); navigate(`/contacts/${selectedQuote.contactId}`); }}
+                    >
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Cliente</p>
+                      <p className="font-semibold text-foreground">{selectedQuote.contactName}</p>
+                      {selectedQuote.contactEmail && <p className="text-sm text-muted-foreground">{selectedQuote.contactEmail}</p>}
+                      {selectedQuote.contactPhone && <p className="text-sm text-muted-foreground">{selectedQuote.contactPhone}</p>}
+                      <p className="text-xs text-cyan-400 mt-1">Ver perfil completo →</p>
+                    </div>
+                  )}
+
+                  {/* Items */}
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-3">Itens</p>
+                    <div className="space-y-2">
+                      {(selectedQuote.items ?? []).map((item, i) => (
+                        <div key={i} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2.5">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{item.description}</p>
+                            <p className="text-xs text-muted-foreground">{item.quantity}x {fmt(item.unitPrice)}</p>
+                          </div>
+                          <p className="text-sm font-semibold ml-3">{fmt(item.total)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Totals */}
+                  <div className="bg-muted/20 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>{fmt(selectedQuote.subtotal)}</span>
+                    </div>
+                    {parseFloat(selectedQuote.discount ?? "0") > 0 && (
+                      <div className="flex justify-between text-sm text-green-400">
+                        <span>Desconto</span>
+                        <span>- {fmt(selectedQuote.discount)}</span>
+                      </div>
+                    )}
+                    <Separator />
+                    <div className="flex justify-between font-bold text-base">
+                      <span>Total</span>
+                      <span>{fmt(selectedQuote.total)}</span>
+                    </div>
+                  </div>
+
+                  {/* Dates */}
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Criado em {format(new Date(selectedQuote.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                    </div>
+                    {selectedQuote.validUntil && (
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        Válido até {format(new Date(selectedQuote.validUntil), "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedQuote.notes && (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">Observações</p>
+                      <p className="text-sm bg-muted/20 rounded-lg p-3">{selectedQuote.notes}</p>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* Actions */}
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Ações</p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" className="gap-2 justify-start" onClick={() => openEmailModal(selectedQuote.id)}>
+                        <Mail className="w-4 h-4 text-blue-400" /> Enviar Email
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="gap-2 justify-start"
+                        onClick={() => handleSendWhatsApp(selectedQuote.id)}
+                        disabled={sendWhatsAppMutation.isPending}
+                      >
+                        <MessageSquare className="w-4 h-4 text-green-400" /> WhatsApp
+                      </Button>
+                    </div>
+
+                    {/* Status transitions */}
+                    {selectedQuote.status === "draft" && (
+                      <Button className="w-full gap-2" onClick={() => { updateMutation.mutate({ id: selectedQuote.id, status: "sent" }); setSelectedId(null); }}>
+                        <Send className="w-4 h-4" /> Marcar como Enviado
+                      </Button>
+                    )}
+                    {selectedQuote.status === "sent" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button className="gap-2 bg-green-600 hover:bg-green-700" onClick={() => { updateMutation.mutate({ id: selectedQuote.id, status: "accepted" }); setSelectedId(null); }}>
+                          <CheckCircle className="w-4 h-4" /> Aceito
+                        </Button>
+                        <Button variant="outline" className="gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10" onClick={() => { updateMutation.mutate({ id: selectedQuote.id, status: "rejected" }); setSelectedId(null); }}>
+                          <XCircle className="w-4 h-4" /> Recusado
+                        </Button>
+                      </div>
+                    )}
+                    {(selectedQuote.status === "draft" || selectedQuote.status === "sent") && (
+                      <Button variant="outline" className="w-full gap-2 text-orange-400 border-orange-500/30 hover:bg-orange-500/10" onClick={() => { updateMutation.mutate({ id: selectedQuote.id, status: "expired" }); setSelectedId(null); }}>
+                        <Clock className="w-4 h-4" /> Marcar como Expirado
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
+
+      {/* ─── EMAIL MODAL ──────────────────────────────────────────────── */}
       <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
-        <DialogContent className="bg-card border-border max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-blue-400" />
-              Enviar Orçamento por Email
+              <Mail className="w-5 h-5 text-blue-400" /> Enviar Orçamento por Email
             </DialogTitle>
-            <DialogDescription>
-              O orçamento será enviado com um template profissional via Brevo.
-            </DialogDescription>
+            <DialogDescription>O orçamento será enviado com template profissional via Brevo.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
+            <div className="space-y-1.5">
               <Label>Email do destinatário *</Label>
-              <Input
-                className="mt-1.5 bg-input border-border"
-                type="email"
-                placeholder="cliente@exemplo.com"
-                value={emailTo}
-                onChange={(e) => setEmailTo(e.target.value)}
-              />
+              <Input type="email" placeholder="cliente@email.com" value={emailTo} onChange={e => setEmailTo(e.target.value)} />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>Nome do destinatário</Label>
-              <Input
-                className="mt-1.5 bg-input border-border"
-                placeholder="Nome do cliente"
-                value={emailName}
-                onChange={(e) => setEmailName(e.target.value)}
-              />
+              <Input placeholder="Nome do cliente" value={emailName} onChange={e => setEmailName(e.target.value)} />
             </div>
-            <div>
-              <Label>Assunto (opcional)</Label>
-              <Input
-                className="mt-1.5 bg-input border-border"
-                placeholder="Deixe em branco para usar o padrão"
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-              />
+            <div className="space-y-1.5">
+              <Label>Assunto</Label>
+              <Input placeholder="Assunto do email" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} />
             </div>
-            <div>
-              <Label>Mensagem adicional (opcional)</Label>
-              <Textarea
-                className="mt-1.5 bg-input border-border resize-none"
-                placeholder="Observações que aparecerão no orçamento..."
-                rows={3}
-                value={emailMessage}
-                onChange={(e) => setEmailMessage(e.target.value)}
-              />
+            <div className="space-y-1.5">
+              <Label>Mensagem adicional</Label>
+              <Textarea placeholder="Mensagem personalizada (opcional)..." value={emailMessage} onChange={e => setEmailMessage(e.target.value)} rows={3} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmailOpen(false)}>Cancelar</Button>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={handleSendEmail}
-              disabled={!emailTo || sendEmailMutation.isPending}
-            >
-              {sendEmailMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando...</>
-              ) : (
-                <><Mail className="w-4 h-4 mr-2" />Enviar Email</>
-              )}
+            <Button onClick={() => { if (!emailQuoteId || !emailTo) return; sendEmailMutation.mutate({ type: "quote", documentId: emailQuoteId, recipientEmail: emailTo, recipientName: emailName || undefined, subject: emailSubject || undefined, message: emailMessage || undefined }); }} disabled={!emailTo || sendEmailMutation.isPending} className="gap-2">
+              {sendEmailMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              Enviar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Create Quote Dialog */}
+      {/* ─── CREATE MODAL ─────────────────────────────────────────────── */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="bg-card border-border max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Novo Orçamento</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-cyan-400" /> Novo Orçamento
+            </DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-sm font-medium mb-2 block">Itens</Label>
-              {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 mb-2">
-                  <Input className="col-span-5 bg-input border-border text-sm" placeholder="Descrição" value={item.description} onChange={(e) => updateItem(idx, "description", e.target.value)} />
-                  <Input className="col-span-2 bg-input border-border text-sm" type="number" placeholder="Qtd" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", Number(e.target.value))} />
-                  <Input className="col-span-2 bg-input border-border text-sm" type="number" placeholder="Valor" value={item.unitPrice} onChange={(e) => updateItem(idx, "unitPrice", Number(e.target.value))} />
-                  <div className="col-span-2 flex items-center text-sm text-cyan-400 font-medium">R$ {item.total.toFixed(2)}</div>
-                  <button onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))} className="col-span-1 text-muted-foreground hover:text-destructive text-xs">✕</button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={() => setItems(prev => [...prev, { description: "", quantity: 1, unitPrice: 0, total: 0 }])}>
-                <Plus className="w-3.5 h-3.5 mr-1.5" />Adicionar Item
+              <Label className="mb-2 block">Itens do orçamento</Label>
+              <div className="space-y-2">
+                {items.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                    <Input className="col-span-5" placeholder="Descrição" value={item.description} onChange={e => updateItem(idx, "description", e.target.value)} />
+                    <Input className="col-span-2" type="number" placeholder="Qtd" value={item.quantity} onChange={e => updateItem(idx, "quantity", Number(e.target.value))} />
+                    <Input className="col-span-3" type="number" placeholder="Valor unit." value={item.unitPrice} onChange={e => updateItem(idx, "unitPrice", Number(e.target.value))} />
+                    <div className="col-span-1 text-xs text-muted-foreground text-right">{fmt(item.total)}</div>
+                    <button onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))} className="col-span-1 text-muted-foreground hover:text-destructive">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => setItems(prev => [...prev, { description: "", quantity: 1, unitPrice: 0, total: 0 }])}>
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Adicionar item
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Desconto (R$)</Label>
-                <Input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="mt-1.5 bg-input border-border" />
+
+            <div className="bg-muted/20 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span>{fmt(subtotal)}</span>
               </div>
-              <div className="flex flex-col justify-end">
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold text-cyan-400">R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Desconto (R$)</span>
+                <Input type="number" className="w-28 h-7 text-right text-sm" value={discount} onChange={e => setDiscount(e.target.value)} />
+              </div>
+              <Separator />
+              <div className="flex justify-between font-bold">
+                <span>Total</span>
+                <span className="text-lg">{fmt(total)}</span>
               </div>
             </div>
-            <div>
-              <Label>Notas</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1.5 bg-input border-border resize-none" rows={2} />
+
+            <div className="space-y-1.5">
+              <Label>Observações</Label>
+              <Textarea placeholder="Condições, validade, observações..." value={notes} onChange={e => setNotes(e.target.value)} rows={3} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={() => createMutation.mutate({ items, discount: discount || undefined, notes: notes || undefined })} disabled={items.length === 0 || createMutation.isPending}>
-              {createMutation.isPending ? "Criando..." : "Criar Orçamento"}
+            <Button onClick={() => createMutation.mutate({ items, discount: discount || undefined, notes: notes || undefined })} disabled={items.length === 0 || createMutation.isPending} className="gap-2">
+              {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              Criar Orçamento
             </Button>
           </DialogFooter>
         </DialogContent>
