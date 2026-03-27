@@ -67,6 +67,15 @@ export default function WhatsApp() {
     onError: (e) => toast.error(e.message),
   });
 
+  // React to URL ?chat= param changes (navigating from contact profile)
+  useEffect(() => {
+    const chatParam = new URLSearchParams(search).get("chat");
+    if (chatParam && chatParam !== selectedChat) {
+      setSelectedChat(chatParam);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);

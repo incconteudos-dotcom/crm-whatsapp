@@ -148,11 +148,22 @@ export default function ContactProfile() {
 
   const openWhatsApp = () => {
     if (!profile) return;
+    // Try to find existing chat by jid first
+    const existingJid = profile.contact.whatsappJid;
+    if (existingJid) {
+      navigate(`/whatsapp?chat=${encodeURIComponent(existingJid)}`);
+      return;
+    }
+    // Build JID from phone number: Z-API format is 55XXXXXXXXXXX@s.whatsapp.net
     const phone = profile.contact.phone?.replace(/\D/g, "");
     if (phone) {
-      navigate(`/whatsapp?phone=${phone}`);
+      // Ensure country code 55 is present
+      const normalized = phone.startsWith("55") ? phone : `55${phone}`;
+      const jid = `${normalized}@s.whatsapp.net`;
+      navigate(`/whatsapp?chat=${encodeURIComponent(jid)}`);
     } else {
-      toast.error("Contato sem número de telefone cadastrado.");
+      navigate("/whatsapp");
+      toast.info("Adicione um telefone ao contato para abrir a conversa diretamente.");
     }
   };
 
