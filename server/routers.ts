@@ -20,6 +20,7 @@ import {
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
+import { sendText, sendDocument, getInstanceStatus, getChats } from "./zapi";
 import { STUDIO_PRODUCTS } from "./stripe/products";
 import { getDb } from "./db";
 import { users as usersTable } from "../drizzle/schema";
@@ -195,11 +196,25 @@ const whatsappRouter = router({
   messages: whatsappProcedure.input(z.object({ chatJid: z.string(), limit: z.number().optional() })).query(({ input }) =>
     getWhatsappMessages(input.chatJid, input.limit)
   ),
-  syncChats: whatsappProcedure.mutation(async ({ ctx }) => {
-    // Calls MCP WhatsApp bridge to list chats and sync to DB
-    // In production this would call the MCP server via HTTP
-    // For now returns mock data structure
-    return { synced: 0, message: "Sincronização iniciada. Configure o WhatsApp MCP para ativar." };
+  syncChats: whatsappProcedure.mutation(async () => {
+    // Fetch real chats from Z-API and sync to DB
+    const zapiChats = await getChats(0, 50);
+    let synced = 0;
+    for (const chat of zapiChats) {
+      await upsertWhatsappChat({
+        jid: chat.phone,
+        name: chat.name,
+        lastMessageAt: chat.lastMessageTimestamp ? new Date(chat.lastMessageTimestamp * 1000) : new Date(),
+        lastMessagePreview: chat.lastMessage?.slice(0, 100),
+        unreadCount: chat.unreadMessages ?? 0,
+        isGroup: chat.isGroup ?? false,
+      });
+      synced++;
+    }
+    return { synced, message: synced > 0 ? `${synced} conversas sincronizadas via Z-API.` : "Nenhuma conversa encontrada. Verifique a conexão do WhatsApp." };
+  }),
+  instanceStatus: whatsappProcedure.query(async () => {
+    return getInstanceStatus();
   }),
   sendMessage: whatsappProcedure.input(z.object({
     chatJid: z.string(),
@@ -207,8 +222,19 @@ const whatsappRouter = router({
   })).mutation(async ({ input, ctx }) => {
     const userName = ctx.user.name ?? "Usuário";
     const prefixedMessage = `[${userName}]: ${input.message}`;
+    // Send via Z-API
+    let zapiMessageId: string | undefined;
+    let zapiError: string | undefined;
+    try {
+      const result = await sendText(input.chatJid, prefixedMessage);
+      zapiMessageId = result.messageId;
+    } catch (err) {
+      zapiError = err instanceof Error ? err.message : String(err);
+      console.error("[Z-API] sendText error:", zapiError);
+      // Don't throw — still store in DB so the message is not lost
+    }
     // Store in DB
-    const msgId = `crm_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const msgId = zapiMessageId ?? `crm_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     await upsertWhatsappMessage({
       messageId: msgId,
       chatJid: input.chatJid,
@@ -229,7 +255,7 @@ const whatsappRouter = router({
       type: "whatsapp",
       description: `Mensagem enviada para ${input.chatJid}: ${input.message.slice(0, 80)}`,
     });
-    return { success: true, messageId: msgId, prefixedMessage };
+    return { success: true, messageId: msgId, prefixedMessage, zapiError };
   }),
   analyzeConversation: whatsappProcedure.input(z.object({
     chatJid: z.string(),
@@ -621,11 +647,24 @@ const documentsRouter = router({
       docName = `Orçamento ${q.number}`;
     }
     const userName = ctx.user.name ?? ctx.user.email ?? "Usuário";
-    const msgText = input.message
-      ? `[${userName}]: ${input.message}\n\n📎 ${docName}: ${docUrl}`
-      : `[${userName}]: 📎 ${docName} - Acesse o documento: ${docUrl}`;
-    await upsertWhatsappMessage({ chatJid: input.recipientJid, messageId: `doc_${Date.now()}`, isFromMe: true, content: msgText, timestamp: Date.now(), senderName: userName });
-    return { success: true, documentUrl: docUrl, message: msgText };
+    const introText = input.message
+      ? `[${userName}]: ${input.message}`
+      : `[${userName}]: Segue em anexo o documento ${docName}.`;
+    // Send via Z-API: text first, then document
+    let zapiMessageId: string | undefined;
+    let zapiError: string | undefined;
+    try {
+      await sendText(input.recipientJid, introText);
+      const docResult = await sendDocument(input.recipientJid, docUrl, docName, "pdf");
+      zapiMessageId = docResult.messageId;
+    } catch (err) {
+      zapiError = err instanceof Error ? err.message : String(err);
+      console.error("[Z-API] sendDocument error:", zapiError);
+    }
+    // Store in DB
+    const fullMsg = `${introText}\n\n📎 ${docName}: ${docUrl}`;
+    await upsertWhatsappMessage({ chatJid: input.recipientJid, messageId: zapiMessageId ?? `doc_${Date.now()}`, isFromMe: true, content: fullMsg, timestamp: Date.now(), senderName: userName });
+    return { success: true, documentUrl: docUrl, message: fullMsg, zapiError };
   }),
   sendByEmail: protectedProcedure.input(z.object({
     type: z.enum(["invoice", "quote", "contract"]),

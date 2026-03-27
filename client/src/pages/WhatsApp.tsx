@@ -4,7 +4,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
   MessageSquare, Search, Send, RefreshCw, Sparkles,
-  Users, Phone, MoreVertical, Paperclip, Smile, ChevronDown
+  Users, MoreVertical, Wifi, WifiOff, CheckCircle2, AlertCircle
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useSearch } from "wouter";
@@ -31,6 +31,9 @@ export default function WhatsApp() {
   const [analysisResult, setAnalysisResult] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const { data: instanceStatus } = trpc.whatsapp.instanceStatus.useQuery(undefined, {
+    refetchInterval: 30000, // poll every 30s
+  });
   const { data: chats, isLoading: chatsLoading, refetch: refetchChats } = trpc.whatsapp.chats.useQuery();
   const { data: messages, isLoading: messagesLoading, refetch: refetchMessages } = trpc.whatsapp.messages.useQuery(
     { chatJid: selectedChat ?? "", limit: 100 },
@@ -38,18 +41,22 @@ export default function WhatsApp() {
   );
 
   const sendMutation = trpc.whatsapp.sendMessage.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       setMessage("");
       refetchMessages();
+      if (data.zapiError) {
+        toast.warning(`Mensagem salva localmente, mas houve erro no envio real: ${data.zapiError}`);
+      }
     },
     onError: (e) => toast.error(e.message),
   });
 
   const syncMutation = trpc.whatsapp.syncChats.useMutation({
     onSuccess: (data) => {
-      toast.info(data.message);
+      toast.success(data.message);
       refetchChats();
     },
+    onError: (e) => toast.error(`Erro ao sincronizar: ${e.message}`),
   });
 
   const analyzeMutation = trpc.whatsapp.analyzeConversation.useMutation({
@@ -99,14 +106,30 @@ export default function WhatsApp() {
                 <MessageSquare className="w-4 h-4 text-green-400" />
                 WhatsApp
               </h2>
-              <button
-                onClick={() => syncMutation.mutate()}
-                disabled={syncMutation.isPending}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                title="Sincronizar conversas"
-              >
-                <RefreshCw className={cn("w-4 h-4", syncMutation.isPending && "animate-spin")} />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Z-API connection status badge */}
+                {instanceStatus ? (
+                  instanceStatus.connected ? (
+                    <span className="flex items-center gap-1 text-xs text-green-400" title="WhatsApp conectado via Z-API">
+                      <Wifi className="w-3 h-3" />
+                      <span className="hidden sm:inline">Online</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-xs text-red-400" title="WhatsApp desconectado">
+                      <WifiOff className="w-3 h-3" />
+                      <span className="hidden sm:inline">Offline</span>
+                    </span>
+                  )
+                ) : null}
+                <button
+                  onClick={() => syncMutation.mutate()}
+                  disabled={syncMutation.isPending}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  title="Sincronizar conversas via Z-API"
+                >
+                  <RefreshCw className={cn("w-4 h-4", syncMutation.isPending && "animate-spin")} />
+                </button>
+              </div>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -177,7 +200,7 @@ export default function WhatsApp() {
                 <MessageSquare className="w-10 h-10 text-muted-foreground mb-3" />
                 <p className="text-sm text-muted-foreground">Nenhuma conversa encontrada</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Configure o WhatsApp MCP e sincronize
+                  Clique em sincronizar para carregar conversas via Z-API
                 </p>
                 <Button
                   size="sm"
@@ -302,7 +325,39 @@ export default function WhatsApp() {
               <p className="text-muted-foreground text-sm max-w-sm">
                 Selecione uma conversa para visualizar as mensagens. Todas as mensagens enviadas incluirão automaticamente a identificação do usuário.
               </p>
-              <div className="mt-6 p-4 bg-card border border-border rounded-xl text-left max-w-sm">
+              {/* Z-API status card */}
+              <div className="mt-4 p-4 bg-card border border-border rounded-xl text-left max-w-sm w-full">
+                <p className="text-xs font-semibold text-muted-foreground mb-3">STATUS Z-API</p>
+                {instanceStatus ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      {instanceStatus.connected ? (
+                        <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      )}
+                      <span className="text-xs text-foreground">
+                        {instanceStatus.connected ? "WhatsApp conectado" : "WhatsApp desconectado"}
+                      </span>
+                    </div>
+                    {instanceStatus.smartphoneConnected !== undefined && (
+                      <div className="flex items-center gap-2">
+                        {instanceStatus.smartphoneConnected ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0" />
+                        )}
+                        <span className="text-xs text-foreground">
+                          {instanceStatus.smartphoneConnected ? "Celular conectado" : "Celular desconectado"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Verificando status...</p>
+                )}
+              </div>
+              <div className="mt-4 p-4 bg-card border border-border rounded-xl text-left max-w-sm">
                 <p className="text-xs font-semibold text-muted-foreground mb-2">COMO FUNCIONA</p>
                 <p className="text-xs text-muted-foreground">
                   Ao enviar uma mensagem, ela será automaticamente prefixada com <span className="text-primary font-medium">[{user?.name}]:</span> para que o destinatário saiba qual membro da equipe está respondendo.

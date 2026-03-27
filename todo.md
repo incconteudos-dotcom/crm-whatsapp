@@ -165,3 +165,15 @@
 - [x] Adicionar botão "Email" com modal na página de Orçamentos
 - [x] Adicionar botão "Email" com modal na página de Contratos
 - [x] Testes unitários para templates de email (8 testes passando)
+
+## Sprint Z-API WhatsApp
+- [x] Configurar secrets ZAPI_INSTANCE_ID, ZAPI_TOKEN e ZAPI_CLIENT_TOKEN
+- [x] Criar server/zapi.ts com cliente Z-API (sendText, sendDocument, getInstanceStatus, getChats)
+- [x] Atualizar documents.sendByWhatsApp para usar Z-API real (texto + documento)
+- [x] Atualizar whatsapp.sendMessage para enviar via Z-API real
+- [x] Atualizar whatsapp.syncChats para buscar conversas reais via Z-API
+- [x] Expor whatsapp.instanceStatus para verificar conexão em tempo real
+- [x] Exibir badge Online/Offline na página WhatsApp (polling a cada 30s)
+- [x] Webhook Z-API em /api/zapi/webhook para receber mensagens em tempo real
+- [x] Sincronizar conversas e mensagens recebidas via webhook no banco
+- [x] Testes unitários do webhook Z-API (6 testes passando, total 29 testes)

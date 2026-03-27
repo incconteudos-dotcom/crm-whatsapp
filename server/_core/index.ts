@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { stripeWebhookHandler } from "../stripe/webhook";
+import { zapiWebhookHandler } from "../zapiWebhook";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -33,6 +34,8 @@ async function startServer() {
   const server = createServer(app);
   // Stripe webhook MUST be registered BEFORE express.json() to allow raw body access
   app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhookHandler);
+  // Z-API webhook — receives real-time WhatsApp events (registered before json() is fine, Z-API sends JSON)
+  app.post("/api/zapi/webhook", zapiWebhookHandler);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
