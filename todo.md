@@ -148,3 +148,10 @@
 - [x] Envio de orçamento em PDF por WhatsApp e email
 - [x] Envio de contrato em PDF por WhatsApp e email
 - [x] PDF com design/identidade visual da empresa (template HTML em S3)
+
+## Correção: Contexto Podcast (não musical)
+- [ ] Corrigir tipos de contrato: remover referências musicais, usar tipos de podcast
+- [ ] Corrigir tipos de sessão de estúdio: remover "mixagem musical", usar termos de podcast
+- [ ] Corrigir textos, labels e placeholders com referências a música/artista/musical
+- [ ] Atualizar enum contractType no schema e banco de dados
+- [ ] Atualizar enum sessionType no schema e banco de dados

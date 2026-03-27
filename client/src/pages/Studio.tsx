@@ -1,7 +1,7 @@
 import CRMLayout from "@/components/CRMLayout";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { Calendar, Plus, Clock, User, Music, CheckCircle, XCircle } from "lucide-react";
+import { Calendar, Plus, Clock, User, Mic, CheckCircle, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,10 @@ import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay 
 import { ptBR } from "date-fns/locale";
 
 const sessionTypeLabels: Record<string, string> = {
-  recording: "Gravação",
-  mixing: "Mixagem",
-  mastering: "Masterização",
-  rehearsal: "Ensaio",
+  recording: "Gravação de Podcast",
+  mixing: "Edição de Áudio",
+  mastering: "Pós-Produção",
+  rehearsal: "Revisão de Episódio",
   other: "Outro",
 };
 
@@ -51,7 +51,7 @@ export default function Studio() {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [form, setForm] = useState({
     title: "", sessionType: "recording" as const, startAt: "", endAt: "",
-    studio: "Estúdio Principal", engineer: "", notes: "", value: "",
+    studio: "Estúdio de Podcast", engineer: "", notes: "", value: "",
   });
 
   const utils = trpc.useUtils();
@@ -163,7 +163,7 @@ export default function Studio() {
                           {format(new Date(b.startAt), "HH:mm")} - {format(new Date(b.endAt), "HH:mm")}
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Music className="w-3 h-3" />
+                          <Mic className="w-3 h-3" />
                           <span className={cn("px-1.5 py-0.5 rounded-full text-xs", sessionTypeColors[b.sessionType ?? "recording"])}>
                             {sessionTypeLabels[b.sessionType ?? "recording"]}
                           </span>
@@ -233,7 +233,7 @@ export default function Studio() {
           <div className="space-y-4">
             <div>
               <Label>Título *</Label>
-              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex: Gravação - João Silva" className="mt-1.5 bg-input border-border" />
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex: Podcast do João - Ep. 10" className="mt-1.5 bg-input border-border" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -262,8 +262,8 @@ export default function Studio() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Engenheiro</Label>
-                <Input value={form.engineer} onChange={(e) => setForm({ ...form, engineer: e.target.value })} placeholder="Nome do engenheiro" className="mt-1.5 bg-input border-border" />
+                <Label>Produtor / Editor</Label>
+                <Input value={form.engineer} onChange={(e) => setForm({ ...form, engineer: e.target.value })} placeholder="Nome do produtor ou editor" className="mt-1.5 bg-input border-border" />
               </div>
               <div>
                 <Label>Valor (R$)</Label>

@@ -32,10 +32,10 @@ export default function Analytics() {
 
   // Studio sessions by type
   const sessionTypeData = [
-    { name: "Gravação", value: bookings?.filter(b => b.sessionType === "recording").length ?? 0 },
-    { name: "Mixagem", value: bookings?.filter(b => b.sessionType === "mixing").length ?? 0 },
-    { name: "Masterização", value: bookings?.filter(b => b.sessionType === "mastering").length ?? 0 },
-    { name: "Ensaio", value: bookings?.filter(b => b.sessionType === "rehearsal").length ?? 0 },
+    { name: "Gravação de Podcast", value: bookings?.filter(b => b.sessionType === "recording").length ?? 0 },
+    { name: "Edição de Áudio", value: bookings?.filter(b => b.sessionType === "mixing").length ?? 0 },
+    { name: "Pós-Produção", value: bookings?.filter(b => b.sessionType === "mastering").length ?? 0 },
+    { name: "Revisão de Episódio", value: bookings?.filter(b => b.sessionType === "rehearsal").length ?? 0 },
     { name: "Outros", value: bookings?.filter(b => b.sessionType === "other").length ?? 0 },
   ].filter(d => d.value > 0);
 
@@ -128,7 +128,7 @@ export default function Analytics() {
 
         {/* Studio sessions */}
         <div className="bg-card border border-border rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-foreground mb-4">Sessões de Estúdio por Tipo</h2>
+          <h2 className="text-sm font-semibold text-foreground mb-4">Sessões de Podcast por Tipo</h2>
           {sessionTypeData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={sessionTypeData} layout="vertical" margin={{ top: 5, right: 20, left: 60, bottom: 5 }}>

@@ -48,16 +48,16 @@ export const STUDIO_PRODUCTS: StudioProduct[] = [
   },
   {
     id: "mixing",
-    name: "Mixagem de Episódio",
-    description: "Serviço de mixagem profissional para episódio já gravado",
+    name: "Edição de Áudio do Episódio",
+    description: "Edição profissional de áudio para episódio já gravado",
     unitAmount: 25000, // R$ 250,00
     currency: "brl",
     category: "service",
   },
   {
     id: "mastering",
-    name: "Masterização de Episódio",
-    description: "Masterização profissional para distribuição em plataformas",
+    name: "Pós-Produção de Episódio",
+    description: "Pós-produção profissional para distribuição em plataformas",
     unitAmount: 15000, // R$ 150,00
     currency: "brl",
     category: "service",

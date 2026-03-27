@@ -27,7 +27,7 @@ export default function Contracts() {
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [aiGenOpen, setAiGenOpen] = useState(false);
   const [form, setForm] = useState({ title: "", value: "", signerName: "", signerEmail: "", content: "" });
-  const [aiForm, setAiForm] = useState({ title: "", contactName: "", value: "", description: "", contractType: "prestação de serviços" });
+  const [aiForm, setAiForm] = useState({ title: "", contactName: "", value: "", description: "", contractType: "produção de podcast" });
   const [generatedContent, setGeneratedContent] = useState("");
 
   const utils = trpc.useUtils();
@@ -252,11 +252,13 @@ export default function Contracts() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="prestação de serviços">Prestação de Serviços</SelectItem>
-                    <SelectItem value="gravação musical">Gravação Musical</SelectItem>
-                    <SelectItem value="produção musical">Produção Musical</SelectItem>
-                    <SelectItem value="licenciamento de música">Licenciamento de Música</SelectItem>
-                    <SelectItem value="exclusividade artística">Exclusividade Artística</SelectItem>
+                    <SelectItem value="produção de podcast">Produção de Podcast</SelectItem>
+                    <SelectItem value="gravação de episódios">Gravação de Episódios</SelectItem>
+                    <SelectItem value="edição e pós-produção">Edição e Pós-Produção</SelectItem>
+                    <SelectItem value="pacote mensal de episódios">Pacote Mensal de Episódios</SelectItem>
+                    <SelectItem value="consultoria em podcast">Consultoria em Podcast</SelectItem>
+                    <SelectItem value="distribuição e publicação">Distribuição e Publicação</SelectItem>
+                    <SelectItem value="prestação de serviços">Prestação de Serviços Gerais</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
