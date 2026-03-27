@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import {
   Users, Search, Plus, Phone, Mail, Building2,
-  MessageSquare, MoreHorizontal, Tag, Trash2, Edit
+  MessageSquare, MoreHorizontal, Tag, Trash2, Edit, ExternalLink
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -139,6 +139,12 @@ export default function Contacts() {
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-popover border-border">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/contacts/${contact.id}`} className="flex items-center gap-2 cursor-pointer">
+                          <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+                          Ver Perfil Completo
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href={`/whatsapp${contact.whatsappJid ? `?chat=${contact.whatsappJid}` : ""}`} className="flex items-center gap-2 cursor-pointer">
                           <MessageSquare className="w-3.5 h-3.5 text-green-400" />

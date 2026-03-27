@@ -6,7 +6,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
   getAllUsers, getPendingUsers, updateUserStatus, updateUserRole, updateUserWhatsappAccess, createUser,
-  getContacts, getContactById, createContact, updateContact, deleteContact,
+  getContacts, getContactById, getContactProfile, createContact, updateContact, deleteContact,
   getPipelineStages, createPipelineStage, seedDefaultPipelineStages,
   getLeads, getLeadById, createLead, updateLead, deleteLead,
   getWhatsappChats, upsertWhatsappChat, getWhatsappMessages, upsertWhatsappMessage,
@@ -107,10 +107,13 @@ const usersRouter = router({
   })).mutation(({ input }) => createUser({ ...input, email: input.email || undefined })),
 });
 
-// ─── CONTACTS ROUTER ──────────────────────────────────────────────────────────
+// ─── CONTACTS ROUTER ──────────────────────────────────────────────
 const contactsRouter = router({
   list: protectedProcedure.input(z.object({ search: z.string().optional() })).query(({ input }) =>
     getContacts(input.search)
+  ),
+  getProfile: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
+    getContactProfile(input.id)
   ),
   get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
     getContactById(input.id)

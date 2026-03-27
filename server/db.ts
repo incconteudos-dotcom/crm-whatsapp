@@ -418,6 +418,31 @@ export async function createActivity(data: InsertActivity) {
   await db.insert(activities).values(data);
 }
 
+// ─── CONTACT PROFILE (360° view) ─────────────────────────────────────────────
+export async function getContactProfile(contactId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [contact] = await db.select().from(contacts).where(eq(contacts.id, contactId)).limit(1);
+  if (!contact) return null;
+  const [contactLeads, contactInvoices, contactQuotes, contactContracts, contactBookings, contactChats] = await Promise.all([
+    db.select().from(leads).where(eq(leads.contactId, contactId)).orderBy(desc(leads.createdAt)),
+    db.select().from(invoices).where(eq(invoices.contactId, contactId)).orderBy(desc(invoices.createdAt)),
+    db.select().from(quotes).where(eq(quotes.contactId, contactId)).orderBy(desc(quotes.createdAt)),
+    db.select().from(contracts).where(eq(contracts.contactId, contactId)).orderBy(desc(contracts.createdAt)),
+    db.select().from(studioBookings).where(eq(studioBookings.contactId, contactId)).orderBy(desc(studioBookings.createdAt)),
+    db.select().from(whatsappChats).where(eq(whatsappChats.contactId, contactId)).limit(1),
+  ]);
+  return {
+    contact,
+    leads: contactLeads,
+    invoices: contactInvoices,
+    quotes: contactQuotes,
+    contracts: contactContracts,
+    bookings: contactBookings,
+    whatsappChat: contactChats[0] ?? null,
+  };
+}
+
 // ─── DASHBOARD STATS ──────────────────────────────────────────────────────────
 export async function getDashboardStats() {
   const db = await getDb();

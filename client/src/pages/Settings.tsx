@@ -2,7 +2,7 @@ import CRMLayout from "@/components/CRMLayout";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Settings as SettingsIcon, User, Bell, Shield, Palette, Save, Eye, EyeOff } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, Palette, Save, Eye, EyeOff, CreditCard, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,6 +83,10 @@ export default function Settings() {
             <TabsTrigger value="appearance" className="flex items-center gap-2">
               <Palette className="w-4 h-4" />
               Aparência
+            </TabsTrigger>
+            <TabsTrigger value="payment" className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Pagamento
             </TabsTrigger>
           </TabsList>
 
@@ -290,6 +294,70 @@ export default function Settings() {
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-2">Fuso horário</p>
                   <p className="text-sm text-foreground">America/Sao_Paulo (UTC-3)</p>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          {/* PAGAMENTO */}
+          <TabsContent value="payment">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  Configurações de Pagamento
+                </CardTitle>
+                <CardDescription>Gerencie as chaves Stripe para receber pagamentos.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* Modo atual */}
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertCircle className="w-4 h-4 text-yellow-400" />
+                    <p className="text-sm font-semibold text-yellow-400">Modo de Teste Ativo</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Use o cartão <code className="bg-muted px-1 py-0.5 rounded text-foreground">4242 4242 4242 4242</code> com qualquer data futura e CVC para testar pagamentos. Nenhum valor real é cobrado.</p>
+                </div>
+
+                {/* Como ativar produção */}
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-foreground">Como ativar pagamentos reais:</p>
+                  {[
+                    { step: "1", text: "Complete a verificação KYC no painel Stripe (stripe.com/dashboard)" },
+                    { step: "2", text: "Acesse Configurações → Payment no painel de gerenciamento do Manus" },
+                    { step: "3", text: "Insira as chaves de produção (Publishable Key e Secret Key)" },
+                    { step: "4", text: "Teste com um pagamento real usando o cupom de 99% de desconto" },
+                  ].map(({ step, text }) => (
+                    <div key={step} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                      <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center shrink-0">{step}</div>
+                      <p className="text-sm text-muted-foreground">{text}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Funcionalidades ativas */}
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Funcionalidades de Pagamento Ativas</p>
+                  {[
+                    "Checkout de faturas via Stripe",
+                    "Pagamento parcelado (split payment)",
+                    "Códigos de desconto (promotion codes)",
+                    "Webhook de confirmação automática",
+                  ].map((feat) => (
+                    <div key={feat} className="flex items-center gap-2 text-sm text-foreground">
+                      <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                      {feat}
+                    </div>
+                  ))}
+                </div>
+
+                <a
+                  href="https://dashboard.stripe.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Abrir painel Stripe
+                </a>
               </CardContent>
             </Card>
           </TabsContent>

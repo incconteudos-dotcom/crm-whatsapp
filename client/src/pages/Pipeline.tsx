@@ -1,7 +1,7 @@
 import CRMLayout from "@/components/CRMLayout";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { Zap, Plus, DollarSign, User, Calendar, MoreHorizontal, Trophy, X } from "lucide-react";
+import { Zap, Plus, DollarSign, Calendar, MoreHorizontal, Trophy, X, User, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,14 +13,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Link } from "wouter";
 
 const statusColors = { open: "text-blue-400", won: "text-green-400", lost: "text-red-400" };
 
 export default function Pipeline() {
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedStage, setSelectedStage] = useState<number | undefined>();
   const [form, setForm] = useState({
-    title: "", stageId: "", value: "", probability: "50", notes: "",
+    title: "", stageId: "", value: "", probability: "50", notes: "", contactId: "",
   });
 
   const utils = trpc.useUtils();
@@ -32,7 +32,7 @@ export default function Pipeline() {
     onSuccess: () => {
       toast.success("Lead criado!");
       setCreateOpen(false);
-      setForm({ title: "", stageId: "", value: "", probability: "50", notes: "" });
+      setForm({ title: "", stageId: "", value: "", probability: "50", notes: "", contactId: "" });
       utils.pipeline.leads.invalidate();
     },
     onError: (e) => toast.error(e.message),
@@ -48,6 +48,11 @@ export default function Pipeline() {
 
   const stageTotal = (stageId: number) =>
     leadsPerStage(stageId).reduce((sum, l) => sum + Number(l.value ?? 0), 0);
+
+  const getContactName = (contactId: number | null | undefined) => {
+    if (!contactId) return null;
+    return contacts?.find(c => c.id === contactId)?.name ?? null;
+  };
 
   return (
     <CRMLayout>
@@ -96,55 +101,72 @@ export default function Pipeline() {
 
                 {/* Cards */}
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                  {leadsPerStage(stage.id).map((lead) => (
-                    <div key={lead.id} className="kanban-card group">
-                      <div className="flex items-start justify-between mb-2">
-                        <p className="text-sm font-medium text-foreground leading-tight">{lead.title}</p>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-all p-0.5">
-                              <MoreHorizontal className="w-3.5 h-3.5" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-popover border-border">
-                            <DropdownMenuItem onClick={() => updateMutation.mutate({ id: lead.id, status: "won" })}>
-                              <Trophy className="w-3.5 h-3.5 mr-2 text-green-400" />
-                              Marcar como Ganho
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => updateMutation.mutate({ id: lead.id, status: "lost" })}>
-                              <X className="w-3.5 h-3.5 mr-2 text-red-400" />
-                              Marcar como Perdido
-                            </DropdownMenuItem>
-                            {stages.filter(s => s.id !== stage.id).map(s => (
-                              <DropdownMenuItem key={s.id} onClick={() => updateMutation.mutate({ id: lead.id, stageId: s.id })}>
-                                Mover para {s.name}
+                  {leadsPerStage(stage.id).map((lead) => {
+                    const contactName = getContactName(lead.contactId);
+                    return (
+                      <div key={lead.id} className="kanban-card group">
+                        <div className="flex items-start justify-between mb-2">
+                          <p className="text-sm font-medium text-foreground leading-tight">{lead.title}</p>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-all p-0.5">
+                                <MoreHorizontal className="w-3.5 h-3.5" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover border-border">
+                              <DropdownMenuItem onClick={() => updateMutation.mutate({ id: lead.id, status: "won" })}>
+                                <Trophy className="w-3.5 h-3.5 mr-2 text-green-400" />
+                                Marcar como Ganho
                               </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      {lead.value && (
-                        <div className="flex items-center gap-1.5 text-xs text-green-400 mb-1.5">
-                          <DollarSign className="w-3 h-3" />
-                          <span>R$ {Number(lead.value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                              <DropdownMenuItem onClick={() => updateMutation.mutate({ id: lead.id, status: "lost" })}>
+                                <X className="w-3.5 h-3.5 mr-2 text-red-400" />
+                                Marcar como Perdido
+                              </DropdownMenuItem>
+                              {lead.contactId && (
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/contacts/${lead.contactId}`}>
+                                    <ExternalLink className="w-3.5 h-3.5 mr-2 text-blue-400" />
+                                    Ver Perfil do Cliente
+                                  </Link>
+                                </DropdownMenuItem>
+                              )}
+                              {stages.filter(s => s.id !== stage.id).map(s => (
+                                <DropdownMenuItem key={s.id} onClick={() => updateMutation.mutate({ id: lead.id, stageId: s.id })}>
+                                  Mover para {s.name}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
-                      )}
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                          <span>{lead.probability ?? 0}%</span>
-                        </div>
-                        {lead.expectedCloseDate && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Calendar className="w-3 h-3" />
-                            <span>{format(new Date(lead.expectedCloseDate), "dd/MM", { locale: ptBR })}</span>
+                        {contactName && (
+                          <Link href={`/contacts/${lead.contactId}`} className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 mb-1.5 w-fit">
+                            <User className="w-3 h-3" />
+                            <span>{contactName}</span>
+                          </Link>
+                        )}
+                        {lead.value && (
+                          <div className="flex items-center gap-1.5 text-xs text-green-400 mb-1.5">
+                            <DollarSign className="w-3 h-3" />
+                            <span>R$ {Number(lead.value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                           </div>
                         )}
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            <span>{lead.probability ?? 0}%</span>
+                          </div>
+                          {lead.expectedCloseDate && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Calendar className="w-3 h-3" />
+                              <span>{format(new Date(lead.expectedCloseDate), "dd/MM", { locale: ptBR })}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <button
-                    onClick={() => { setSelectedStage(stage.id); setForm(f => ({ ...f, stageId: String(stage.id) })); setCreateOpen(true); }}
+                    onClick={() => { setForm(f => ({ ...f, stageId: String(stage.id) })); setCreateOpen(true); }}
                     className="w-full flex items-center gap-2 p-2 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -169,9 +191,31 @@ export default function Pipeline() {
               <Input
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="Ex: Gravação de álbum - João Silva"
+                placeholder="Ex: Gravação de episódio - João Silva"
                 className="mt-1.5 bg-input border-border"
               />
+            </div>
+            <div>
+              <Label>Cliente / Contato</Label>
+              <Select value={form.contactId} onValueChange={(v) => {
+                const contact = contacts?.find(c => String(c.id) === v);
+                setForm({ ...form, contactId: v, title: form.title || (contact ? `Lead - ${contact.name}` : "") });
+              }}>
+                <SelectTrigger className="mt-1.5 bg-input border-border">
+                  <SelectValue placeholder="Selecionar contato (opcional)..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem contato vinculado</SelectItem>
+                  {contacts?.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}{c.company ? ` — ${c.company}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Vincule um contato para manter o histórico completo do cliente.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -225,6 +269,7 @@ export default function Pipeline() {
             <Button
               onClick={() => createMutation.mutate({
                 title: form.title,
+                contactId: form.contactId && form.contactId !== "none" ? Number(form.contactId) : undefined,
                 stageId: form.stageId ? Number(form.stageId) : undefined,
                 value: form.value || undefined,
                 probability: Number(form.probability),

@@ -180,3 +180,31 @@
 
 ## Bugs Ativos
 - [x] syncChats: jid inserido como null — corrigido mapeamento ZApiChatRaw (lastMessageTime, messagesUnread como strings) e adicionado filtro .filter(c => !!c.phone)
+
+## Sprint 2 — Email Brevo + Relacionamentos
+- [x] Diagnosticar e corrigir envio de email via Brevo (teste confirmado: email enviado com sucesso)
+- [x] Adicionar campo contactId nas tabelas (já existia no schema)
+- [x] UI de criação de lead com seleção de contato (dropdown com busca)
+- [x] Preencher título do lead automaticamente ao selecionar contato
+- [x] Adicionar função getContactProfile (visão 360°) no db.ts
+- [x] Adicionar procedure contacts.getProfile no router
+
+## Sprint 3 — Perfil do Cliente
+- [x] Página /contacts/:id com resumo completo do cliente
+- [x] Seções: leads, faturas, orçamentos, contratos, agendamentos
+- [x] Cards de métricas: leads abertos, faturas, receita total, agendamentos
+- [x] Botões de ação: WhatsApp, Email, Novo Lead, Nova Fatura, Novo Orçamento, Novo Contrato
+- [x] Link "Ver Perfil Completo" no DropdownMenu da página de Contatos
+- [x] Registrar rota /contacts/:id no App.tsx
+
+## Sprint 4 — Contexto Podcast + Configurações
+- [x] Tipos de contrato para podcast já corretos na UI (Produção de Podcast, Gravação de Episódios, Edição e Pós-Produção)
+- [x] Tipos de sessão de estúdio já corretos (Gravação de Podcast, Edição de Áudio, Pós-Produção, Revisão de Episódio)
+- [x] Aba "Pagamento" adicionada nas Configurações com instruções Stripe e modo teste
+
+## Sprint 5 — WhatsApp Avançado
+- [x] Badge Online/Offline já implementado (polling 30s)
+- [x] Webhook Z-API já vincula mensagens ao chat no banco
+- [ ] Badge de mensagens não lidas no sidebar (próxima sprint)
+- [ ] Vincular chat ao contato automaticamente (cruzar número)
+- [ ] Notificação WhatsApp automática ao confirmar agendamento

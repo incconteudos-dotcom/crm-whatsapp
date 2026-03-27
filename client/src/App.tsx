@@ -18,6 +18,7 @@ import Analytics from "./pages/Analytics";
 import Users from "./pages/Users";
 import Payments from "./pages/Payments";
 import Settings from "./pages/Settings";
+import ContactProfile from "./pages/ContactProfile";
 
 function Router() {
   return (
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/users" component={Users} />
       <Route path="/payments" component={Payments} />
       <Route path="/settings" component={Settings} />
+      <Route path="/contacts/:id" component={ContactProfile} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

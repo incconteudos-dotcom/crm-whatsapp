@@ -1,0 +1,66 @@
+{
+  "query": "SELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME IN ('contactId', 'leadId') ORDER BY TABLE_NAME, COLUMN_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute SELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME IN ('contactId', 'leadId') ORDER BY TABLE_NAME, COLUMN_NAME;",
+  "rows": [
+    {
+      "TABLE_NAME": "activities",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "activities",
+      "COLUMN_NAME": "leadId"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "leadId"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "leadId"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "quotes",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "quotes",
+      "COLUMN_NAME": "leadId"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "leadId"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "leadId"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "contactId"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\tCOLUMN_NAME\nactivities\tcontactId\nactivities\tleadId\ncontracts\tcontactId\ncontracts\tleadId\ninvoices\tcontactId\ninvoices\tleadId\nleads\tcontactId\nquotes\tcontactId\nquotes\tleadId\nstudio_bookings\tcontactId\nstudio_bookings\tleadId\ntasks\tcontactId\ntasks\tleadId\nwhatsapp_chats\tcontactId\n",
+  "stderr": "",
+  "execution_time_ms": 91
+}
