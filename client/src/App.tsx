@@ -16,6 +16,7 @@ import Studio from "./pages/Studio";
 import Tasks from "./pages/Tasks";
 import Analytics from "./pages/Analytics";
 import Users from "./pages/Users";
+import Payments from "./pages/Payments";
 
 function Router() {
   return (
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/tasks" component={Tasks} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/users" component={Users} />
+      <Route path="/payments" component={Payments} />
       <Route path="/settings" component={() => <div className="p-8 text-muted-foreground">Configurações em breve...</div>} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

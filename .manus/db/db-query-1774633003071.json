@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `invoices` ADD `stripeCheckoutSessionId` varchar(255);\nALTER TABLE `invoices` ADD `paymentPlan` enum('full','installment_50_50') DEFAULT 'full';\nALTER TABLE `invoices` ADD `installmentNumber` int DEFAULT 1;\nALTER TABLE `invoices` ADD `parentInvoiceId` int;\nALTER TABLE `users` ADD `stripeCustomerId` varchar(255);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute ALTER TABLE `invoices` ADD `stripeCheckoutSessionId` varchar(255);\nALTER TABLE `invoices` ADD `paymentPlan` enum('full','installment_50_50') DEFAULT 'full';\nALTER TABLE `invoices` ADD `installmentNumber` int DEFAULT 1;\nALTER TABLE `invoices` ADD `parentInvoiceId` int;\nALTER TABLE `users` ADD `stripeCustomerId` varchar(255);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1131
+}

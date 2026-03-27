@@ -19,6 +19,11 @@ import {
   getDashboardStats,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
+import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
+import { STUDIO_PRODUCTS } from "./stripe/products";
+import { getDb } from "./db";
+import { users as usersTable } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 // ─── ROLE GUARDS ──────────────────────────────────────────────────────────────
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -395,6 +400,136 @@ const dashboardRouter = router({
   activities: protectedProcedure.query(() => getRecentActivities(20)),
 });
 
+// ─── STRIPE ROUTER ───────────────────────────────────────────────────────────
+const stripeRouter = router({
+  // Lista os produtos do catálogo do estúdio
+  products: protectedProcedure.query(() => STUDIO_PRODUCTS),
+
+  // Cria checkout para pagamento integral de fatura
+  createInvoiceCheckout: protectedProcedure.input(z.object({
+    invoiceId: z.number(),
+    origin: z.string(),
+  })).mutation(async ({ input, ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível" });
+
+    const invoice = await getInvoiceById(input.invoiceId);
+    if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Fatura não encontrada" });
+
+    // Cria ou recupera Stripe Customer
+    const stripeCustomerId = await getOrCreateStripeCustomer({
+      stripeCustomerId: ctx.user.stripeCustomerId,
+      email: ctx.user.email,
+      name: ctx.user.name,
+      userId: ctx.user.id,
+    });
+
+    // Salva stripeCustomerId se for novo
+    if (!ctx.user.stripeCustomerId) {
+      await db.update(usersTable).set({ stripeCustomerId }).where(eq(usersTable.id, ctx.user.id));
+    }
+
+    const totalCents = Math.round(parseFloat(invoice.total ?? "0") * 100);
+    const description = `Fatura ${invoice.number} — Estúdio de Podcast`;
+
+    const { url, sessionId } = await createInvoiceCheckoutSession({
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      description,
+      amountCents: totalCents,
+      customerEmail: ctx.user.email,
+      customerName: ctx.user.name,
+      stripeCustomerId,
+      userId: ctx.user.id,
+      origin: input.origin,
+    });
+
+    // Salva URL de pagamento na fatura
+    await updateInvoice(invoice.id, { stripePaymentUrl: url, stripeCheckoutSessionId: sessionId });
+
+    return { checkoutUrl: url, sessionId };
+  }),
+
+  // Cria checkout para plano 50%/50% (gera 2 links)
+  createSplitCheckout: protectedProcedure.input(z.object({
+    invoiceId: z.number(),
+    origin: z.string(),
+  })).mutation(async ({ input, ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível" });
+
+    const invoice = await getInvoiceById(input.invoiceId);
+    if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Fatura não encontrada" });
+
+    const stripeCustomerId = await getOrCreateStripeCustomer({
+      stripeCustomerId: ctx.user.stripeCustomerId,
+      email: ctx.user.email,
+      name: ctx.user.name,
+      userId: ctx.user.id,
+    });
+
+    if (!ctx.user.stripeCustomerId) {
+      await db.update(usersTable).set({ stripeCustomerId }).where(eq(usersTable.id, ctx.user.id));
+    }
+
+    const totalCents = Math.round(parseFloat(invoice.total ?? "0") * 100);
+    const description = `Fatura ${invoice.number} — Estúdio de Podcast`;
+
+    const { session1, session2 } = await createSplitPaymentSessions({
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      description,
+      totalAmountCents: totalCents,
+      customerEmail: ctx.user.email,
+      customerName: ctx.user.name,
+      stripeCustomerId,
+      userId: ctx.user.id,
+      origin: input.origin,
+    });
+
+    // Salva o link da parcela 1 na fatura
+    await updateInvoice(invoice.id, {
+      stripePaymentUrl: session1.url,
+      stripeCheckoutSessionId: session1.sessionId,
+      paymentPlan: "installment_50_50",
+    });
+
+    return {
+      installment1: { url: session1.url, sessionId: session1.sessionId },
+      installment2: { url: session2.url, sessionId: session2.sessionId },
+    };
+  }),
+
+  // Histórico de pagamentos do usuário via Stripe API
+  paymentHistory: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user.stripeCustomerId) return { payments: [] };
+
+    try {
+      const paymentIntents = await stripe.paymentIntents.list({
+        customer: ctx.user.stripeCustomerId,
+        limit: 50,
+      });
+
+      const payments = paymentIntents.data.map((pi) => ({
+        id: pi.id,
+        amount: pi.amount,
+        currency: pi.currency,
+        status: pi.status,
+        description: pi.description,
+        createdAt: new Date(pi.created * 1000),
+        receiptUrl: pi.latest_charge
+          ? `https://dashboard.stripe.com/payments/${pi.id}`
+          : null,
+      }));
+
+      return { payments };
+    } catch (err) {
+      console.error("[Stripe] Error fetching payment history:", err);
+      return { payments: [] };
+    }
+  }),
+});
+
 // ─── APP ROUTER ───────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -416,6 +551,7 @@ export const appRouter = router({
   studio: studioRouter,
   tasks: tasksRouter,
   dashboard: dashboardRouter,
+  stripe: stripeRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -113,14 +113,23 @@
 - [x] Testes de roles e permissões (crm.test.ts)
 - [x] Testes de contatos, pipeline, WhatsApp, faturas (15 testes passando)
 
+## Sprint 1 — Stripe e Financeiro
+- [x] Adicionar stripe_customer_id e stripe_payment_intent_id ao schema
+- [x] Criar arquivo server/stripe/products.ts com catálogo de produtos
+- [x] Endpoint de checkout Stripe para faturas (avulso e 50%/50%)
+- [x] Webhook /api/stripe/webhook para confirmar pagamentos
+- [x] Página /payments com histórico de pagamentos por usuário
+- [x] Botão "Pagar fatura" nas páginas de Faturas e Orçamentos
+- [x] Suporte a plano 50%/50% com 2 links de pagamento separados
+
 ## Bugs
 - [x] Corrigir erro de login ao tentar acessar o CRM (colunas status/whatsappAccess/role faltando no banco - migration aplicada, 13 tabelas criadas)
 
 ## Fases Seguintes (Planejadas)
 - [ ] Integração real com WhatsApp MCP
-- [ ] Integração Stripe para pagamentos
+- [x] Integração Stripe para pagamentos
 - [ ] Geração de PDF de faturas e orçamentos
 - [ ] Assinatura digital de contratos
 - [ ] Notificações por e-mail
 - [ ] Importação de contatos via CSV
-- [ ] App mobile (React Native)
+- [ ] Portal do Cliente (Sprint 10)

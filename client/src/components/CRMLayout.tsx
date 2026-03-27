@@ -35,6 +35,7 @@ const navItems = [
   { icon: Calendar, label: "Estúdio", path: "/studio" },
   { icon: CheckSquare, label: "Tarefas", path: "/tasks" },
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
+  { icon: CreditCard, label: "Pagamentos", path: "/payments" },
 ];
 
 const adminItems = [
