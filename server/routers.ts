@@ -9,8 +9,8 @@ import {
   getContacts, getContactById, getContactProfile, createContact, updateContact, deleteContact,
   getPipelineStages, createPipelineStage, seedDefaultPipelineStages,
   getLeads, getLeadById, createLead, updateLead, deleteLead,
-  getWhatsappChats, upsertWhatsappChat, getWhatsappMessages, upsertWhatsappMessage,
-  getContracts, getContractById, createContract, updateContract,
+  getWhatsappChats, upsertWhatsappChat, getWhatsappMessages, upsertWhatsappMessage, getTotalUnreadChats,
+  getContracts, getContractsWithContact, getContractById, createContract, updateContract,
   getInvoices, getInvoiceById, createInvoice, updateInvoice,
   getQuotes, createQuote, updateQuote,
   getStudioBookings, createStudioBooking, updateStudioBooking, deleteStudioBooking,
@@ -310,11 +310,12 @@ const whatsappRouter = router({
 
     return { analysis: response.choices[0]?.message?.content ?? "Análise não disponível." };
   }),
+  totalUnread: protectedProcedure.query(() => getTotalUnreadChats()),
 });
 
 // ─── CONTRACTS ROUTER ─────────────────────────────────────────────────────────
 const contractsRouter = router({
-  list: protectedProcedure.query(() => getContracts()),
+  list: protectedProcedure.query(() => getContractsWithContact()),
   get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
     getContractById(input.id)
   ),
@@ -478,9 +479,61 @@ const studioRouter = router({
     id: z.number(),
     status: z.enum(["scheduled", "confirmed", "in_progress", "completed", "cancelled"]).optional(),
     notes: z.string().optional(),
-  })).mutation(({ input }) => {
+  })).mutation(async ({ input }) => {
     const { id, ...data } = input;
-    return updateStudioBooking(id, data);
+    // Fetch current booking before update to detect status change
+    const allBookings = await getStudioBookings();
+    const booking = allBookings.find(b => b.id === id);
+    await updateStudioBooking(id, data);
+    // If status changed to "confirmed", send WhatsApp notification
+    if (data.status === "confirmed" && booking && booking.status !== "confirmed" && booking.contactId) {
+      try {
+        const contact = await getContactById(booking.contactId);
+        if (contact?.phone) {
+          const phone = contact.phone.replace(/\D/g, "");
+          const jid = phone.startsWith("55") ? `${phone}@s.whatsapp.net` : `55${phone}@s.whatsapp.net`;
+          const startDate = booking.startAt
+            ? new Date(booking.startAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+            : "a definir";
+          const endDate = booking.endAt
+            ? new Date(booking.endAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+            : "a definir";
+          const msg = [
+            `✅ *Agendamento Confirmado!*`,
+            ``,
+            `Olá ${contact.name},`,
+            ``,
+            `Seu agendamento no Pátio Estúdio foi *confirmado*:`,
+            ``,
+            `📅 *Sessão:* ${booking.title}`,
+            `🕐 *Início:* ${startDate}`,
+            `🕐 *Término:* ${endDate}`,
+            booking.studio ? `🎙️ *Estúdio:* ${booking.studio}` : null,
+            booking.notes ? `📝 *Obs:* ${booking.notes}` : null,
+            ``,
+            `Qualquer dúvida, estamos à disposição!`,
+          ].filter(Boolean).join("\n");
+          await sendText(jid, msg);
+          await upsertWhatsappMessage({
+            chatJid: jid,
+            messageId: `booking_confirm_${id}_${Date.now()}`,
+            isFromMe: true,
+            content: msg,
+            timestamp: Date.now(),
+            senderName: "Sistema CRM",
+          });
+          await upsertWhatsappChat({
+            jid,
+            name: contact.name,
+            lastMessageAt: new Date(),
+            lastMessagePreview: msg.slice(0, 100),
+          });
+        }
+      } catch (err) {
+        console.error("[Studio] Falha ao enviar notificação WhatsApp:", err);
+      }
+    }
+    return { success: true };
   }),
   delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
     deleteStudioBooking(input.id)

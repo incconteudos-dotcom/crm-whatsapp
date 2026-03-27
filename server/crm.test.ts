@@ -3,6 +3,14 @@ import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 // Mock db module
+// Mock zapi module for studio notification tests
+vi.mock("./zapi", () => ({
+  sendText: vi.fn().mockResolvedValue({ messageId: "zapi-msg-1" }),
+  sendDocument: vi.fn().mockResolvedValue({ messageId: "zapi-doc-1" }),
+  getInstanceStatus: vi.fn().mockResolvedValue({ connected: true }),
+  getChats: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("./db", () => ({
   getAllUsers: vi.fn().mockResolvedValue([]),
   getPendingUsers: vi.fn().mockResolvedValue([]),
@@ -27,9 +35,11 @@ vi.mock("./db", () => ({
   getWhatsappMessages: vi.fn().mockResolvedValue([]),
   upsertWhatsappMessage: vi.fn().mockResolvedValue(undefined),
   getContracts: vi.fn().mockResolvedValue([]),
+  getContractsWithContact: vi.fn().mockResolvedValue([]),
   getContractById: vi.fn().mockResolvedValue(undefined),
   createContract: vi.fn().mockResolvedValue({ insertId: 1 }),
   updateContract: vi.fn().mockResolvedValue(undefined),
+  getTotalUnreadChats: vi.fn().mockResolvedValue(7),
   getInvoices: vi.fn().mockResolvedValue([]),
   getInvoiceById: vi.fn().mockResolvedValue(undefined),
   createInvoice: vi.fn().mockResolvedValue({ insertId: 1 }),
@@ -182,6 +192,64 @@ describe("Pipeline Router", () => {
     const caller = appRouter.createCaller(createUserCtx());
     const result = await caller.pipeline.createLead({ title: "Lead Teste" });
     expect(result).toBeDefined();
+  });
+});
+
+describe("Contracts Router", () => {
+  it("lists contracts with contact info", async () => {
+    const caller = appRouter.createCaller(createUserCtx());
+    const result = await caller.contracts.list();
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("creates a contract", async () => {
+    const caller = appRouter.createCaller(createUserCtx());
+    const result = await caller.contracts.create({ title: "Contrato Podcast" });
+    expect(result).toBeDefined();
+  });
+});
+
+describe("WhatsApp totalUnread", () => {
+  it("returns total unread count for authenticated user", async () => {
+    const caller = appRouter.createCaller(createUserCtx());
+    const total = await caller.whatsapp.totalUnread();
+    expect(typeof total).toBe("number");
+    expect(total).toBe(7);
+  });
+});
+
+describe("Studio Router - Booking Confirmation", () => {
+  it("updates booking status without throwing", async () => {
+    const caller = appRouter.createCaller(createUserCtx());
+    const result = await caller.studio.update({ id: 1, status: "confirmed" });
+    expect(result).toEqual({ success: true });
+  });
+
+  it("sends WhatsApp notification when booking is confirmed and contact has phone", async () => {
+    const { getStudioBookings, getContactById, upsertWhatsappMessage, upsertWhatsappChat } = await import("./db");
+    const { sendText } = await import("./zapi");
+    (getStudioBookings as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{
+      id: 42,
+      title: "Gravação Episódio 10",
+      status: "scheduled",
+      contactId: 5,
+      startAt: new Date("2026-04-01T10:00:00Z"),
+      endAt: new Date("2026-04-01T12:00:00Z"),
+      studio: "Estúdio A",
+      notes: null,
+    }]);
+    (getContactById as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 5,
+      name: "Maria Podcast",
+      phone: "11987654321",
+      email: "maria@podcast.com",
+    });
+    const caller = appRouter.createCaller(createUserCtx());
+    await caller.studio.update({ id: 42, status: "confirmed" });
+    expect(sendText).toHaveBeenCalledWith(
+      "5511987654321@s.whatsapp.net",
+      expect.stringContaining("Agendamento Confirmado")
+    );
   });
 });
 

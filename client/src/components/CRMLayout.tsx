@@ -65,6 +65,13 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
     onSuccess: () => { window.location.href = "/"; },
   });
 
+  // Poll unread WhatsApp count every 30s
+  const { data: unreadData } = trpc.whatsapp.totalUnread.useQuery(undefined, {
+    refetchInterval: 30_000,
+    enabled: isAuthenticated && user?.status === "active",
+  });
+  const totalUnread = unreadData ?? 0;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -154,12 +161,14 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {navItems.map((item) => {
             const active = location === item.path || location.startsWith(item.path + "/");
+            const isWhatsApp = item.path === "/whatsapp";
+            const showBadge = isWhatsApp && totalUnread > 0;
             return (
               <Link
                 key={item.path}
                 href={item.path}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors relative",
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                     : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
@@ -167,8 +176,20 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
                 )}
                 title={collapsed ? item.label : undefined}
               >
-                <item.icon className="w-4 h-4 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
+                <div className="relative shrink-0">
+                  <item.icon className="w-4 h-4" />
+                  {showBadge && collapsed && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] bg-green-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                      {totalUnread > 99 ? "99+" : totalUnread}
+                    </span>
+                  )}
+                </div>
+                {!collapsed && <span className="flex-1">{item.label}</span>}
+                {!collapsed && showBadge && (
+                  <span className="min-w-[20px] h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5 leading-none">
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </span>
+                )}
               </Link>
             );
           })}

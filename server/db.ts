@@ -251,6 +251,14 @@ export async function deleteLead(id: number) {
 }
 
 // ─── WHATSAPP ─────────────────────────────────────────────────────────────────
+export async function getTotalUnreadChats() {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db
+    .select({ total: sql<number>`COALESCE(SUM(${whatsappChats.unreadCount}), 0)` })
+    .from(whatsappChats);
+  return Number(result[0]?.total ?? 0);
+}
 export async function getWhatsappChats() {
   const db = await getDb();
   if (!db) return [];
@@ -287,6 +295,34 @@ export async function getContracts() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(contracts).orderBy(desc(contracts.createdAt));
+}
+export async function getContractsWithContact() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: contracts.id,
+      title: contracts.title,
+      content: contracts.content,
+      status: contracts.status,
+      value: contracts.value,
+      validUntil: contracts.validUntil,
+      signerName: contracts.signerName,
+      signerEmail: contracts.signerEmail,
+      signatureUrl: contracts.signatureUrl,
+      signedAt: contracts.signedAt,
+      contactId: contracts.contactId,
+      leadId: contracts.leadId,
+      assignedUserId: contracts.assignedUserId,
+      createdAt: contracts.createdAt,
+      updatedAt: contracts.updatedAt,
+      contactName: contacts.name,
+      contactEmail: contacts.email,
+      contactPhone: contacts.phone,
+    })
+    .from(contracts)
+    .leftJoin(contacts, eq(contracts.contactId, contacts.id))
+    .orderBy(desc(contracts.createdAt));
 }
 
 export async function getContractById(id: number) {

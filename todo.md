@@ -242,3 +242,9 @@
 - [ ] Pipeline: exibir coluna/seção de leads perdidos
 - [ ] Pipeline: permitir excluir lead
 - [ ] Pipeline: clicar no card do lead abre drawer com todas as ações (editar, mover, excluir, vincular documentos)
+
+## Sprint — Contratos Drawer + Badge + Notificação Agendamento
+- [ ] Contratos: card clicável abre drawer de detalhe completo
+- [ ] Contratos: drawer com PDF, email/WhatsApp pré-preenchido, alterar status, excluir
+- [ ] Badge de mensagens não lidas no sidebar ao lado de "WhatsApp"
+- [ ] Notificação automática Z-API ao confirmar agendamento no Estúdio
