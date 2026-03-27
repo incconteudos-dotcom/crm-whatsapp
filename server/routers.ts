@@ -116,7 +116,7 @@ const contactsRouter = router({
   ),
   create: protectedProcedure.input(z.object({
     name: z.string().min(1),
-    email: z.string().email().optional().or(z.literal("")),
+    email: z.union([z.string().email(), z.literal("")]).optional(),
     phone: z.string().optional(),
     whatsappJid: z.string().optional(),
     company: z.string().optional(),
