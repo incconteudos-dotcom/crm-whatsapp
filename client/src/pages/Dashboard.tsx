@@ -115,14 +115,12 @@ export default function Dashboard() {
                   { icon: FileText, label: "Novo Contrato", path: "/contracts", color: "text-orange-400" },
                   { icon: DollarSign, label: "Gerar Fatura", path: "/invoices", color: "text-green-400" },
                 ].map((item) => (
-                  <Link key={item.path} href={item.path}>
-                    <a className="flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors group">
-                      <div className="flex items-center gap-3">
-                        <item.icon className={`w-4 h-4 ${item.color}`} />
-                        <span className="text-sm text-foreground">{item.label}</span>
-                      </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    </a>
+                  <Link key={item.path} href={item.path} className="flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <item.icon className={`w-4 h-4 ${item.color}`} />
+                      <span className="text-sm text-foreground">{item.label}</span>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </Link>
                 ))}
               </div>
@@ -134,9 +132,7 @@ export default function Dashboard() {
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-foreground">Atividade Recente</h2>
-                <Link href="/analytics">
-                  <a className="text-xs text-primary hover:underline">Ver tudo</a>
-                </Link>
+                <Link href="/analytics" className="text-xs text-primary hover:underline">Ver tudo</Link>
               </div>
               {activitiesLoading ? (
                 <div className="space-y-3">
@@ -186,14 +182,11 @@ export default function Dashboard() {
                   <MessageSquare className="w-4 h-4 text-green-400" />
                   Conversas Recentes no WhatsApp
                 </h2>
-                <Link href="/whatsapp">
-                  <a className="text-xs text-primary hover:underline">Abrir WhatsApp</a>
-                </Link>
+                <Link href="/whatsapp" className="text-xs text-primary hover:underline">Abrir WhatsApp</Link>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {chats.slice(0, 6).map((chat) => (
-                  <Link key={chat.id} href={`/whatsapp?chat=${chat.jid}`}>
-                    <a className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors">
+                  <Link key={chat.id} href={`/whatsapp?chat=${chat.jid}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors">
                       <div className="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center shrink-0">
                         <span className="text-sm font-semibold text-green-400">
                           {(chat.name ?? "?").charAt(0).toUpperCase()}
@@ -208,7 +201,6 @@ export default function Dashboard() {
                           {chat.unreadCount}
                         </span>
                       )}
-                    </a>
                   </Link>
                 ))}
               </div>

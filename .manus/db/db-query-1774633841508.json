@@ -1,0 +1,466 @@
+{
+  "query": "\nSELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() \nAND TABLE_NAME IN ('invoices','contracts','contacts','pipeline_stages','leads','tasks','studio_bookings','whatsapp_chats')\nORDER BY TABLE_NAME, ORDINAL_POSITION;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nSELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() \nAND TABLE_NAME IN ('invoices','contracts','contacts','pipeline_stages','leads','tasks','studio_bookings','whatsapp_chats')\nORDER BY TABLE_NAME, ORDINAL_POSITION;\n",
+  "rows": [
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "name"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "email"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "phone"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "whatsappJid"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "company"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "position"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "tags"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "notes"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "avatarUrl"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "source"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "assignedUserId"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "TABLE_NAME": "contacts",
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "title"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "leadId"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "assignedUserId"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "content"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "value"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "currency"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "signedAt"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "signatoryName"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "signatoryEmail"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "expiresAt"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "fileUrl"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "signatureUrl"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "notes"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "number"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "leadId"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "assignedUserId"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "items"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "subtotal"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "tax"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "total"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "currency"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "dueDate"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "paidAt"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "stripePaymentIntentId"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "stripePaymentUrl"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "fileUrl"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "notes"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "stripeCheckoutSessionId"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "paymentPlan"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "installmentNumber"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "parentInvoiceId"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "title"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "stageId"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "assignedUserId"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "value"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "currency"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "probability"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "expectedCloseDate"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "notes"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "tags"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "TABLE_NAME": "pipeline_stages",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "pipeline_stages",
+      "COLUMN_NAME": "name"
+    },
+    {
+      "TABLE_NAME": "pipeline_stages",
+      "COLUMN_NAME": "color"
+    },
+    {
+      "TABLE_NAME": "pipeline_stages",
+      "COLUMN_NAME": "position"
+    },
+    {
+      "TABLE_NAME": "pipeline_stages",
+      "COLUMN_NAME": "isDefault"
+    },
+    {
+      "TABLE_NAME": "pipeline_stages",
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "leadId"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "assignedUserId"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "title"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "sessionType"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "startAt"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "endAt"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "studio"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "engineer"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "notes"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "value"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "invoiceId"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "title"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "description"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "assignedUserId"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "leadId"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "priority"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "dueDate"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "completedAt"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "jid"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "name"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "isGroup"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "contactId"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "lastMessageAt"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "lastMessagePreview"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "unreadCount"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "syncedAt"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "COLUMN_NAME": "updatedAt"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\tCOLUMN_NAME\ncontacts\tid\ncontacts\tname\ncontacts\temail\ncontacts\tphone\ncontacts\twhatsappJid\ncontacts\tcompany\ncontacts\tposition\ncontacts\ttags\ncontacts\tnotes\ncontacts\tavatarUrl\ncontacts\tsource\ncontacts\tassignedUserId\ncontacts\tcreatedAt\ncontacts\tupdatedAt\ncontracts\tid\ncontracts\ttitle\ncontracts\tcontactId\ncontracts\tleadId\ncontracts\tassignedUserId\ncontracts\tstatus\ncontracts\tcontent\ncontracts\tvalue\ncontracts\tcurrency\ncontracts\tsignedAt\ncontracts\tsignatoryName\ncontracts\tsignatoryEmail\ncontracts\texpiresAt\ncontracts\tfileUrl\ncontracts\tsignatureUrl\ncontracts\tnotes\ncontracts\tcreatedAt\ncontracts\tupdatedAt\ninvoices\tid\ninvoices\tnumber\ninvoices\tcontactId\ninvoices\tleadId\ninvoices\tassignedUserId\ninvoices\tstatus\ninvoices\titems\ninvoices\tsubtotal\ninvoices\ttax\ninvoices\ttotal\ninvoices\tcurrency\ninvoices\tdueDate\ninvoices\tpaidAt\ninvoices\tstripePaymentIntentId\ninvoices\tstripePaymentUrl\ninvoices\tfileUrl\ninvoices\tnotes\ninvoices\tcreatedAt\ninvoices\tupdatedAt\ninvoices\tstripeCheckoutSessionId\ninvoices\tpaymentPlan\ninvoices\tinstallmentNumber\ninvoices\tparentInvoiceId\nleads\tid\nleads\ttitle\nleads\tcontactId\nleads\tstageId\nleads\tassignedUserId\nleads\tvalue\nleads\tcurrency\nleads\tprobability\nleads\texpectedCloseDate\nleads\tstatus\nleads\tnotes\nleads\ttags\nleads\tcreatedAt\nleads\tupdatedAt\npipeline_stages\tid\npipeline_stages\tname\npipeline_stages\tcolor\npipeline_stages\tposition\npipeline_stages\tisDefault\npipeline_stages\tcreatedAt\nstudio_bookings\tid\nstudio_bookings\tcontactId\nstudio_bookings\tleadId\nstudio_bookings\tassignedUserId\nstudio_bookings\ttitle\nstudio_bookings\tsessionType\nstudio_bookings\tstatus\nstudio_bookings\tstartAt\nstudio_bookings\tendAt\nstudio_bookings\tstudio\nstudio_bookings\tengineer\nstudio_bookings\tnotes\nstudio_bookings\tvalue\nstudio_bookings\tinvoiceId\nstudio_bookings\tcreatedAt\nstudio_bookings\tupdatedAt\ntasks\tid\ntasks\ttitle\ntasks\tdescription\ntasks\tassignedUserId\ntasks\tcontactId\ntasks\tleadId\ntasks\tpriority\ntasks\tstatus\ntasks\tdueDate\ntasks\tcompletedAt\ntasks\tcreatedAt\ntasks\tupdatedAt\nwhatsapp_chats\tid\nwhatsapp_chats\tjid\nwhatsapp_chats\tname\nwhatsapp_chats\tisGroup\nwhatsapp_chats\tcontactId\nwhatsapp_chats\tlastMessageAt\nwhatsapp_chats\tlastMessagePreview\nwhatsapp_chats\tunreadCount\nwhatsapp_chats\tsyncedAt\nwhatsapp_chats\tcreatedAt\nwhatsapp_chats\tupdatedAt\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

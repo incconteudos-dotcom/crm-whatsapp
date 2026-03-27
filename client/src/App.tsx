@@ -17,6 +17,7 @@ import Tasks from "./pages/Tasks";
 import Analytics from "./pages/Analytics";
 import Users from "./pages/Users";
 import Payments from "./pages/Payments";
+import Settings from "./pages/Settings";
 
 function Router() {
   return (
@@ -34,7 +35,7 @@ function Router() {
       <Route path="/analytics" component={Analytics} />
       <Route path="/users" component={Users} />
       <Route path="/payments" component={Payments} />
-      <Route path="/settings" component={() => <div className="p-8 text-muted-foreground">Configurações em breve...</div>} />
+      <Route path="/settings" component={Settings} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

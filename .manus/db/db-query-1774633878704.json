@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE contracts \n  ADD COLUMN IF NOT EXISTS signerName VARCHAR(255) NULL,\n  ADD COLUMN IF NOT EXISTS signerEmail VARCHAR(320) NULL,\n  ADD COLUMN IF NOT EXISTS validUntil TIMESTAMP NULL,\n  ADD COLUMN IF NOT EXISTS contractType VARCHAR(64) NULL;\n\nALTER TABLE leads\n  ADD COLUMN IF NOT EXISTS source VARCHAR(64) NULL,\n  ADD COLUMN IF NOT EXISTS sentiment VARCHAR(32) NULL;\n\nALTER TABLE pipeline_stages\n  ADD COLUMN IF NOT EXISTS isDefault TINYINT(1) DEFAULT 0;\n\nALTER TABLE tasks\n  ADD COLUMN IF NOT EXISTS createdByUserId INT NULL;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nALTER TABLE contracts \n  ADD COLUMN IF NOT EXISTS signerName VARCHAR(255) NULL,\n  ADD COLUMN IF NOT EXISTS signerEmail VARCHAR(320) NULL,\n  ADD COLUMN IF NOT EXISTS validUntil TIMESTAMP NULL,\n  ADD COLUMN IF NOT EXISTS contractType VARCHAR(64) NULL;\n\nALTER TABLE leads\n  ADD COLUMN IF NOT EXISTS source VARCHAR(64) NULL,\n  ADD COLUMN IF NOT EXISTS sentiment VARCHAR(32) NULL;\n\nALTER TABLE pipeline_stages\n  ADD COLUMN IF NOT EXISTS isDefault TINYINT(1) DEFAULT 0;\n\nALTER TABLE tasks\n  ADD COLUMN IF NOT EXISTS createdByUserId INT NULL;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1257
+}

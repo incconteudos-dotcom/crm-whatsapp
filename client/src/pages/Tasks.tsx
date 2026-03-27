@@ -30,7 +30,9 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 export default function Tasks() {
   const [createOpen, setCreateOpen] = useState(false);
   const [myTasksOnly, setMyTasksOnly] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", priority: "medium" as const, dueDate: "" });
+  const [form, setForm] = useState({ title: "", description: "", priority: "medium" as const, dueDate: "", assignedUserId: "" });
+
+  const { data: usersData } = trpc.users.list.useQuery();
 
   const utils = trpc.useUtils();
   const { data: tasks, isLoading } = trpc.tasks.list.useQuery({ myTasks: myTasksOnly });
@@ -39,7 +41,7 @@ export default function Tasks() {
     onSuccess: () => {
       toast.success("Tarefa criada!");
       setCreateOpen(false);
-      setForm({ title: "", description: "", priority: "medium", dueDate: "" });
+      setForm({ title: "", description: "", priority: "medium", dueDate: "", assignedUserId: "" });
       utils.tasks.list.invalidate();
     },
     onError: (e) => toast.error(e.message),
@@ -172,13 +174,25 @@ export default function Tasks() {
               </div>
             </div>
             <div>
+              <Label>Responsável</Label>
+              <Select value={form.assignedUserId} onValueChange={(v) => setForm({ ...form, assignedUserId: v })}>
+                <SelectTrigger className="mt-1.5 bg-input border-border"><SelectValue placeholder="Selecionar usuário..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem responsável</SelectItem>
+                  {usersData?.map((u) => (
+                    <SelectItem key={u.id} value={String(u.id)}>{u.name ?? u.email ?? `Usuário #${u.id}`}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>Descrição</Label>
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1.5 bg-input border-border resize-none" rows={3} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={() => createMutation.mutate({ title: form.title, priority: form.priority, description: form.description || undefined, dueDate: form.dueDate ? new Date(form.dueDate) : undefined })} disabled={!form.title.trim() || createMutation.isPending}>
+            <Button onClick={() => createMutation.mutate({ title: form.title, priority: form.priority, description: form.description || undefined, dueDate: form.dueDate ? new Date(form.dueDate) : undefined, assignedUserId: form.assignedUserId ? parseInt(form.assignedUserId) : undefined })} disabled={!form.title.trim() || createMutation.isPending}>
               {createMutation.isPending ? "Criando..." : "Criar Tarefa"}
             </Button>
           </DialogFooter>

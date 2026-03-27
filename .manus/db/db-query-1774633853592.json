@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE invoices \n  ADD COLUMN IF NOT EXISTS contractId INT NULL,\n  ADD COLUMN IF NOT EXISTS paymentPlan ENUM('full','installment_50_50') DEFAULT 'full',\n  ADD COLUMN IF NOT EXISTS installmentNumber INT DEFAULT 1,\n  ADD COLUMN IF NOT EXISTS parentInvoiceId INT NULL;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nALTER TABLE invoices \n  ADD COLUMN IF NOT EXISTS contractId INT NULL,\n  ADD COLUMN IF NOT EXISTS paymentPlan ENUM('full','installment_50_50') DEFAULT 'full',\n  ADD COLUMN IF NOT EXISTS installmentNumber INT DEFAULT 1,\n  ADD COLUMN IF NOT EXISTS parentInvoiceId INT NULL;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 283
+}

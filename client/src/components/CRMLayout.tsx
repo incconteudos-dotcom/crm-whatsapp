@@ -155,20 +155,20 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
           {navItems.map((item) => {
             const active = location === item.path || location.startsWith(item.path + "/");
             return (
-              <Link key={item.path} href={item.path}>
-                <a
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
-                    active
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
-                    collapsed && "justify-center px-2"
-                  )}
-                  title={collapsed ? item.label : undefined}
-                >
-                  <item.icon className="w-4 h-4 shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
-                </a>
+              <Link
+                key={item.path}
+                href={item.path}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                  active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                    : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+                  collapsed && "justify-center px-2"
+                )}
+                title={collapsed ? item.label : undefined}
+              >
+                <item.icon className="w-4 h-4 shrink-0" />
+                {!collapsed && <span>{item.label}</span>}
               </Link>
             );
           })}
@@ -182,20 +182,20 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
               {adminItems.map((item) => {
                 const active = location === item.path;
                 return (
-                  <Link key={item.path} href={item.path}>
-                    <a
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
-                        active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
-                        collapsed && "justify-center px-2"
-                      )}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      <item.icon className="w-4 h-4 shrink-0" />
-                      {!collapsed && <span>{item.label}</span>}
-                    </a>
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                      active
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                        : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+                      collapsed && "justify-center px-2"
+                    )}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <item.icon className="w-4 h-4 shrink-0" />
+                    {!collapsed && <span>{item.label}</span>}
                   </Link>
                 );
               })}

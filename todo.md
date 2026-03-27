@@ -81,7 +81,7 @@
 - [x] Numeração automática (ORC-XXXXXXXX)
 - [x] Status de orçamentos: rascunho, enviado, aceito, recusado, expirado
 - [ ] Integração Stripe para cobrança online
-- [ ] Geração de PDF de faturas e orçamentos
+- [x] Geração de PDF de faturas e orçamentos
 - [ ] Envio de link de pagamento por WhatsApp
 
 ## Agendamento de Estúdio
@@ -128,8 +128,23 @@
 ## Fases Seguintes (Planejadas)
 - [ ] Integração real com WhatsApp MCP
 - [x] Integração Stripe para pagamentos
-- [ ] Geração de PDF de faturas e orçamentos
+- [x] Geração de PDF de faturas e orçamentos
 - [ ] Assinatura digital de contratos
 - [ ] Notificações por e-mail
 - [ ] Importação de contatos via CSV
 - [ ] Portal do Cliente (Sprint 10)
+
+## Auditoria e Correções Críticas
+- [x] Mapear e corrigir todos os erros de API no frontend (procedures inexistentes)
+- [x] Remover/substituir todos os dados mockados por chamadas reais ao backend
+- [x] Corrigir chamadas tRPC com nomes de procedure incorretos
+- [x] Corrigir tipos TypeScript incompatíveis entre frontend e backend
+
+## Novas Funcionalidades (Sprint Atual)
+- [x] Tarefas: adicionar campo responsável (usuário do sistema)
+- [x] Usuários: cadastro de novo usuário pelo admin (sem OAuth)
+- [x] Página de Configurações funcional (perfil, estúdio, notificações)
+- [x] Envio de fatura em PDF por WhatsApp e email
+- [x] Envio de orçamento em PDF por WhatsApp e email
+- [x] Envio de contrato em PDF por WhatsApp e email
+- [x] PDF com design/identidade visual da empresa (template HTML em S3)

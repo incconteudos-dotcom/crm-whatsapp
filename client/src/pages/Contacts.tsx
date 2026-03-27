@@ -140,11 +140,9 @@ export default function Contacts() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-popover border-border">
                       <DropdownMenuItem asChild>
-                        <Link href={`/whatsapp${contact.whatsappJid ? `?chat=${contact.whatsappJid}` : ""}`}>
-                          <a className="flex items-center gap-2 cursor-pointer">
-                            <MessageSquare className="w-3.5 h-3.5 text-green-400" />
-                            Abrir WhatsApp
-                          </a>
+                        <Link href={`/whatsapp${contact.whatsappJid ? `?chat=${contact.whatsappJid}` : ""}`} className="flex items-center gap-2 cursor-pointer">
+                          <MessageSquare className="w-3.5 h-3.5 text-green-400" />
+                          Abrir WhatsApp
                         </Link>
                       </DropdownMenuItem>
                       {isManager && (

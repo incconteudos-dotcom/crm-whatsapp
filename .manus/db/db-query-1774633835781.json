@@ -1,0 +1,194 @@
+{
+  "query": "\nSHOW COLUMNS FROM invoices;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nSHOW COLUMNS FROM invoices;\n",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "number",
+      "Type": "varchar(64)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "contactId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "leadId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "assignedUserId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "enum('draft','sent','paid','overdue','cancelled')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "draft",
+      "Extra": ""
+    },
+    {
+      "Field": "items",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "subtotal",
+      "Type": "decimal(12,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "tax",
+      "Type": "decimal(12,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "total",
+      "Type": "decimal(12,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "currency",
+      "Type": "varchar(8)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "BRL",
+      "Extra": ""
+    },
+    {
+      "Field": "dueDate",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "paidAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "stripePaymentIntentId",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "stripePaymentUrl",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "fileUrl",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "notes",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    },
+    {
+      "Field": "stripeCheckoutSessionId",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentPlan",
+      "Type": "enum('full','installment_50_50')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "full",
+      "Extra": ""
+    },
+    {
+      "Field": "installmentNumber",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "parentInvoiceId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nnumber\tvarchar(64)\tNO\tUNI\tNULL\t\ncontactId\tint\tYES\t\tNULL\t\nleadId\tint\tYES\t\tNULL\t\nassignedUserId\tint\tYES\t\tNULL\t\nstatus\tenum('draft','sent','paid','overdue','cancelled')\tYES\t\tdraft\t\nitems\tjson\tYES\t\tNULL\t\nsubtotal\tdecimal(12,2)\tYES\t\tNULL\t\ntax\tdecimal(12,2)\tYES\t\t0\t\ntotal\tdecimal(12,2)\tYES\t\tNULL\t\ncurrency\tvarchar(8)\tYES\t\tBRL\t\ndueDate\ttimestamp\tYES\t\tNULL\t\npaidAt\ttimestamp\tYES\t\tNULL\t\nstripePaymentIntentId\tvarchar(255)\tYES\t\tNULL\t\nstripePaymentUrl\ttext\tYES\t\tNULL\t\nfileUrl\ttext\tYES\t\tNULL\t\nnotes\ttext\tYES\t\tNULL\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\nstripeCheckoutSessionId\tvarchar(255)\tYES\t\tNULL\t\npaymentPlan\tenum('full','installment_50_50')\tYES\t\tfull\t\ninstallmentNumber\tint\tYES\t\t1\t\nparentInvoiceId\tint\tYES\t\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 80
+}

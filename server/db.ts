@@ -121,6 +121,24 @@ export async function updateUserWhatsappAccess(userId: number, whatsappAccess: b
   await db.update(users).set({ whatsappAccess, updatedAt: new Date() }).where(eq(users.id, userId));
 }
 
+export async function createUser(data: { name: string; email: string; role: "admin" | "gerente" | "analista" | "assistente"; whatsappAccess: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  // Generate a unique openId for admin-created users (they log in via email invitation)
+  const openId = `admin_created_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  await db.insert(users).values({
+    openId,
+    name: data.name,
+    email: data.email,
+    role: data.role,
+    whatsappAccess: data.whatsappAccess,
+    status: "active",
+    loginMethod: "email",
+    lastSignedIn: new Date(),
+  });
+  return { success: true };
+}
+
 // ─── PIPELINE STAGES ─────────────────────────────────────────────────────────
 export async function getPipelineStages() {
   const db = await getDb();

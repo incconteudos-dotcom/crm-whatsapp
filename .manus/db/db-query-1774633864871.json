@@ -1,0 +1,38 @@
+{
+  "query": "\nSELECT TABLE_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ', ') as columns\nFROM INFORMATION_SCHEMA.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() \nAND TABLE_NAME IN ('contracts','tasks','leads','pipeline_stages','studio_bookings','whatsapp_chats','whatsapp_messages')\nGROUP BY TABLE_NAME;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nSELECT TABLE_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ', ') as columns\nFROM INFORMATION_SCHEMA.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() \nAND TABLE_NAME IN ('contracts','tasks','leads','pipeline_stages','studio_bookings','whatsapp_chats','whatsapp_messages')\nGROUP BY TABLE_NAME;\n",
+  "rows": [
+    {
+      "TABLE_NAME": "contracts",
+      "columns": "id, title, contactId, leadId, assignedUserId, status, content, value, currency, signedAt, signatoryName, signatoryEmail, expiresAt, fileUrl, signatureUrl, notes, createdAt, updatedAt"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "columns": "id, title, contactId, stageId, assignedUserId, value, currency, probability, expectedCloseDate, status, notes, tags, createdAt, updatedAt"
+    },
+    {
+      "TABLE_NAME": "pipeline_stages",
+      "columns": "id, name, color, position, isDefault, createdAt"
+    },
+    {
+      "TABLE_NAME": "studio_bookings",
+      "columns": "id, contactId, leadId, assignedUserId, title, sessionType, status, startAt, endAt, studio, engineer, notes, value, invoiceId, createdAt, updatedAt"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "columns": "id, title, description, assignedUserId, contactId, leadId, priority, status, dueDate, completedAt, createdAt, updatedAt"
+    },
+    {
+      "TABLE_NAME": "whatsapp_chats",
+      "columns": "id, jid, name, isGroup, contactId, lastMessageAt, lastMessagePreview, unreadCount, syncedAt, createdAt, updatedAt"
+    },
+    {
+      "TABLE_NAME": "whatsapp_messages",
+      "columns": "id, messageId, chatJid, chatId, senderJid, senderName, crmUserId, crmUserName, content, mediaType, mediaUrl, isFromMe, timestamp, createdAt"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\tcolumns\ncontracts\tid, title, contactId, leadId, assignedUserId, status, content, value, currency, signedAt, signatoryName, signatoryEmail, expiresAt, fileUrl, signatureUrl, notes, createdAt, updatedAt\nleads\tid, title, contactId, stageId, assignedUserId, value, currency, probability, expectedCloseDate, status, notes, tags, createdAt, updatedAt\npipeline_stages\tid, name, color, position, isDefault, createdAt\nstudio_bookings\tid, contactId, leadId, assignedUserId, title, sessionType, status, startAt, endAt, studio, engineer, notes, value, invoiceId, createdAt, updatedAt\ntasks\tid, title, description, assignedUserId, contactId, leadId, priority, status, dueDate, completedAt, createdAt, updatedAt\nwhatsapp_chats\tid, jid, name, isGroup, contactId, lastMessageAt, lastMessagePreview, unreadCount, syncedAt, createdAt, updatedAt\nwhatsapp_messages\tid, messageId, chatJid, chatId, senderJid, senderName, crmUserId, crmUserName, content, mediaType, mediaUrl, isFromMe, timestamp, createdAt\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}

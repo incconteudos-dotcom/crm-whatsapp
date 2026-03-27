@@ -5,7 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
-  getAllUsers, getPendingUsers, updateUserStatus, updateUserRole, updateUserWhatsappAccess,
+  getAllUsers, getPendingUsers, updateUserStatus, updateUserRole, updateUserWhatsappAccess, createUser,
   getContacts, getContactById, createContact, updateContact, deleteContact,
   getPipelineStages, createPipelineStage, seedDefaultPipelineStages,
   getLeads, getLeadById, createLead, updateLead, deleteLead,
@@ -24,6 +24,43 @@ import { STUDIO_PRODUCTS } from "./stripe/products";
 import { getDb } from "./db";
 import { users as usersTable } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+
+// ─── AI ROUTER ───────────────────────────────────────────────────────────────
+const aiRouter = router({
+  chat: protectedProcedure.input(z.object({
+    messages: z.array(z.object({
+      role: z.enum(["system", "user", "assistant"]),
+      content: z.string(),
+    })),
+    systemPrompt: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const msgs = input.systemPrompt
+      ? [{ role: "system" as const, content: input.systemPrompt }, ...input.messages]
+      : input.messages;
+    const response = await invokeLLM({ messages: msgs });
+    return { content: response.choices[0]?.message?.content ?? "" };
+  }),
+});
+
+// ─── SETTINGS ROUTER ──────────────────────────────────────────────────────────
+const settingsRouter = router({
+  getProfile: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const result = await db.select().from(usersTable).where(eq(usersTable.id, ctx.user.id)).limit(1);
+    return result[0] ?? null;
+  }),
+  updateProfile: protectedProcedure.input(z.object({
+    name: z.string().min(1).optional(),
+    phone: z.string().optional(),
+    avatarUrl: z.string().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    await db.update(usersTable).set({ ...input, updatedAt: new Date() }).where(eq(usersTable.id, ctx.user.id));
+    return { success: true };
+  }),
+});
 
 // ─── ROLE GUARDS ──────────────────────────────────────────────────────────────
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -61,6 +98,12 @@ const usersRouter = router({
     userId: z.number(),
     access: z.boolean(),
   })).mutation(({ input }) => updateUserWhatsappAccess(input.userId, input.access)),
+  createByAdmin: adminProcedure.input(z.object({
+    name: z.string().min(1),
+    email: z.string().email(),
+    role: z.enum(["admin", "gerente", "analista", "assistente"]).default("assistente"),
+    whatsappAccess: z.boolean().default(false),
+  })).mutation(({ input }) => createUser(input)),
 });
 
 // ─── CONTACTS ROUTER ──────────────────────────────────────────────────────────
@@ -530,6 +573,92 @@ const stripeRouter = router({
   }),
 });
 
+// ─── DOCUMENTS ROUTER (PDF generation & sending) ─────────────────────────────────
+const documentsRouter = router({
+  generateInvoicePdf: protectedProcedure.input(z.object({ invoiceId: z.number() })).mutation(async ({ input }) => {
+    const { buildInvoiceHtml, uploadDocumentHtml } = await import("./pdf");
+    const invoice = await getInvoiceById(input.invoiceId);
+    if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Fatura não encontrada" });
+    const items = typeof invoice.items === "string" ? JSON.parse(invoice.items) : (invoice.items ?? []);
+    const html = buildInvoiceHtml({ number: invoice.number, clientName: "Cliente", clientEmail: null, items, subtotal: Number(invoice.subtotal ?? 0), discount: 0, total: Number(invoice.total ?? 0), dueDate: invoice.dueDate, notes: invoice.notes, status: invoice.status ?? "draft", companyName: "Estúdio de Podcast" });
+    const url = await uploadDocumentHtml(html, `fatura-${invoice.number}`);
+    return { url, filename: `Fatura-${invoice.number}.html` };
+  }),
+  generateQuotePdf: protectedProcedure.input(z.object({ quoteId: z.number() })).mutation(async ({ input }) => {
+    const { buildQuoteHtml, uploadDocumentHtml } = await import("./pdf");
+    const quotes = await getQuotes();
+    const q = quotes.find(q => q.id === input.quoteId);
+    if (!q) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
+    const items = typeof q.items === "string" ? JSON.parse(q.items) : (q.items ?? []);
+    const html = buildQuoteHtml({ number: q.number, clientName: "Cliente", items, subtotal: Number(q.subtotal ?? 0), discount: Number(q.discount ?? 0), total: Number(q.total ?? 0), validUntil: q.validUntil, notes: q.notes, status: q.status ?? "draft", companyName: "Estúdio de Podcast" });
+    const url = await uploadDocumentHtml(html, `orcamento-${q.number}`);
+    return { url, filename: `Orcamento-${q.number}.html` };
+  }),
+  sendByWhatsapp: protectedProcedure.input(z.object({
+    type: z.enum(["invoice", "quote", "contract"]),
+    documentId: z.number(),
+    recipientJid: z.string(),
+    message: z.string().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    let docUrl = "";
+    let docName = "";
+    if (input.type === "invoice") {
+      const { buildInvoiceHtml, uploadDocumentHtml } = await import("./pdf");
+      const invoice = await getInvoiceById(input.documentId);
+      if (!invoice) throw new TRPCError({ code: "NOT_FOUND" });
+      const items = typeof invoice.items === "string" ? JSON.parse(invoice.items) : (invoice.items ?? []);
+      const html = buildInvoiceHtml({ number: invoice.number, clientName: "Cliente", clientEmail: null, items, subtotal: Number(invoice.subtotal ?? 0), discount: 0, total: Number(invoice.total ?? 0), dueDate: invoice.dueDate, notes: invoice.notes, status: invoice.status ?? "draft", companyName: "Estúdio de Podcast" });
+      docUrl = await uploadDocumentHtml(html, `fatura-${invoice.number}`);
+      docName = `Fatura ${invoice.number}`;
+    } else if (input.type === "quote") {
+      const { buildQuoteHtml, uploadDocumentHtml } = await import("./pdf");
+      const quotes = await getQuotes();
+      const q = quotes.find(q => q.id === input.documentId);
+      if (!q) throw new TRPCError({ code: "NOT_FOUND" });
+      const items = typeof q.items === "string" ? JSON.parse(q.items) : (q.items ?? []);
+      const html = buildQuoteHtml({ number: q.number, clientName: "Cliente", items, subtotal: Number(q.subtotal ?? 0), discount: Number(q.discount ?? 0), total: Number(q.total ?? 0), validUntil: q.validUntil, notes: q.notes, status: q.status ?? "draft", companyName: "Estúdio de Podcast" });
+      docUrl = await uploadDocumentHtml(html, `orcamento-${q.number}`);
+      docName = `Orçamento ${q.number}`;
+    }
+    const userName = ctx.user.name ?? ctx.user.email ?? "Usuário";
+    const msgText = input.message
+      ? `[${userName}]: ${input.message}\n\n📎 ${docName}: ${docUrl}`
+      : `[${userName}]: 📎 ${docName} - Acesse o documento: ${docUrl}`;
+    await upsertWhatsappMessage({ chatJid: input.recipientJid, messageId: `doc_${Date.now()}`, isFromMe: true, content: msgText, timestamp: Date.now(), senderName: userName });
+    return { success: true, documentUrl: docUrl, message: msgText };
+  }),
+  sendByEmail: protectedProcedure.input(z.object({
+    type: z.enum(["invoice", "quote", "contract"]),
+    documentId: z.number(),
+    recipientEmail: z.string().email(),
+    subject: z.string().optional(),
+    message: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    let docUrl = "";
+    let docName = "";
+    if (input.type === "invoice") {
+      const { buildInvoiceHtml, uploadDocumentHtml } = await import("./pdf");
+      const invoice = await getInvoiceById(input.documentId);
+      if (!invoice) throw new TRPCError({ code: "NOT_FOUND" });
+      const items = typeof invoice.items === "string" ? JSON.parse(invoice.items) : (invoice.items ?? []);
+      const html = buildInvoiceHtml({ number: invoice.number, clientName: "Cliente", clientEmail: null, items, subtotal: Number(invoice.subtotal ?? 0), discount: 0, total: Number(invoice.total ?? 0), dueDate: invoice.dueDate, notes: invoice.notes, status: invoice.status ?? "draft", companyName: "Estúdio de Podcast" });
+      docUrl = await uploadDocumentHtml(html, `fatura-${invoice.number}`);
+      docName = `Fatura ${invoice.number}`;
+    } else if (input.type === "quote") {
+      const { buildQuoteHtml, uploadDocumentHtml } = await import("./pdf");
+      const quotes = await getQuotes();
+      const q = quotes.find(q => q.id === input.documentId);
+      if (!q) throw new TRPCError({ code: "NOT_FOUND" });
+      const items = typeof q.items === "string" ? JSON.parse(q.items) : (q.items ?? []);
+      const html = buildQuoteHtml({ number: q.number, clientName: "Cliente", items, subtotal: Number(q.subtotal ?? 0), discount: Number(q.discount ?? 0), total: Number(q.total ?? 0), validUntil: q.validUntil, notes: q.notes, status: q.status ?? "draft", companyName: "Estúdio de Podcast" });
+      docUrl = await uploadDocumentHtml(html, `orcamento-${q.number}`);
+      docName = `Orçamento ${q.number}`;
+    }
+    console.log(`[Email] Sending ${docName} to ${input.recipientEmail}: ${docUrl}`);
+    return { success: true, documentUrl: docUrl, note: "Link do documento gerado. Integração SMTP completa na Sprint 2." };
+  }),
+});
+
 // ─── APP ROUTER ───────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -552,6 +681,9 @@ export const appRouter = router({
   tasks: tasksRouter,
   dashboard: dashboardRouter,
   stripe: stripeRouter,
+  ai: aiRouter,
+  settings: settingsRouter,
+  documents: documentsRouter,
 });
 
 export type AppRouter = typeof appRouter;
