@@ -433,6 +433,29 @@ const quotesRouter = router({
     const { id, ...data } = input;
     return updateQuote(id, data);
   }),
+  convertToInvoice: protectedProcedure.input(z.object({
+    quoteId: z.number(),
+    dueDate: z.date().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    const quotes = await getQuotes();
+    const q = quotes.find(q => q.id === input.quoteId);
+    if (!q) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
+    const number = `FAT-${Date.now().toString().slice(-8)}`;
+    const invoice = await createInvoice({
+      number,
+      contactId: q.contactId ?? undefined,
+      leadId: q.leadId ?? undefined,
+      items: q.items,
+      subtotal: q.subtotal,
+      total: q.total,
+      dueDate: input.dueDate,
+      notes: q.notes ?? undefined,
+      assignedUserId: ctx.user.id,
+    });
+    // Mark quote as accepted
+    await updateQuote(input.quoteId, { status: "accepted" });
+    return invoice;
+  }),
 });
 
 // ─── STUDIO ROUTER ────────────────────────────────────────────────────────────
@@ -630,23 +653,23 @@ const stripeRouter = router({
 // ─── DOCUMENTS ROUTER (PDF generation & sending) ─────────────────────────────────
 const documentsRouter = router({
   generateInvoicePdf: protectedProcedure.input(z.object({ invoiceId: z.number() })).mutation(async ({ input }) => {
-    const { buildInvoiceHtml, uploadDocumentHtml } = await import("./pdf");
+    const { buildInvoiceHtml, uploadDocumentPdf } = await import("./pdf");
     const invoice = await getInvoiceById(input.invoiceId);
     if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Fatura não encontrada" });
     const items = typeof invoice.items === "string" ? JSON.parse(invoice.items) : (invoice.items ?? []);
-    const html = buildInvoiceHtml({ number: invoice.number, clientName: "Cliente", clientEmail: null, items, subtotal: Number(invoice.subtotal ?? 0), discount: 0, total: Number(invoice.total ?? 0), dueDate: invoice.dueDate, notes: invoice.notes, status: invoice.status ?? "draft", companyName: "Estúdio de Podcast" });
-    const url = await uploadDocumentHtml(html, `fatura-${invoice.number}`);
-    return { url, filename: `Fatura-${invoice.number}.html` };
+    const html = buildInvoiceHtml({ number: invoice.number, clientName: (invoice as any).clientName ?? "Cliente", clientEmail: (invoice as any).clientEmail ?? null, items, subtotal: Number(invoice.subtotal ?? 0), discount: 0, total: Number(invoice.total ?? 0), dueDate: invoice.dueDate, notes: invoice.notes, status: invoice.status ?? "draft", companyName: "Estúdio de Podcast" });
+    const url = await uploadDocumentPdf(html, `fatura-${invoice.number}`);
+    return { url, filename: `Fatura-${invoice.number}.pdf` };
   }),
   generateQuotePdf: protectedProcedure.input(z.object({ quoteId: z.number() })).mutation(async ({ input }) => {
-    const { buildQuoteHtml, uploadDocumentHtml } = await import("./pdf");
+    const { buildQuoteHtml, uploadDocumentPdf } = await import("./pdf");
     const quotes = await getQuotes();
     const q = quotes.find(q => q.id === input.quoteId);
     if (!q) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
     const items = typeof q.items === "string" ? JSON.parse(q.items) : (q.items ?? []);
-    const html = buildQuoteHtml({ number: q.number, clientName: "Cliente", items, subtotal: Number(q.subtotal ?? 0), discount: Number(q.discount ?? 0), total: Number(q.total ?? 0), validUntil: q.validUntil, notes: q.notes, status: q.status ?? "draft", companyName: "Estúdio de Podcast" });
-    const url = await uploadDocumentHtml(html, `orcamento-${q.number}`);
-    return { url, filename: `Orcamento-${q.number}.html` };
+    const html = buildQuoteHtml({ number: q.number, clientName: (q as any).clientName ?? "Cliente", items, subtotal: Number(q.subtotal ?? 0), discount: Number(q.discount ?? 0), total: Number(q.total ?? 0), validUntil: q.validUntil, notes: q.notes, status: q.status ?? "draft", companyName: "Estúdio de Podcast" });
+    const url = await uploadDocumentPdf(html, `orcamento-${q.number}`);
+    return { url, filename: `Orcamento-${q.number}.pdf` };
   }),
   sendByWhatsapp: protectedProcedure.input(z.object({
     type: z.enum(["invoice", "quote", "contract"]),
@@ -657,21 +680,21 @@ const documentsRouter = router({
     let docUrl = "";
     let docName = "";
     if (input.type === "invoice") {
-      const { buildInvoiceHtml, uploadDocumentHtml } = await import("./pdf");
+      const { buildInvoiceHtml, uploadDocumentPdf } = await import("./pdf");
       const invoice = await getInvoiceById(input.documentId);
       if (!invoice) throw new TRPCError({ code: "NOT_FOUND" });
       const items = typeof invoice.items === "string" ? JSON.parse(invoice.items) : (invoice.items ?? []);
-      const html = buildInvoiceHtml({ number: invoice.number, clientName: "Cliente", clientEmail: null, items, subtotal: Number(invoice.subtotal ?? 0), discount: 0, total: Number(invoice.total ?? 0), dueDate: invoice.dueDate, notes: invoice.notes, status: invoice.status ?? "draft", companyName: "Estúdio de Podcast" });
-      docUrl = await uploadDocumentHtml(html, `fatura-${invoice.number}`);
+      const html = buildInvoiceHtml({ number: invoice.number, clientName: (invoice as any).clientName ?? "Cliente", clientEmail: (invoice as any).clientEmail ?? null, items, subtotal: Number(invoice.subtotal ?? 0), discount: 0, total: Number(invoice.total ?? 0), dueDate: invoice.dueDate, notes: invoice.notes, status: invoice.status ?? "draft", companyName: "Estúdio de Podcast" });
+      docUrl = await uploadDocumentPdf(html, `fatura-${invoice.number}`);
       docName = `Fatura ${invoice.number}`;
     } else if (input.type === "quote") {
-      const { buildQuoteHtml, uploadDocumentHtml } = await import("./pdf");
+      const { buildQuoteHtml, uploadDocumentPdf } = await import("./pdf");
       const quotes = await getQuotes();
       const q = quotes.find(q => q.id === input.documentId);
       if (!q) throw new TRPCError({ code: "NOT_FOUND" });
       const items = typeof q.items === "string" ? JSON.parse(q.items) : (q.items ?? []);
-      const html = buildQuoteHtml({ number: q.number, clientName: "Cliente", items, subtotal: Number(q.subtotal ?? 0), discount: Number(q.discount ?? 0), total: Number(q.total ?? 0), validUntil: q.validUntil, notes: q.notes, status: q.status ?? "draft", companyName: "Estúdio de Podcast" });
-      docUrl = await uploadDocumentHtml(html, `orcamento-${q.number}`);
+      const html = buildQuoteHtml({ number: q.number, clientName: (q as any).clientName ?? "Cliente", items, subtotal: Number(q.subtotal ?? 0), discount: Number(q.discount ?? 0), total: Number(q.total ?? 0), validUntil: q.validUntil, notes: q.notes, status: q.status ?? "draft", companyName: "Estúdio de Podcast" });
+      docUrl = await uploadDocumentPdf(html, `orcamento-${q.number}`);
       docName = `Orçamento ${q.number}`;
     }
     const userName = ctx.user.name ?? ctx.user.email ?? "Usuário";

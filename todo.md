@@ -230,3 +230,15 @@
 - [ ] Quotes: drawer com botões Enviar Email, Enviar WhatsApp, Alterar Status, Converter em Fatura, Baixar PDF
 - [ ] Invoices: mesmo padrão de drawer de detalhe + email pré-preenchido com contato
 - [ ] Invoices: botão de link de pagamento Stripe no drawer
+
+## Sprint Atual — PDF + Conversão + Pipeline
+
+- [ ] Corrigir geração de PDF de orçamentos para envio via WhatsApp (arquivo vazio/formato errado)
+- [ ] Corrigir geração de PDF de faturas para envio via WhatsApp
+- [ ] Corrigir geração de PDF de contratos para envio via WhatsApp
+- [ ] Implementar conversão de orçamento aprovado em fatura (botão "Converter em Fatura")
+- [ ] Ao criar fatura, permitir selecionar orçamento aprovado para pré-preencher itens
+- [ ] Ao criar contrato, exigir/sugerir fatura criada ou paga vinculada
+- [ ] Pipeline: exibir coluna/seção de leads perdidos
+- [ ] Pipeline: permitir excluir lead
+- [ ] Pipeline: clicar no card do lead abre drawer com todas as ações (editar, mover, excluir, vincular documentos)

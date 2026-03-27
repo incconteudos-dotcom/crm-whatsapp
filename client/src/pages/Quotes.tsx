@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import {
   BookOpen, Plus, CheckCircle, XCircle, Send, Clock, Mail, Loader2,
-  MessageSquare, ArrowRight, User, DollarSign, Calendar, X
+  MessageSquare, ArrowRight, User, DollarSign, Calendar, X, FileText
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -83,6 +83,16 @@ export default function Quotes() {
       setEmailOpen(false);
     },
     onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const convertToInvoiceMutation = trpc.quotes.convertToInvoice.useMutation({
+    onSuccess: () => {
+      toast.success("Orçamento convertido em fatura!");
+      setSelectedId(null);
+      utils.quotes.list.invalidate();
+      navigate("/invoices");
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const sendWhatsAppMutation = trpc.documents.sendByWhatsapp.useMutation({
@@ -333,6 +343,16 @@ export default function Quotes() {
                           <XCircle className="w-4 h-4" /> Recusado
                         </Button>
                       </div>
+                    )}
+                    {(selectedQuote.status === "accepted" || selectedQuote.status === "sent") && (
+                      <Button
+                        className="w-full gap-2 bg-cyan-600 hover:bg-cyan-700"
+                        onClick={() => convertToInvoiceMutation.mutate({ quoteId: selectedQuote.id })}
+                        disabled={convertToInvoiceMutation.isPending}
+                      >
+                        {convertToInvoiceMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                        Converter em Fatura
+                      </Button>
                     )}
                     {(selectedQuote.status === "draft" || selectedQuote.status === "sent") && (
                       <Button variant="outline" className="w-full gap-2 text-orange-400 border-orange-500/30 hover:bg-orange-500/10" onClick={() => { updateMutation.mutate({ id: selectedQuote.id, status: "expired" }); setSelectedId(null); }}>

@@ -1,12 +1,36 @@
 /**
  * PDF Generation & Sending Helper
- * Generates HTML-based PDFs for invoices, quotes and contracts,
- * then sends them via WhatsApp (MCP) and/or email (future integration).
- * 
- * For now, generates a downloadable URL via S3 storage.
+ * Generates real PDFs via WeasyPrint (Python) for invoices, quotes and contracts.
+ * PDFs are uploaded to S3 and the URL is returned for WhatsApp/email sending.
  */
 
 import { storagePut } from "./storage";
+import { execSync } from "child_process";
+import path from "path";
+
+/**
+ * Converts HTML string to a real PDF Buffer using WeasyPrint (Python).
+ */
+export function generatePdfBuffer(html: string): Buffer {
+  const scriptPath = path.join(__dirname, "generate_pdf.py");
+  const pdfBuffer = execSync(`python3 "${scriptPath}"`, {
+    input: html,
+    maxBuffer: 10 * 1024 * 1024,
+    timeout: 30000,
+  });
+  return pdfBuffer;
+}
+
+/**
+ * Generates a real PDF from HTML and uploads it to S3.
+ * Returns the public S3 URL of the PDF file.
+ */
+export async function uploadDocumentPdf(html: string, prefix: string): Promise<string> {
+  const pdfBuffer = generatePdfBuffer(html);
+  const key = `documents/${prefix}-${Date.now()}-${randomSuffix()}.pdf`;
+  const { url } = await storagePut(key, pdfBuffer, "application/pdf");
+  return url;
+}
 
 function randomSuffix() {
   return Math.random().toString(36).slice(2, 8);
