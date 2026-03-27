@@ -155,3 +155,13 @@
 - [ ] Corrigir textos, labels e placeholders com referências a música/artista/musical
 - [ ] Atualizar enum contractType no schema e banco de dados
 - [ ] Atualizar enum sessionType no schema e banco de dados
+
+## Sprint Brevo Email (Atual)
+- [x] Instalar SDK @getbrevo/brevo v5
+- [x] Criar server/email.ts com buildInvoiceEmail, buildQuoteEmail, buildContractEmail (templates HTML profissionais)
+- [x] Criar funções sendInvoiceEmail, sendQuoteEmail, sendContractEmail via Brevo API
+- [x] Atualizar documents.sendByEmail no router para usar Brevo real (não stub)
+- [x] Adicionar botão "Enviar por Email" com modal na página de Faturas
+- [x] Adicionar botão "Email" com modal na página de Orçamentos
+- [x] Adicionar botão "Email" com modal na página de Contratos
+- [x] Testes unitários para templates de email (8 testes passando)

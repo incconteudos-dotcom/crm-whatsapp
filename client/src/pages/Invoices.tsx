@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import {
   Receipt, Plus, CheckCircle, Send, CreditCard, SplitSquareHorizontal,
-  ExternalLink, Copy, Loader2, AlertCircle,
+  ExternalLink, Copy, Loader2, AlertCircle, Mail,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -28,7 +28,6 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 };
 
 type InvoiceItem = { description: string; quantity: number; unitPrice: number; total: number };
-
 type SplitLinks = { installment1: { url: string }; installment2: { url: string } };
 
 export default function Invoices() {
@@ -38,6 +37,14 @@ export default function Invoices() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [items, setItems]             = useState<InvoiceItem[]>([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
   const [notes, setNotes]             = useState("");
+
+  // Email modal state
+  const [emailOpen, setEmailOpen]     = useState(false);
+  const [emailInvoiceId, setEmailInvoiceId] = useState<number | null>(null);
+  const [emailTo, setEmailTo]         = useState("");
+  const [emailName, setEmailName]     = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
 
   const utils = trpc.useUtils();
   const { data: invoices, isLoading } = trpc.invoices.list.useQuery();
@@ -74,6 +81,15 @@ export default function Invoices() {
     onError: (e) => toast.error(`Erro ao gerar links: ${e.message}`),
   });
 
+  const sendEmailMutation = trpc.documents.sendByEmail.useMutation({
+    onSuccess: () => {
+      toast.success("Email enviado com sucesso!");
+      setEmailOpen(false);
+      setEmailTo(""); setEmailName(""); setEmailSubject(""); setEmailMessage("");
+    },
+    onError: (e) => toast.error(`Erro ao enviar email: ${e.message}`),
+  });
+
   const handlePayFull = (invoiceId: number) => {
     checkoutMutation.mutate({ invoiceId, origin: window.location.origin });
   };
@@ -83,6 +99,25 @@ export default function Invoices() {
     setSelectedInvoiceId(invoiceId);
     splitMutation.mutate({ invoiceId, origin: window.location.origin });
     setPayOpen(true);
+  };
+
+  const openEmailModal = (invoiceId: number) => {
+    setEmailInvoiceId(invoiceId);
+    setEmailSubject("");
+    setEmailMessage("");
+    setEmailOpen(true);
+  };
+
+  const handleSendEmail = () => {
+    if (!emailInvoiceId || !emailTo) return;
+    sendEmailMutation.mutate({
+      type: "invoice",
+      documentId: emailInvoiceId,
+      recipientEmail: emailTo,
+      recipientName: emailName || undefined,
+      subject: emailSubject || undefined,
+      message: emailMessage || undefined,
+    });
   };
 
   const copyLink = (url: string) => {
@@ -187,6 +222,16 @@ export default function Invoices() {
                         <Send className="w-3.5 h-3.5 mr-1.5" />Enviar
                       </Button>
                     )}
+                    {/* Send by Email */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-blue-500/40 text-blue-300 hover:bg-blue-500/10"
+                      onClick={() => openEmailModal(inv.id)}
+                    >
+                      <Mail className="w-3.5 h-3.5 mr-1.5" />
+                      Enviar por Email
+                    </Button>
                     {(inv.status === "sent" || inv.status === "draft") && (
                       <>
                         <Button
@@ -243,6 +288,75 @@ export default function Invoices() {
           </div>
         )}
       </div>
+
+      {/* Send by Email Dialog */}
+      <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5 text-blue-400" />
+              Enviar Fatura por Email
+            </DialogTitle>
+            <DialogDescription>
+              A fatura será enviada com um template profissional via Brevo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Email do destinatário *</Label>
+              <Input
+                className="mt-1.5 bg-input border-border"
+                type="email"
+                placeholder="cliente@exemplo.com"
+                value={emailTo}
+                onChange={(e) => setEmailTo(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Nome do destinatário</Label>
+              <Input
+                className="mt-1.5 bg-input border-border"
+                placeholder="Nome do cliente"
+                value={emailName}
+                onChange={(e) => setEmailName(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Assunto (opcional)</Label>
+              <Input
+                className="mt-1.5 bg-input border-border"
+                placeholder="Deixe em branco para usar o padrão"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Mensagem adicional (opcional)</Label>
+              <Textarea
+                className="mt-1.5 bg-input border-border resize-none"
+                placeholder="Observações que aparecerão na fatura..."
+                rows={3}
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailOpen(false)}>Cancelar</Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleSendEmail}
+              disabled={!emailTo || sendEmailMutation.isPending}
+            >
+              {sendEmailMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando...</>
+              ) : (
+                <><Mail className="w-4 h-4 mr-2" />Enviar Email</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Invoice Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

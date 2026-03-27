@@ -631,31 +631,88 @@ const documentsRouter = router({
     type: z.enum(["invoice", "quote", "contract"]),
     documentId: z.number(),
     recipientEmail: z.string().email(),
+    recipientName: z.string().optional(),
     subject: z.string().optional(),
     message: z.string().optional(),
   })).mutation(async ({ input }) => {
-    let docUrl = "";
-    let docName = "";
+    const { sendInvoiceEmail, sendQuoteEmail, sendContractEmail } = await import("./email");
+    const COMPANY = "Pátio Estúdio de Podcast";
+
     if (input.type === "invoice") {
-      const { buildInvoiceHtml, uploadDocumentHtml } = await import("./pdf");
       const invoice = await getInvoiceById(input.documentId);
-      if (!invoice) throw new TRPCError({ code: "NOT_FOUND" });
+      if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Fatura não encontrada" });
       const items = typeof invoice.items === "string" ? JSON.parse(invoice.items) : (invoice.items ?? []);
-      const html = buildInvoiceHtml({ number: invoice.number, clientName: "Cliente", clientEmail: null, items, subtotal: Number(invoice.subtotal ?? 0), discount: 0, total: Number(invoice.total ?? 0), dueDate: invoice.dueDate, notes: invoice.notes, status: invoice.status ?? "draft", companyName: "Estúdio de Podcast" });
-      docUrl = await uploadDocumentHtml(html, `fatura-${invoice.number}`);
-      docName = `Fatura ${invoice.number}`;
+      const result = await sendInvoiceEmail({
+        to: input.recipientEmail,
+        toName: input.recipientName,
+        subject: input.subject,
+        invoice: {
+          number: invoice.number,
+          clientName: input.recipientName ?? "Cliente",
+          items,
+          subtotal: Number(invoice.subtotal ?? 0),
+          discount: 0,
+          total: Number(invoice.total ?? 0),
+          dueDate: invoice.dueDate,
+          notes: input.message ?? invoice.notes,
+          status: invoice.status ?? "draft",
+          companyName: COMPANY,
+        },
+      });
+      if (!result.success) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error ?? "Falha ao enviar email" });
+      return { success: true, messageId: result.messageId };
+
     } else if (input.type === "quote") {
-      const { buildQuoteHtml, uploadDocumentHtml } = await import("./pdf");
       const quotes = await getQuotes();
       const q = quotes.find(q => q.id === input.documentId);
-      if (!q) throw new TRPCError({ code: "NOT_FOUND" });
+      if (!q) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
       const items = typeof q.items === "string" ? JSON.parse(q.items) : (q.items ?? []);
-      const html = buildQuoteHtml({ number: q.number, clientName: "Cliente", items, subtotal: Number(q.subtotal ?? 0), discount: Number(q.discount ?? 0), total: Number(q.total ?? 0), validUntil: q.validUntil, notes: q.notes, status: q.status ?? "draft", companyName: "Estúdio de Podcast" });
-      docUrl = await uploadDocumentHtml(html, `orcamento-${q.number}`);
-      docName = `Orçamento ${q.number}`;
+      const result = await sendQuoteEmail({
+        to: input.recipientEmail,
+        toName: input.recipientName,
+        subject: input.subject,
+        quote: {
+          number: q.number,
+          clientName: input.recipientName ?? "Cliente",
+          items,
+          subtotal: Number(q.subtotal ?? 0),
+          discount: Number(q.discount ?? 0),
+          total: Number(q.total ?? 0),
+          validUntil: q.validUntil,
+          notes: input.message ?? q.notes,
+          status: q.status ?? "draft",
+          companyName: COMPANY,
+        },
+      });
+      if (!result.success) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error ?? "Falha ao enviar email" });
+      return { success: true, messageId: result.messageId };
+
+    } else if (input.type === "contract") {
+      const contract = await getContractById(input.documentId);
+      if (!contract) throw new TRPCError({ code: "NOT_FOUND", message: "Contrato não encontrado" });
+      const contractNum = `CTR-${String(contract.id).padStart(4, "0")}`;
+      const result = await sendContractEmail({
+        to: input.recipientEmail,
+        toName: input.recipientName,
+        subject: input.subject,
+        contract: {
+          number: contractNum,
+          clientName: input.recipientName ?? "Cliente",
+          title: contract.title,
+          type: "Contrato de Serviços",
+          value: contract.value ? Number(contract.value) : null,
+          startDate: null,
+          endDate: contract.validUntil ?? null,
+          status: contract.status ?? "draft",
+          notes: input.message ?? undefined,
+          companyName: COMPANY,
+        },
+      });
+      if (!result.success) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error ?? "Falha ao enviar email" });
+      return { success: true, messageId: result.messageId };
     }
-    console.log(`[Email] Sending ${docName} to ${input.recipientEmail}: ${docUrl}`);
-    return { success: true, documentUrl: docUrl, note: "Link do documento gerado. Integração SMTP completa na Sprint 2." };
+
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Tipo de documento inválido" });
   }),
 });
 
