@@ -648,9 +648,29 @@ const portalRouter = router({
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Falha ao enviar mensagem via WhatsApp" });
     }
   }),
+  // Reenvia lembrete via WhatsApp com mensagem diferente
+  sendReminder: protectedProcedure.input(z.object({
+    portalUrl: z.string(),
+    contactId: z.number(),
+    documentTitle: z.string().optional(),
+    documentType: z.enum(["contract", "invoice", "quote"]),
+  })).mutation(async ({ input }) => {
+    const contact = await getContactById(input.contactId);
+    if (!contact?.phone) throw new TRPCError({ code: "BAD_REQUEST", message: "Contato sem número de telefone cadastrado" });
+    const digits = contact.phone.replace(/\D/g, "");
+    const jid = digits.startsWith("55") ? `${digits}@s.whatsapp.net` : `55${digits}@s.whatsapp.net`;
+    const typeLabel = input.documentType === "contract" ? "contrato" : input.documentType === "invoice" ? "fatura" : "orçamento";
+    const title = input.documentTitle ? `*${input.documentTitle}*` : `seu ${typeLabel}`;
+    const message = `Olá, ${contact.name}! 😊\n\nPassando para lembrar que ${title} ainda aguarda sua assinatura/aprovação.\n\nVocê pode acessar pelo link abaixo a qualquer momento:\n\n${input.portalUrl}\n\nQualquer dúvida, é só chamar! 🙌`;
+    try {
+      await sendText(jid, message);
+      return { success: true, jid, contactName: contact.name };
+    } catch {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Falha ao enviar lembrete via WhatsApp" });
+    }
+  }),
 });
-
-// ─── STRIPE ROUTER ───────────────────────────────────────────────────────────
+// ─── STRIPE ROUTERR ───────────────────────────────────────────────────────────
 const stripeRouter = router({
   // Lista os produtos do catálogo do estúdio
   products: protectedProcedure.query(() => STUDIO_PRODUCTS),

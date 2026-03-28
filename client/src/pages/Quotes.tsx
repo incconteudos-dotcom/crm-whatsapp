@@ -98,6 +98,11 @@ export default function Quotes() {
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
+  const sendReminderMutation = trpc.portal.sendReminder.useMutation({
+    onSuccess: (data: { contactName: string }) => toast.success(`Lembrete enviado via WhatsApp para ${data.contactName}!`),
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
   const filteredQuotes = useMemo(() => {
     if (!quotes) return [];
     return quotes.filter(q => {
@@ -455,22 +460,41 @@ export default function Quotes() {
                           </Button>
                         </div>
                         {selectedQuote.contactId && (
-                          <Button
-                            size="sm"
-                            className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => sendPortalWhatsAppMutation.mutate({
-                              portalUrl: portalLink,
-                              contactId: selectedQuote.contactId!,
-                              documentTitle: `Orçamento ${selectedQuote.number}`,
-                              documentType: "quote",
-                            })}
-                            disabled={sendPortalWhatsAppMutation.isPending}
-                          >
-                            {sendPortalWhatsAppMutation.isPending
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <MessageSquare className="w-3.5 h-3.5" />}
-                            Enviar Link via WhatsApp
-                          </Button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              size="sm"
+                              className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                              onClick={() => sendPortalWhatsAppMutation.mutate({
+                                portalUrl: portalLink,
+                                contactId: selectedQuote.contactId!,
+                                documentTitle: `Orçamento ${selectedQuote.number}`,
+                                documentType: "quote",
+                              })}
+                              disabled={sendPortalWhatsAppMutation.isPending}
+                            >
+                              {sendPortalWhatsAppMutation.isPending
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <MessageSquare className="w-3.5 h-3.5" />}
+                              Enviar Link
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-2 border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/10"
+                              onClick={() => sendReminderMutation.mutate({
+                                portalUrl: portalLink,
+                                contactId: selectedQuote.contactId!,
+                                documentTitle: `Orçamento ${selectedQuote.number}`,
+                                documentType: "quote",
+                              })}
+                              disabled={sendReminderMutation.isPending}
+                            >
+                              {sendReminderMutation.isPending
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <MessageSquare className="w-3.5 h-3.5" />}
+                              Lembrete
+                            </Button>
+                          </div>
                         )}
                       </div>
                     )}
