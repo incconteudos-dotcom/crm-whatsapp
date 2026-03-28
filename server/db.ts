@@ -53,6 +53,14 @@ import {
   portalMagicLinks,
   type InsertBrandSettings,
   type InsertPortalMagicLink,
+  automationSequences,
+  automationSteps,
+  automationExecutions,
+  messageTemplates,
+  type InsertAutomationSequence,
+  type InsertAutomationStep,
+  type InsertAutomationExecution,
+  type InsertMessageTemplate,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -1153,4 +1161,148 @@ export async function getPortalDataForContact(contactId: number) {
     projects: projectsList,
     podcasts: podcastsList,
   };
+}
+
+// ─── AUTOMATION SEQUENCES ─────────────────────────────────────────────────────
+export async function getAutomationSequences() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(automationSequences).orderBy(desc(automationSequences.createdAt));
+}
+
+export async function getAutomationSequenceById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(automationSequences).where(eq(automationSequences.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createAutomationSequence(data: InsertAutomationSequence) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(automationSequences).values(data);
+  return result;
+}
+
+export async function updateAutomationSequence(id: number, data: Partial<InsertAutomationSequence>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(automationSequences).set({ ...data, updatedAt: new Date() }).where(eq(automationSequences.id, id));
+}
+
+export async function deleteAutomationSequence(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(automationSteps).where(eq(automationSteps.sequenceId, id));
+  await db.delete(automationSequences).where(eq(automationSequences.id, id));
+}
+
+// ─── AUTOMATION STEPS ─────────────────────────────────────────────────────────
+export async function getAutomationSteps(sequenceId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(automationSteps)
+    .where(eq(automationSteps.sequenceId, sequenceId))
+    .orderBy(automationSteps.stepOrder);
+}
+
+export async function createAutomationStep(data: InsertAutomationStep) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(automationSteps).values(data);
+  return result;
+}
+
+export async function updateAutomationStep(id: number, data: Partial<InsertAutomationStep>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(automationSteps).set(data).where(eq(automationSteps.id, id));
+}
+
+export async function deleteAutomationStep(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(automationSteps).where(eq(automationSteps.id, id));
+}
+
+// ─── AUTOMATION EXECUTIONS ────────────────────────────────────────────────────
+export async function getAutomationExecutions(filters?: { contactId?: number; sequenceId?: number; status?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.contactId) conditions.push(eq(automationExecutions.contactId, filters.contactId));
+  if (filters?.sequenceId) conditions.push(eq(automationExecutions.sequenceId, filters.sequenceId));
+  if (filters?.status) conditions.push(eq(automationExecutions.status, filters.status as "pending" | "sent" | "failed" | "skipped"));
+  const query = db.select().from(automationExecutions).orderBy(desc(automationExecutions.scheduledAt));
+  if (conditions.length > 0) return query.where(and(...conditions));
+  return query;
+}
+
+export async function createAutomationExecution(data: InsertAutomationExecution) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(automationExecutions).values(data);
+  return result;
+}
+
+export async function updateAutomationExecution(id: number, data: Partial<InsertAutomationExecution>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(automationExecutions).set(data).where(eq(automationExecutions.id, id));
+}
+
+export async function scheduleAutomationForLead(leadId: number, contactId: number, triggerStage: string) {
+  const db = await getDb();
+  if (!db) return;
+  // Find active sequences for this stage
+  const sequences = await db.select().from(automationSequences)
+    .where(and(eq(automationSequences.triggerStage, triggerStage), eq(automationSequences.isActive, true)));
+  for (const seq of sequences) {
+    const steps = await db.select().from(automationSteps)
+      .where(eq(automationSteps.sequenceId, seq.id))
+      .orderBy(automationSteps.stepOrder);
+    for (const step of steps) {
+      const scheduledAt = new Date();
+      scheduledAt.setDate(scheduledAt.getDate() + step.delayDays);
+      await db.insert(automationExecutions).values({
+        sequenceId: seq.id,
+        stepId: step.id,
+        contactId,
+        leadId,
+        status: "pending",
+        scheduledAt,
+      });
+    }
+  }
+}
+
+// ─── MESSAGE TEMPLATES ────────────────────────────────────────────────────────
+export async function getMessageTemplates(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (category) {
+    return db.select().from(messageTemplates)
+      .where(eq(messageTemplates.category, category))
+      .orderBy(desc(messageTemplates.createdAt));
+  }
+  return db.select().from(messageTemplates).orderBy(desc(messageTemplates.createdAt));
+}
+
+export async function createMessageTemplate(data: InsertMessageTemplate) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(messageTemplates).values(data);
+  return result;
+}
+
+export async function updateMessageTemplate(id: number, data: Partial<InsertMessageTemplate>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(messageTemplates).set({ ...data, updatedAt: new Date() }).where(eq(messageTemplates.id, id));
+}
+
+export async function deleteMessageTemplate(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(messageTemplates).where(eq(messageTemplates.id, id));
 }

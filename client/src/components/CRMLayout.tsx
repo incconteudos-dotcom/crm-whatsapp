@@ -49,6 +49,7 @@ const navItems = [
   { icon: Wallet, label: "Créditos", path: "/credits" },
   { icon: ClipboardList, label: "Rotina Diária", path: "/routine" },
   { icon: Mic2, label: "Podcasts", path: "/podcasts" },
+  { icon: Zap, label: "Automações", path: "/automations" },
 ];
 
 const adminItems = [

@@ -26,6 +26,7 @@ import ContractTemplates from "./pages/ContractTemplates";
 import Credits from "./pages/Credits";
 import DailyRoutine from "./pages/DailyRoutine";
 import Podcasts from "./pages/Podcasts";
+import Automations from "./pages/Automations";
 import ClientPortalDashboard, { ClientPortalMagicEntry } from "./pages/ClientPortalV2";
 import BrandSettings from "./pages/BrandSettings";
 
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/credits" component={Credits} />
       <Route path="/routine" component={DailyRoutine} />
       <Route path="/podcasts" component={Podcasts} />
+      <Route path="/automations" component={Automations} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

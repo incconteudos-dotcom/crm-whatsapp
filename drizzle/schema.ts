@@ -520,3 +520,61 @@ export const portalMagicLinks = mysqlTable("portal_magic_links", {
 });
 export type PortalMagicLink = typeof portalMagicLinks.$inferSelect;
 export type InsertPortalMagicLink = typeof portalMagicLinks.$inferInsert;
+
+// ─── AUTOMATION SEQUENCES ─────────────────────────────────────────────────────
+export const automationSequences = mysqlTable("automation_sequences", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  triggerStage: varchar("trigger_stage", { length: 50 }).notNull(), // pipeline stage
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type AutomationSequence = typeof automationSequences.$inferSelect;
+export type InsertAutomationSequence = typeof automationSequences.$inferInsert;
+
+// ─── AUTOMATION STEPS ─────────────────────────────────────────────────────────
+export const automationSteps = mysqlTable("automation_steps", {
+  id: int("id").autoincrement().primaryKey(),
+  sequenceId: int("sequence_id").notNull(),
+  stepOrder: int("step_order").notNull().default(1),
+  delayDays: int("delay_days").notNull().default(1),
+  channel: varchar("channel", { length: 20 }).notNull().default("whatsapp"), // whatsapp | email
+  messageTemplate: text("message_template").notNull(),
+  subject: varchar("subject", { length: 255 }), // for email
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AutomationStep = typeof automationSteps.$inferSelect;
+export type InsertAutomationStep = typeof automationSteps.$inferInsert;
+
+// ─── AUTOMATION EXECUTIONS ────────────────────────────────────────────────────
+export const automationExecutions = mysqlTable("automation_executions", {
+  id: int("id").autoincrement().primaryKey(),
+  sequenceId: int("sequence_id").notNull(),
+  stepId: int("step_id").notNull(),
+  contactId: int("contact_id").notNull(),
+  leadId: int("lead_id"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending | sent | failed | skipped
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  executedAt: timestamp("executed_at"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AutomationExecution = typeof automationExecutions.$inferSelect;
+export type InsertAutomationExecution = typeof automationExecutions.$inferInsert;
+
+// ─── MESSAGE TEMPLATES ────────────────────────────────────────────────────────
+export const messageTemplates = mysqlTable("message_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull().default("follow_up"), // follow_up | welcome | reminder | proposal
+  channel: varchar("channel", { length: 20 }).notNull().default("whatsapp"),
+  subject: varchar("subject", { length: 255 }),
+  content: text("content").notNull(),
+  variables: text("variables"), // JSON array of variable names like ["nome", "empresa"]
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MessageTemplate = typeof messageTemplates.$inferSelect;
+export type InsertMessageTemplate = typeof messageTemplates.$inferInsert;

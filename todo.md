@@ -344,3 +344,10 @@
 - [x] Botão "Magic Link" no perfil do contato
 - [x] Rotas /portal/magic/:token, /portal/client/:contactId, /brand-settings
 - [x] Item "Portal Visual" no menu admin
+
+## Sprint 6 — Automação Comercial ✅
+- [x] Tabelas: automation_sequences, automation_steps, automation_executions, message_templates
+- [x] Backend: CRUD completo de sequências, passos, execuções e templates
+- [x] Disparo automático ao mover lead de estágio no Pipeline
+- [x] Página /automations com 3 abas: Sequências, Templates, Histórico
+- [x] Item Automações no menu lateral

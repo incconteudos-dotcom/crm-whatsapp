@@ -35,6 +35,10 @@ import {
   getEpisodeComments, createEpisodeComment,
   getBrandSettings, upsertBrandSettings,
   createPortalMagicLink, validatePortalMagicLink, getPortalDataForContact,
+  getAutomationSequences, getAutomationSequenceById, createAutomationSequence, updateAutomationSequence, deleteAutomationSequence,
+  getAutomationSteps, createAutomationStep, updateAutomationStep, deleteAutomationStep,
+  getAutomationExecutions, scheduleAutomationForLead,
+  getMessageTemplates, createMessageTemplate, updateMessageTemplate, deleteMessageTemplate,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -227,9 +231,23 @@ const pipelineRouter = router({
     probability: z.number().optional(),
     status: z.enum(["open", "won", "lost"]).optional(),
     notes: z.string().optional(),
-  })).mutation(({ input }) => {
+  })).mutation(async ({ input }) => {
     const { id, ...data } = input;
-    return updateLead(id, data);
+    const result = await updateLead(id, data);
+    // Trigger automation sequences when stage changes
+    if (data.stageId) {
+      try {
+        const lead = await getLeadById(id);
+        const stages = await getPipelineStages();
+        const stage = stages.find(s => s.id === data.stageId);
+        if (lead && stage && lead.contactId) {
+          await scheduleAutomationForLead(id, lead.contactId, stage.name);
+        }
+      } catch (e) {
+        console.warn("[Automation] Failed to schedule for lead", id, e);
+      }
+    }
+    return result;
   }),
   deleteLead: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
     deleteLead(input.id)
@@ -1481,6 +1499,102 @@ const portalMagicRouter = router({
   }),
 });
 
+// ─── AUTOMATIONS ROUTER ─────────────────────────────────────────────────────
+const automationsRouter = router({
+  list: protectedProcedure.query(() => getAutomationSequences()),
+  get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
+    getAutomationSequenceById(input.id)
+  ),
+  create: protectedProcedure.input(z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+    triggerStage: z.string().min(1),
+    isActive: z.boolean().default(true),
+  })).mutation(({ input }) => createAutomationSequence(input)),
+  update: protectedProcedure.input(z.object({
+    id: z.number(),
+    name: z.string().optional(),
+    description: z.string().optional(),
+    triggerStage: z.string().optional(),
+    isActive: z.boolean().optional(),
+  })).mutation(({ input }) => {
+    const { id, ...data } = input;
+    return updateAutomationSequence(id, data);
+  }),
+  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
+    deleteAutomationSequence(input.id)
+  ),
+  // Steps
+  getSteps: protectedProcedure.input(z.object({ sequenceId: z.number() })).query(({ input }) =>
+    getAutomationSteps(input.sequenceId)
+  ),
+  addStep: protectedProcedure.input(z.object({
+    sequenceId: z.number(),
+    stepOrder: z.number(),
+    delayDays: z.number().min(0),
+    channel: z.enum(["whatsapp", "email"]),
+    customMessage: z.string().optional(),
+    subject: z.string().optional(),
+  })).mutation(({ input }) => createAutomationStep({ ...input, messageTemplate: input.customMessage ?? "" })),
+  updateStep: protectedProcedure.input(z.object({
+    id: z.number(),
+    stepOrder: z.number().optional(),
+    delayDays: z.number().optional(),
+    channel: z.enum(["whatsapp", "email"]).optional(),
+    customMessage: z.string().optional(),
+    subject: z.string().optional(),
+  })).mutation(({ input }) => {
+    const { id, ...data } = input;
+    return updateAutomationStep(id, data);
+  }),
+  deleteStep: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
+    deleteAutomationStep(input.id)
+  ),
+  // Executions
+  executions: protectedProcedure.input(z.object({
+    contactId: z.number().optional(),
+    sequenceId: z.number().optional(),
+    status: z.string().optional(),
+  })).query(({ input }) => getAutomationExecutions(input)),
+  scheduleForLead: protectedProcedure.input(z.object({
+    leadId: z.number(),
+    contactId: z.number(),
+    triggerStage: z.string(),
+  })).mutation(({ input }) =>
+    scheduleAutomationForLead(input.leadId, input.contactId, input.triggerStage)
+  ),
+});
+
+// ─── MESSAGE TEMPLATES ROUTER ─────────────────────────────────────────────────
+const messageTemplatesRouter = router({
+  list: protectedProcedure.input(z.object({ category: z.string().optional() })).query(({ input }) =>
+    getMessageTemplates(input.category)
+  ),
+  create: protectedProcedure.input(z.object({
+    name: z.string().min(1),
+    category: z.string().optional(),
+    channel: z.enum(["whatsapp", "email", "both"]),
+    subject: z.string().optional(),
+    body: z.string().min(1),
+    variables: z.array(z.string()).optional(),
+  })).mutation(({ input }) => createMessageTemplate({ ...input, content: input.body, variables: input.variables ? JSON.stringify(input.variables) : undefined })),
+  update: protectedProcedure.input(z.object({
+    id: z.number(),
+    name: z.string().optional(),
+    category: z.string().optional(),
+    channel: z.enum(["whatsapp", "email", "both"]).optional(),
+    subject: z.string().optional(),
+    body: z.string().optional(),
+    variables: z.array(z.string()).optional(),
+  })).mutation(({ input }) => {
+    const { id, body, variables, ...rest } = input;
+    return updateMessageTemplate(id, { ...rest, ...(body ? { content: body } : {}), ...(variables ? { variables: JSON.stringify(variables) } : {}) });
+  }),
+  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
+    deleteMessageTemplate(input.id)
+  ),
+});
+
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -1519,6 +1633,8 @@ export const appRouter = router({
   podcasts: podcastsRouter,
   brand: brandRouter,
   portalMagic: portalMagicRouter,
+  automations: automationsRouter,
+  messageTemplates: messageTemplatesRouter,
 });
 
 export type AppRouter = typeof appRouter;
