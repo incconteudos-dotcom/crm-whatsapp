@@ -1,0 +1,9 @@
+{
+  "query": "\nCREATE TABLE IF NOT EXISTS automation_settings (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  automationId VARCHAR(64) NOT NULL UNIQUE,\n  isActive TINYINT(1) NOT NULL DEFAULT 1,\n  lastRunAt TIMESTAMP NULL,\n  totalRuns INT DEFAULT 0,\n  totalSuccess INT DEFAULT 0,\n  totalErrors INT DEFAULT 0,\n  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);\n\nINSERT IGNORE INTO automation_settings (automationId, isActive) VALUES\n  ('welcome_whatsapp', 1),\n  ('follow_up_48h', 1),\n  ('contract_signed_chain', 1),\n  ('renewal_30d', 1),\n  ('overdue_invoice', 1),\n  ('onboarding_post_payment', 1),\n  ('nps_post_project', 1),\n  ('reengagement_7d', 1),\n  ('session_reminder_24h', 1),\n  ('weekly_pipeline_summary', 1);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nCREATE TABLE IF NOT EXISTS automation_settings (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  automationId VARCHAR(64) NOT NULL UNIQUE,\n  isActive TINYINT(1) NOT NULL DEFAULT 1,\n  lastRunAt TIMESTAMP NULL,\n  totalRuns INT DEFAULT 0,\n  totalSuccess INT DEFAULT 0,\n  totalErrors INT DEFAULT 0,\n  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);\n\nINSERT IGNORE INTO automation_settings (automationId, isActive) VALUES\n  ('welcome_whatsapp', 1),\n  ('follow_up_48h', 1),\n  ('contract_signed_chain', 1),\n  ('renewal_30d', 1),\n  ('overdue_invoice', 1),\n  ('onboarding_post_payment', 1),\n  ('nps_post_project', 1),\n  ('reengagement_7d', 1),\n  ('session_reminder_24h', 1),\n  ('weekly_pipeline_summary', 1);\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 139
+}

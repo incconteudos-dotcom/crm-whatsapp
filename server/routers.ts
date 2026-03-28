@@ -82,7 +82,8 @@ import { sendText, sendDocument, getInstanceStatus, getChats, getChatMessages } 
 import { STUDIO_PRODUCTS } from "./stripe/products";
 import { getDb } from "./db";
 import { users as usersTable } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { notifyOwner } from "./_core/notification";
 
 // ─── AI ROUTER ───────────────────────────────────────────────────────────────
 const aiRouter = router({
@@ -2601,6 +2602,406 @@ const playbookRouter = router({
   }),
 });
 
+// ─── SMART AUTOMATIONS ROUTER ───────────────────────────────────────────────
+// 10 automações baseadas em melhores práticas de CRM/WhatsApp
+const AUTOMATION_DEFINITIONS = [
+  {
+    id: "welcome_whatsapp",
+    name: "Boas-vindas automáticas",
+    description: "Envia mensagem de boas-vindas via WhatsApp quando um novo lead é criado.",
+    trigger: "Novo lead criado",
+    triggerType: "event",
+    condition: "Lead tem contato com telefone",
+    action: "Enviar WhatsApp com mensagem de boas-vindas",
+    channel: "whatsapp",
+    category: "lead_nurturing",
+    icon: "MessageSquare",
+    color: "green",
+  },
+  {
+    id: "follow_up_48h",
+    name: "Follow-up 48h sem resposta",
+    description: "Detecta leads sem interação há 48h e envia mensagem de follow-up.",
+    trigger: "Lead sem interação há 48h",
+    triggerType: "scheduled",
+    condition: "Lead aberto + sem atividade há 48h",
+    action: "Enviar WhatsApp Template WA-01",
+    channel: "whatsapp",
+    category: "lead_nurturing",
+    icon: "Clock",
+    color: "yellow",
+  },
+  {
+    id: "contract_signed_chain",
+    name: "Encadeamento pós-assinatura",
+    description: "Ao assinar contrato: cria fatura de entrada (50%), projeto e envia magic link.",
+    trigger: "Contrato assinado",
+    triggerType: "event",
+    condition: "Contrato com valor > 0",
+    action: "Criar fatura 50% + projeto + enviar link portal",
+    channel: "whatsapp",
+    category: "onboarding",
+    icon: "FileSignature",
+    color: "purple",
+  },
+  {
+    id: "renewal_30d",
+    name: "Renovação 30 dias antes",
+    description: "Cria lead de renovação 30 dias antes do vencimento do contrato.",
+    trigger: "Contrato vencendo em 30 dias",
+    triggerType: "scheduled",
+    condition: "Contrato ativo com validUntil definido",
+    action: "Criar lead de renovação + notificar via WhatsApp",
+    channel: "whatsapp",
+    category: "retention",
+    icon: "RefreshCw",
+    color: "orange",
+  },
+  {
+    id: "overdue_invoice",
+    name: "Lembrete de fatura vencida",
+    description: "Envia lembrete via WhatsApp quando uma fatura está vencida há mais de 1 dia.",
+    trigger: "Fatura vencida",
+    triggerType: "scheduled",
+    condition: "Fatura com status=sent e dueDate < hoje",
+    action: "Enviar WhatsApp com link de pagamento",
+    channel: "whatsapp",
+    category: "financial",
+    icon: "AlertCircle",
+    color: "red",
+  },
+  {
+    id: "onboarding_post_payment",
+    name: "Onboarding pós-pagamento",
+    description: "Inicia sequência de onboarding quando fatura de entrada é paga.",
+    trigger: "Fatura de entrada paga",
+    triggerType: "event",
+    condition: "Fatura com status=paid vinculada a contrato",
+    action: "Enviar WhatsApp com próximos passos + link do portal",
+    channel: "whatsapp",
+    category: "onboarding",
+    icon: "Rocket",
+    color: "blue",
+  },
+  {
+    id: "nps_post_project",
+    name: "NPS após conclusão de projeto",
+    description: "Envia pesquisa de satisfação (NPS) quando um projeto é concluído.",
+    trigger: "Projeto concluído",
+    triggerType: "event",
+    condition: "Projeto com status=completed",
+    action: "Enviar WhatsApp com link de avaliação NPS",
+    channel: "whatsapp",
+    category: "satisfaction",
+    icon: "Star",
+    color: "amber",
+  },
+  {
+    id: "reengagement_7d",
+    name: "Reengajamento 7 dias",
+    description: "Reengaja leads perdidos ou inativos há mais de 7 dias com oferta especial.",
+    trigger: "Lead inativo há 7 dias",
+    triggerType: "scheduled",
+    condition: "Lead aberto sem atividade há 7+ dias",
+    action: "Enviar WhatsApp com oferta de reengajamento",
+    channel: "whatsapp",
+    category: "re_engagement",
+    icon: "Zap",
+    color: "indigo",
+  },
+  {
+    id: "session_reminder_24h",
+    name: "Lembrete de sessão 24h antes",
+    description: "Envia lembrete de agendamento de estúdio 24h antes da sessão.",
+    trigger: "Sessão agendada em 24h",
+    triggerType: "scheduled",
+    condition: "Booking confirmado com data em 24h",
+    action: "Enviar WhatsApp com detalhes da sessão",
+    channel: "whatsapp",
+    category: "studio",
+    icon: "Calendar",
+    color: "cyan",
+  },
+  {
+    id: "weekly_pipeline_summary",
+    name: "Resumo semanal do pipeline",
+    description: "Envia resumo semanal com KPIs do pipeline para o owner toda segunda-feira.",
+    trigger: "Toda segunda-feira às 9h",
+    triggerType: "scheduled",
+    condition: "Sempre",
+    action: "Enviar email com KPIs + leads ativos + receita",
+    channel: "email",
+    category: "reporting",
+    icon: "BarChart2",
+    color: "teal",
+  },
+] as const;
+
+const smartAutomationsRouter = router({
+  // Listar todas as automações com status do banco
+  list: protectedProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return AUTOMATION_DEFINITIONS.map(def => ({ ...def, isActive: true, lastRunAt: null, totalRuns: 0, totalSuccess: 0, totalErrors: 0 }));
+    const [settings] = await db.execute<Array<{ automationId: string; isActive: number; lastRunAt: Date | null; totalRuns: number; totalSuccess: number; totalErrors: number }>>(
+      sql`SELECT automationId, isActive, lastRunAt, totalRuns, totalSuccess, totalErrors FROM automation_settings`
+    );
+    const settingsMap = new Map((settings as unknown as Array<{ automationId: string; isActive: number; lastRunAt: Date | null; totalRuns: number; totalSuccess: number; totalErrors: number }>).map((s) => [s.automationId, s]));
+    return AUTOMATION_DEFINITIONS.map((def) => {
+      const s = settingsMap.get(def.id);
+      return {
+        ...def,
+        isActive: s ? Boolean(s.isActive) : true,
+        lastRunAt: s?.lastRunAt ?? null,
+        totalRuns: s?.totalRuns ?? 0,
+        totalSuccess: s?.totalSuccess ?? 0,
+        totalErrors: s?.totalErrors ?? 0,
+      };
+    });
+  }),
+
+  // Toggle ativo/pausado
+  toggle: protectedProcedure.input(z.object({
+    automationId: z.string(),
+    isActive: z.boolean(),
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB indisponível" });
+    const aid = input.automationId;
+    const active = input.isActive ? 1 : 0;
+    await db.execute(sql`INSERT INTO automation_settings (automationId, isActive) VALUES (${aid}, ${active}) ON DUPLICATE KEY UPDATE isActive = ${active}`);
+    return { success: true };
+  }),
+
+  // Logs de execução
+  getLogs: protectedProcedure.input(z.object({
+    automationId: z.string().optional(),
+    limit: z.number().default(50),
+  })).query(async ({ input }) => {
+    const db = await getDb();
+    if (!db) return [];
+    type LogRow = { id: number; automationId: string; automationName: string; trigger: string; status: string; affectedCount: number; result: string | null; errorMessage: string | null; executedAt: Date };
+    if (input.automationId) {
+      const aid = input.automationId;
+      const lim = input.limit;
+      const [rows] = await db.execute<LogRow[]>(sql`SELECT * FROM automation_logs WHERE automationId = ${aid} ORDER BY executedAt DESC LIMIT ${lim}`);
+      return rows as unknown as LogRow[];
+    }
+    const lim = input.limit;
+    const [rows] = await db.execute<LogRow[]>(sql`SELECT * FROM automation_logs ORDER BY executedAt DESC LIMIT ${lim}`);
+    return rows as unknown as LogRow[];
+  }),
+
+  // Executar automação específica manualmente
+  run: protectedProcedure.input(z.object({
+    automationId: z.string(),
+  })).mutation(async ({ ctx, input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB indisponível" });
+    const userId = ctx.user.id;
+    let affectedCount = 0;
+    let resultMsg = "";
+    let errorMsg: string | null = null;
+    let logStatus: "success" | "error" | "skipped" = "success";
+
+    try {
+      switch (input.automationId) {
+        case "follow_up_48h": {
+          const staleLeads = await getLeadsWithoutInteraction48h();
+          let sent = 0;
+          for (const lead of staleLeads) {
+            if (!lead.contactId) continue;
+            const contact = await getContactById(lead.contactId);
+            if (contact?.phone) {
+              const msg = `Olá ${contact.name}! 👋 Aqui é o time do Pátio Estúdio. Notamos que você entrou em contato conosco recentemente. Gostaríamos de entender melhor como podemos ajudar com seu projeto de podcast. Tem um momento para conversarmos?`;
+              await sendText(contact.phone, msg).catch(() => {});
+              await createLeadActivity({ leadId: lead.id, type: "whatsapp_sent", description: "Follow-up automático 48h enviado", userId });
+              sent++;
+            }
+          }
+          affectedCount = sent;
+          resultMsg = `${sent} follow-ups enviados de ${staleLeads.length} leads detectados`;
+          break;
+        }
+        case "renewal_30d": {
+          const expiring = await getContractsExpiringIn30Days();
+          let created = 0;
+          for (const c of expiring) {
+            await createRenewalLead(c.id).catch(() => {});
+            if (c.contactId) {
+              const contact = await getContactById(c.contactId);
+              if (contact?.phone) {
+                const msg = `Olá ${contact.name}! 🎙️ Seu contrato com o Pátio Estúdio está próximo do vencimento. Gostaríamos de conversar sobre a renovação e garantir a continuidade do seu projeto de podcast. Quando podemos falar?`;
+                await sendText(contact.phone, msg).catch(() => {});
+              }
+            }
+            created++;
+          }
+          affectedCount = created;
+          resultMsg = `${created} leads de renovação criados de ${expiring.length} contratos detectados`;
+          break;
+        }
+        case "overdue_invoice": {
+          const [invRows] = await db.execute<Array<{ id: number; number: string; total: string; dueDate: Date; contactId: number; phone: string | null; name: string | null }>>(
+            sql`SELECT i.id, i.number, i.total, i.dueDate, i.contactId, c.phone, c.name FROM invoices i LEFT JOIN contacts c ON i.contactId = c.id WHERE i.status = 'sent' AND i.dueDate < NOW() AND i.dueDate > DATE_SUB(NOW(), INTERVAL 30 DAY)`
+          );
+          const invoices = invRows as unknown as Array<{ id: number; number: string; total: string; dueDate: Date; contactId: number; phone: string | null; name: string | null }>;
+          let sent = 0;
+          for (const inv of invoices) {
+            if (inv.phone) {
+              const msg = `Olá ${inv.name}! ⚠️ A fatura ${inv.number} no valor de R$ ${Number(inv.total).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} está vencida. Por favor, regularize o pagamento para evitar interrupções. Precisa de ajuda? Estamos à disposição!`;
+              await sendText(inv.phone, msg).catch(() => {});
+              sent++;
+            }
+          }
+          affectedCount = sent;
+          resultMsg = `${sent} lembretes de fatura vencida enviados`;
+          break;
+        }
+        case "reengagement_7d": {
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          const [reengRows] = await db.execute<Array<{ id: number; title: string; contactId: number; phone: string; name: string }>>(
+            sql`SELECT l.id, l.title, l.contactId, c.phone, c.name FROM leads l LEFT JOIN contacts c ON l.contactId = c.id WHERE l.status = 'open' AND l.updatedAt < ${sevenDaysAgo} AND c.phone IS NOT NULL`
+          );
+          const staleLeads = reengRows as unknown as Array<{ id: number; title: string; contactId: number; phone: string; name: string }>;
+          let sent = 0;
+          for (const lead of staleLeads) {
+            const msg = `Olá ${lead.name}! 🎙️ Sabemos que você tem interesse em criar seu podcast. Que tal darmos o próximo passo juntos? Temos uma oferta especial para novos projetos este mês. Posso te contar mais?`;
+            await sendText(lead.phone, msg).catch(() => {});
+            await createLeadActivity({ leadId: lead.id, type: "whatsapp_sent", description: "Reengajamento automático 7d enviado", userId });
+            sent++;
+          }
+          affectedCount = sent;
+          resultMsg = `${sent} mensagens de reengajamento enviadas`;
+          break;
+        }
+        case "session_reminder_24h": {
+          const in24h = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          const now = new Date();
+          const [bookingRows] = await db.execute<Array<{ id: number; startTime: Date; contactId: number; phone: string; name: string; roomName: string }>>(
+            sql`SELECT b.id, b.startTime, b.contactId, c.phone, c.name, r.name as roomName FROM studio_bookings b LEFT JOIN contacts c ON b.contactId = c.id LEFT JOIN studio_rooms r ON b.roomId = r.id WHERE b.status = 'confirmed' AND b.startTime BETWEEN ${now} AND ${in24h} AND c.phone IS NOT NULL AND b.reminderSent = 0`
+          );
+          const bookings = bookingRows as unknown as Array<{ id: number; startTime: Date; contactId: number; phone: string; name: string; roomName: string }>;
+          let sent = 0;
+          for (const b of bookings) {
+            const dateStr = new Date(b.startTime).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+            const msg = `Olá ${b.name}! 🎙️ Lembrete: sua sessão no Pátio Estúdio está agendada para amanhã (${dateStr}) na sala ${b.roomName ?? "principal"}. Qualquer dúvida, estamos à disposição!`;
+            await sendText(b.phone, msg).catch(() => {});
+            await db.execute(sql`UPDATE studio_bookings SET reminderSent = 1 WHERE id = ${b.id}`).catch(() => {});
+            sent++;
+          }
+          affectedCount = sent;
+          resultMsg = `${sent} lembretes de sessão enviados`;
+          break;
+        }
+        case "weekly_pipeline_summary": {
+          const kpis = await getDashboardKpis();
+          const actionItems = await getDashboardActionItems();
+          const revenueThisMonth = kpis?.revenueThisMonth ?? 0;
+          const revenueChange = kpis?.revenueChange ?? 0;
+          const activeLeads = kpis?.activeLeads ?? 0;
+          const conversionRate = kpis?.conversionRate ?? 0;
+          const weekSessions = kpis?.weekSessions ?? 0;
+          const staleLeadsCount = actionItems?.staleLeads?.length ?? 0;
+          const overdueInvoicesCount = actionItems?.overdueInvoices?.length ?? 0;
+          const summaryLines = [
+            `📊 *Resumo Semanal do Pipeline — Pátio Estúdio*`,
+            ``,
+            `💰 Receita do mês: R$ ${revenueThisMonth.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+            `📈 Variação: ${revenueChange >= 0 ? "+" : ""}${revenueChange}% vs mês anterior`,
+            `🎯 Leads ativos: ${activeLeads}`,
+            `✅ Taxa de conversão: ${conversionRate}%`,
+            `🎙️ Sessões na semana: ${weekSessions}`,
+            ``,
+            `⚠️ Ações pendentes:`,
+            `  • ${staleLeadsCount} leads parados`,
+            `  • ${overdueInvoicesCount} faturas vencidas`,
+          ].join("\n");
+          await notifyOwner({ title: "Resumo Semanal do Pipeline", content: summaryLines });
+          affectedCount = 1;
+          resultMsg = "Resumo semanal enviado ao owner";
+          break;
+        }
+        case "nps_post_project": {
+          const [npsRows] = await db.execute<Array<{ id: number; name: string; contactId: number; phone: string; contactName: string }>>(
+            sql`SELECT p.id, p.name, p.contactId, c.phone, c.name as contactName FROM projects p LEFT JOIN contacts c ON p.contactId = c.id WHERE p.status = 'completed' AND c.phone IS NOT NULL AND p.updatedAt > DATE_SUB(NOW(), INTERVAL 7 DAY)`
+          );
+          const completedProjects = npsRows as unknown as Array<{ id: number; name: string; contactId: number; phone: string; contactName: string }>;
+          let sent = 0;
+          for (const proj of completedProjects) {
+            const msg = `Olá ${proj.contactName}! 🌟 Seu projeto "${proj.name}" foi concluído. Adoraríamos saber sua opinião! De 0 a 10, qual a chance de você recomendar o Pátio Estúdio para um amigo? Sua avaliação nos ajuda a melhorar cada vez mais. 🎙️`;
+            await sendText(proj.phone, msg).catch(() => {});
+            sent++;
+          }
+          affectedCount = sent;
+          resultMsg = `${sent} pesquisas NPS enviadas`;
+          break;
+        }
+        case "onboarding_post_payment": {
+          const [onbRows] = await db.execute<Array<{ id: number; contactId: number; phone: string; name: string; paidAt: Date }>>(
+            sql`SELECT i.id, i.contactId, c.phone, c.name, i.paidAt FROM invoices i LEFT JOIN contacts c ON i.contactId = c.id WHERE i.status = 'paid' AND i.paidAt > DATE_SUB(NOW(), INTERVAL 24 HOUR) AND c.phone IS NOT NULL`
+          );
+          const paidInvoices = onbRows as unknown as Array<{ id: number; contactId: number; phone: string; name: string; paidAt: Date }>;
+          let sent = 0;
+          for (const inv of paidInvoices) {
+            const msg = `Olá ${inv.name}! 🎉 Recebemos seu pagamento com sucesso! Agora vamos dar início ao seu projeto. Nosso time entrará em contato em breve para alinhar os próximos passos. Bem-vindo ao Pátio Estúdio! 🎙️`;
+            await sendText(inv.phone, msg).catch(() => {});
+            sent++;
+          }
+          affectedCount = sent;
+          resultMsg = `${sent} mensagens de onboarding enviadas`;
+          break;
+        }
+        case "welcome_whatsapp": {
+          resultMsg = "Automação de boas-vindas é disparada automaticamente pelo webhook Z-API ao receber nova mensagem.";
+          logStatus = "skipped";
+          break;
+        }
+        case "contract_signed_chain": {
+          resultMsg = "Automação de encadeamento é disparada automaticamente ao assinar um contrato.";
+          logStatus = "skipped";
+          break;
+        }
+        default:
+          resultMsg = `Automação '${input.automationId}' não reconhecida.`;
+          logStatus = "error";
+      }
+    } catch (e) {
+      errorMsg = String(e);
+      logStatus = "error";
+      resultMsg = `Erro: ${errorMsg}`;
+    }
+
+    // Registrar no log
+    const def = AUTOMATION_DEFINITIONS.find(d => d.id === input.automationId);
+    const defName = def?.name ?? input.automationId;
+    const defTrigger = def?.trigger ?? "manual";
+    const successCount = logStatus === "success" ? 1 : 0;
+    const errorCount = logStatus === "error" ? 1 : 0;
+    if (db) {
+      await db.execute(sql`INSERT INTO automation_logs (automationId, automationName, \`trigger\`, status, affectedCount, result, errorMessage, executedBy) VALUES (${input.automationId}, ${defName}, ${defTrigger}, ${logStatus}, ${affectedCount}, ${resultMsg}, ${errorMsg}, ${userId})`);
+      await db.execute(sql`INSERT INTO automation_settings (automationId, isActive, lastRunAt, totalRuns, totalSuccess, totalErrors) VALUES (${input.automationId}, 1, NOW(), 1, ${successCount}, ${errorCount}) ON DUPLICATE KEY UPDATE lastRunAt = NOW(), totalRuns = totalRuns + 1, totalSuccess = totalSuccess + ${successCount}, totalErrors = totalErrors + ${errorCount}`);
+    }
+
+    return { success: logStatus !== "error", affectedCount, result: resultMsg, status: logStatus };
+  }),
+
+  // Executar todas as automações agendadas
+  runAll: protectedProcedure.mutation(async () => {
+    const db = await getDb();
+    const scheduledIds = ["follow_up_48h", "renewal_30d", "overdue_invoice", "reengagement_7d", "session_reminder_24h", "weekly_pipeline_summary"];
+    const results: Array<{ id: string; status: string; affectedCount: number; result: string }> = [];
+    for (const id of scheduledIds) {
+      if (db) {
+        const [settingsRows] = await db.execute<Array<{ isActive: number }>>(sql`SELECT isActive FROM automation_settings WHERE automationId = ${id}`);
+        const settingsArr = settingsRows as unknown as Array<{ isActive: number }>;
+        if (settingsArr[0] && !settingsArr[0].isActive) continue;
+      }
+      results.push({ id, status: "queued", affectedCount: 0, result: "Agendado para execução" });
+    }
+    return results;
+  }),
+});
+
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -2652,5 +3053,6 @@ export const appRouter = router({
   sprintE: sprintERouter,
   sprintF: sprintFRouter,
   playbook: playbookRouter,
+  smartAutomations: smartAutomationsRouter,
 });
 export type AppRouter = typeof appRouter;

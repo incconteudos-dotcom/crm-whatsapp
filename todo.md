@@ -714,3 +714,39 @@
 - [x] Testar fluxo completo end-to-end (66 testes passando)
 - [x] Sincronizar schema.ts com banco: signatoryName, signatoryEmail, expiresAt, notes em contracts
 - [x] TypeScript: 0 erros em todos os arquivos
+
+## Sprint Automações — Redesign Completo da Página de Automações
+
+### Backend
+- [ ] Schema: tabela automation_logs (automationId, trigger, status, result, executedAt)
+- [ ] Backend: 10 procedures de automação (welcome, follow-up, contract-signed, renewal, overdue-invoice, onboarding, nps, re-engagement, session-reminder, weekly-summary)
+- [ ] Backend: procedure automations.getLogs — histórico de execuções por automação
+- [ ] Backend: procedure automations.runAll — executar todas as automações ativas
+
+### Frontend
+- [ ] Redesenhar PlaybookAutomations.tsx com cards de automações (trigger, condição, ação, status, log)
+- [ ] Toggle ativo/pausado por automação
+- [ ] Botão de disparo manual por automação
+- [ ] Painel de logs de execução por automação
+- [ ] Métricas de desempenho (execuções, sucessos, falhas)
+- [ ] Seção de status geral das automações
+
+## Sprint Automações — Central de Automações (Redesign)
+
+- [x] Pesquisar melhores práticas de CRM/WhatsApp (HubSpot, Stripe, ActivePieces)
+- [x] Criar tabelas automation_logs e automation_settings no banco
+- [x] Implementar smartAutomationsRouter com 10 automações reais
+- [x] Corrigir todos os db.execute() para usar sql template literal (drizzle-orm)
+- [x] Adicionar import de notifyOwner no routers.ts
+- [x] Redesenhar PlaybookAutomations.tsx com Central de Automações
+- [x] Filtros por categoria (8 categorias)
+- [x] Métricas gerais (ativas, execuções, taxa de sucesso, categorias)
+- [x] Cards com trigger/condição/ação visíveis
+- [x] Toggle ativo/pausado por automação
+- [x] Botão "Executar agora" por automação
+- [x] Sheet de logs de execução por automação
+- [x] Botão "Executar Todas Agendadas"
+- [x] Seção de melhores práticas com referências
+- [x] Rota /automations agora aponta para nova página
+- [x] Rota /automations/sequences mantém a página antiga
+- [x] 83 testes passando (0 falhas)

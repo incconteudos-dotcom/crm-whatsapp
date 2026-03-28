@@ -66,7 +66,8 @@ function Router() {
       <Route path="/credits" component={Credits} />
       <Route path="/routine" component={DailyRoutine} />
       <Route path="/podcasts" component={Podcasts} />
-      <Route path="/automations" component={Automations} />
+      <Route path="/automations" component={PlaybookAutomations} />
+      <Route path="/automations/sequences" component={Automations} />
       <Route path="/equipment" component={Equipment} />
       <Route path="/studio-rooms" component={StudioRooms} />
       <Route path="/payment-history" component={PaymentHistory} />
@@ -74,7 +75,7 @@ function Router() {
       <Route path="/whatsapp-analysis" component={WhatsAppAnalysis} />
       <Route path="/time-tracking" component={TimeTracking} />
       <Route path="/export" component={ExportData} />
-      <Route path="/playbook" component={PlaybookAutomations} />
+      <Route path="/playbook" component={PlaybookAutomations} />  {/* alias */}
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

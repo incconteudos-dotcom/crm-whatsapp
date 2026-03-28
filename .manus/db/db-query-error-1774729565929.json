@@ -1,0 +1,17 @@
+{
+  "query": "\nCREATE TABLE IF NOT EXISTS automation_logs (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  automationId VARCHAR(64) NOT NULL,\n  automationName VARCHAR(255) NOT NULL,\n  trigger VARCHAR(128) NOT NULL,\n  status ENUM('success', 'error', 'skipped') NOT NULL DEFAULT 'success',\n  affectedCount INT DEFAULT 0,\n  result TEXT,\n  errorMessage TEXT,\n  executedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  executedBy INT,\n  INDEX idx_automationId (automationId),\n  INDEX idx_executedAt (executedAt)\n);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nCREATE TABLE IF NOT EXISTS automation_logs (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  automationId VARCHAR(64) NOT NULL,\n  automationName VARCHAR(255) NOT NULL,\n  trigger VARCHAR(128) NOT NULL,\n  status ENUM('success', 'error', 'skipped') NOT NULL DEFAULT 'success',\n  affectedCount INT DEFAULT 0,\n  result TEXT,\n  errorMessage TEXT,\n  executedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  executedBy INT,\n  INDEX idx_automationId (automationId),\n  INDEX idx_executedAt (executedAt)\n);\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 2: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 5 column 10 near \"trigger VARCHAR(128) NOT NULL,",
+    "  status ENUM('success', 'error', 'skipped') NOT NULL DEFAULT 'success',",
+    "  affectedCount INT DEFAULT 0,",
+    "  result TEXT,",
+    "  errorMessage TEXT,",
+    "  executedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,",
+    "  executedBy INT,",
+    "  INDEX idx_automationId (automationId),",
+    "  INDEX idx_executedAt (executedAt)",
+    ")\""
+  ]
+}
