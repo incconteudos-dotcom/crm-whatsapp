@@ -23,6 +23,7 @@ import {
   Wallet,
   Zap,
   ClipboardList,
+  Mic2,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -46,6 +47,7 @@ const navItems = [
   { icon: Library, label: "Modelos", path: "/contract-templates" },
   { icon: Wallet, label: "Créditos", path: "/credits" },
   { icon: ClipboardList, label: "Rotina Diária", path: "/routine" },
+  { icon: Mic2, label: "Podcasts", path: "/podcasts" },
 ];
 
 const adminItems = [

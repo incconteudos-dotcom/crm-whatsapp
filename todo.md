@@ -322,3 +322,14 @@
 - [x] Rotinas Diárias por role — página /routine com checklist personalizado por cargo
 - [x] Conflitos de horário no Estúdio — validação em tempo real ao preencher data/hora
 - [x] Rota /routine registrada no App.tsx e item no menu lateral
+
+## Sprint 4 — Módulo de Podcast
+- [x] Tabelas podcasts, episodes, episode_comments criadas no banco
+- [x] Backend: CRUD de podcasts e episódios com status de produção
+- [x] Backend: comentários por episódio
+- [x] Página /podcasts com sidebar de programas e kanban de episódios por status
+- [x] 6 colunas de produção: Roteiro → Gravação → Edição → Revisão → Agendado → Publicado
+- [x] Avançar status com 1 clique (kanban e sheet de detalhes)
+- [x] Links do Drive em vez de upload (scriptUrl, rawAudioUrl, editedAudioUrl, thumbnailUrl, publishedUrl)
+- [x] Sheet de detalhes com comentários por episódio
+- [x] Item Podcasts adicionado ao menu lateral

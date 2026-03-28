@@ -25,6 +25,7 @@ import Projects from "./pages/Projects";
 import ContractTemplates from "./pages/ContractTemplates";
 import Credits from "./pages/Credits";
 import DailyRoutine from "./pages/DailyRoutine";
+import Podcasts from "./pages/Podcasts";
 
 function Router() {
   return (
@@ -50,6 +51,7 @@ function Router() {
       <Route path="/contract-templates" component={ContractTemplates} />
       <Route path="/credits" component={Credits} />
       <Route path="/routine" component={DailyRoutine} />
+      <Route path="/podcasts" component={Podcasts} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

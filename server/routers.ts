@@ -30,6 +30,9 @@ import {
   getRoutineTemplatesByRole, getAllRoutineTemplates, createRoutineTemplate, updateRoutineTemplate, deleteRoutineTemplate, seedDefaultRoutines,
   getDailyRoutine, upsertDailyRoutine,
   checkStudioConflict,
+  getPodcasts, getPodcastById, createPodcast, updatePodcast, deletePodcast,
+  getEpisodesByPodcast, getEpisodeById, createEpisode, updateEpisode, deleteEpisode,
+  getEpisodeComments, createEpisodeComment,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -1321,6 +1324,108 @@ const routinesRouter = router({
   ),
 });
 
+// ─── PODCASTS ROUTER ────────────────────────────────────────────────────────
+const podcastsRouter = router({
+  list: protectedProcedure.query(() => getPodcasts()),
+  get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
+    getPodcastById(input.id)
+  ),
+  create: protectedProcedure.input(z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+    coverUrl: z.string().optional(),
+    contactId: z.number().optional(),
+    category: z.string().optional(),
+    language: z.string().optional(),
+    publishingFrequency: z.string().optional(),
+    rssUrl: z.string().optional(),
+    spotifyUrl: z.string().optional(),
+    youtubeUrl: z.string().optional(),
+    notes: z.string().optional(),
+  })).mutation(({ input }) => createPodcast(input)),
+  update: protectedProcedure.input(z.object({
+    id: z.number(),
+    name: z.string().optional(),
+    description: z.string().optional(),
+    coverUrl: z.string().optional(),
+    contactId: z.number().optional(),
+    category: z.string().optional(),
+    language: z.string().optional(),
+    publishingFrequency: z.string().optional(),
+    rssUrl: z.string().optional(),
+    spotifyUrl: z.string().optional(),
+    youtubeUrl: z.string().optional(),
+    status: z.enum(["active", "paused", "finished"]).optional(),
+    notes: z.string().optional(),
+  })).mutation(({ input }) => {
+    const { id, ...data } = input;
+    return updatePodcast(id, data);
+  }),
+  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
+    deletePodcast(input.id)
+  ),
+  // Episodes
+  episodes: protectedProcedure.input(z.object({ podcastId: z.number() })).query(({ input }) =>
+    getEpisodesByPodcast(input.podcastId)
+  ),
+  getEpisode: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
+    getEpisodeById(input.id)
+  ),
+  createEpisode: protectedProcedure.input(z.object({
+    podcastId: z.number(),
+    title: z.string().min(1),
+    number: z.number().optional(),
+    description: z.string().optional(),
+    guestName: z.string().optional(),
+    guestBio: z.string().optional(),
+    recordingDate: z.date().optional(),
+    publishDate: z.date().optional(),
+    scriptUrl: z.string().optional(),
+    rawAudioUrl: z.string().optional(),
+    editedAudioUrl: z.string().optional(),
+    thumbnailUrl: z.string().optional(),
+    publishedUrl: z.string().optional(),
+    studioBookingId: z.number().optional(),
+    assignedEditorId: z.number().optional(),
+    notes: z.string().optional(),
+  })).mutation(({ input }) => createEpisode(input)),
+  updateEpisode: protectedProcedure.input(z.object({
+    id: z.number(),
+    title: z.string().optional(),
+    number: z.number().optional(),
+    description: z.string().optional(),
+    guestName: z.string().optional(),
+    guestBio: z.string().optional(),
+    recordingDate: z.date().optional(),
+    publishDate: z.date().optional(),
+    scriptUrl: z.string().optional(),
+    rawAudioUrl: z.string().optional(),
+    editedAudioUrl: z.string().optional(),
+    thumbnailUrl: z.string().optional(),
+    publishedUrl: z.string().optional(),
+    productionStatus: z.enum(["roteiro","gravacao","edicao","revisao","agendado","publicado"]).optional(),
+    studioBookingId: z.number().optional(),
+    assignedEditorId: z.number().optional(),
+    notes: z.string().optional(),
+  })).mutation(({ input }) => {
+    const { id, ...data } = input;
+    return updateEpisode(id, data);
+  }),
+  deleteEpisode: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
+    deleteEpisode(input.id)
+  ),
+  // Comments
+  comments: protectedProcedure.input(z.object({ episodeId: z.number() })).query(({ input }) =>
+    getEpisodeComments(input.episodeId)
+  ),
+  addComment: protectedProcedure.input(z.object({
+    episodeId: z.number(),
+    content: z.string().min(1),
+  })).mutation(({ input, ctx }) =>
+    createEpisodeComment({ episodeId: input.episodeId, userId: ctx.user.id, content: input.content })
+  ),
+});
+
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -1356,6 +1461,7 @@ export const appRouter = router({
   credits: creditsRouter,
   pj: pjRouter,
   routines: routinesRouter,
+  podcasts: podcastsRouter,
 });
 
 export type AppRouter = typeof appRouter;

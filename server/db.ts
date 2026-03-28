@@ -43,6 +43,12 @@ import {
   dailyRoutines,
   routineTemplates,
   type InsertPjDocument,
+  podcasts,
+  episodes,
+  episodeComments,
+  type InsertPodcast,
+  type InsertEpisode,
+  type InsertEpisodeComment,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -996,4 +1002,86 @@ export async function checkStudioConflict(startAt: Date, endAt: Date, studio?: s
   if (excludeId) conditions.push(sql`${studioBookings.id} != ${excludeId}`);
   const results = await db.select().from(studioBookings).where(and(...conditions)).limit(1);
   return { hasConflict: results.length > 0, conflictingBooking: results[0] ?? null };
+}
+
+// ─── PODCASTS ─────────────────────────────────────────────────────────────────
+export async function getPodcasts() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(podcasts).orderBy(desc(podcasts.createdAt));
+}
+
+export async function getPodcastById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(podcasts).where(eq(podcasts.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createPodcast(data: InsertPodcast) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(podcasts).values(data);
+  return result;
+}
+
+export async function updatePodcast(id: number, data: Partial<InsertPodcast>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(podcasts).set({ ...data, updatedAt: new Date() }).where(eq(podcasts.id, id));
+}
+
+export async function deletePodcast(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(episodes).where(eq(episodes.podcastId, id));
+  await db.delete(podcasts).where(eq(podcasts.id, id));
+}
+
+// ─── EPISODES ─────────────────────────────────────────────────────────────────
+export async function getEpisodesByPodcast(podcastId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(episodes).where(eq(episodes.podcastId, podcastId)).orderBy(desc(episodes.createdAt));
+}
+
+export async function getEpisodeById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(episodes).where(eq(episodes.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createEpisode(data: InsertEpisode) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(episodes).values(data);
+  return result;
+}
+
+export async function updateEpisode(id: number, data: Partial<InsertEpisode>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(episodes).set({ ...data, updatedAt: new Date() }).where(eq(episodes.id, id));
+}
+
+export async function deleteEpisode(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(episodeComments).where(eq(episodeComments.episodeId, id));
+  await db.delete(episodes).where(eq(episodes.id, id));
+}
+
+// ─── EPISODE COMMENTS ─────────────────────────────────────────────────────────
+export async function getEpisodeComments(episodeId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(episodeComments).where(eq(episodeComments.episodeId, episodeId)).orderBy(episodeComments.createdAt);
+}
+
+export async function createEpisodeComment(data: InsertEpisodeComment) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(episodeComments).values(data);
+  return result;
 }

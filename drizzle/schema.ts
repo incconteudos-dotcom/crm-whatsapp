@@ -430,3 +430,63 @@ export const routineTemplates = mysqlTable("routine_templates", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type RoutineTemplate = typeof routineTemplates.$inferSelect;
+
+// ─── PODCASTS ─────────────────────────────────────────────────────────────────
+export const podcasts = mysqlTable("podcasts", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  coverUrl: text("cover_url"),
+  contactId: int("contact_id"),
+  category: varchar("category", { length: 128 }),
+  language: varchar("language", { length: 32 }).default("pt-BR"),
+  publishingFrequency: varchar("publishing_frequency", { length: 64 }),
+  rssUrl: text("rss_url"),
+  spotifyUrl: text("spotify_url"),
+  youtubeUrl: text("youtube_url"),
+  status: mysqlEnum("podcast_status", ["active", "paused", "finished"]).default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Podcast = typeof podcasts.$inferSelect;
+export type InsertPodcast = typeof podcasts.$inferInsert;
+
+// ─── EPISODES ─────────────────────────────────────────────────────────────────
+export const episodes = mysqlTable("episodes", {
+  id: int("id").autoincrement().primaryKey(),
+  podcastId: int("podcast_id").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  number: int("number"),
+  description: text("description"),
+  guestName: varchar("guest_name", { length: 255 }),
+  guestBio: text("guest_bio"),
+  recordingDate: timestamp("recording_date"),
+  publishDate: timestamp("publish_date"),
+  duration: int("duration"),
+  scriptUrl: text("script_url"),
+  rawAudioUrl: text("raw_audio_url"),
+  editedAudioUrl: text("edited_audio_url"),
+  thumbnailUrl: text("thumbnail_url"),
+  publishedUrl: text("published_url"),
+  productionStatus: mysqlEnum("production_status", ["roteiro","gravacao","edicao","revisao","agendado","publicado"]).default("roteiro"),
+  studioBookingId: int("studio_booking_id"),
+  assignedEditorId: int("assigned_editor_id"),
+  tags: json("tags").$type<string[]>().default([]),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Episode = typeof episodes.$inferSelect;
+export type InsertEpisode = typeof episodes.$inferInsert;
+
+// ─── EPISODE COMMENTS ─────────────────────────────────────────────────────────
+export const episodeComments = mysqlTable("episode_comments", {
+  id: int("id").autoincrement().primaryKey(),
+  episodeId: int("episode_id").notNull(),
+  userId: int("user_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type EpisodeComment = typeof episodeComments.$inferSelect;
+export type InsertEpisodeComment = typeof episodeComments.$inferInsert;
