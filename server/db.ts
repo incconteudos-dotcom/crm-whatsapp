@@ -84,6 +84,8 @@ import {
   type InsertNpsResponse,
   timeEntries,
   type InsertTimeEntry,
+  leadActivities,
+  type InsertLeadActivity,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -2258,4 +2260,98 @@ export async function createRenewalLead(contractId: number): Promise<number | nu
     tags: ["renovação", "auto"],
   });
   return (res as any).insertId as number;
+}
+
+// ─── LEAD ACTIVITIES (Sprint Funil) ──────────────────────────────────────────
+export async function createLeadActivity(data: InsertLeadActivity) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(leadActivities).values(data);
+}
+
+export async function getLeadActivities(leadId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(leadActivities)
+    .where(eq(leadActivities.leadId, leadId))
+    .orderBy(desc(leadActivities.createdAt));
+}
+
+// ─── LEAD SCORING ─────────────────────────────────────────────────────────────
+export function computeLeadScore(lead: {
+  contactId?: number | null;
+  value?: string | null;
+  probability?: number | null;
+  updatedAt?: Date | null;
+  expectedCloseDate?: Date | null;
+}): number {
+  let score = 0;
+  if (lead.contactId) score += 20;
+  if (lead.value && Number(lead.value) > 0) score += 20;
+  if (lead.probability && lead.probability > 50) score += 20;
+  if (lead.updatedAt) {
+    const daysSince = (Date.now() - new Date(lead.updatedAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSince <= 3) score += 20;
+  }
+  if (lead.expectedCloseDate) score += 20;
+  return score;
+}
+
+// ─── PIPELINE FORECAST ────────────────────────────────────────────────────────
+export async function getPipelineForecast() {
+  const db = await getDb();
+  if (!db) return { totalOpen: 0, weightedValue: 0, forecastThisMonth: 0 };
+  const openLeads = await db.select().from(leads).where(eq(leads.status, "open"));
+  let totalOpen = 0;
+  let weightedValue = 0;
+  let forecastThisMonth = 0;
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  for (const lead of openLeads) {
+    const val = Number(lead.value ?? 0);
+    const prob = Number(lead.probability ?? 0) / 100;
+    totalOpen += val;
+    weightedValue += val * prob;
+    if (lead.expectedCloseDate) {
+      const closeDate = new Date(lead.expectedCloseDate);
+      if (closeDate >= startOfMonth && closeDate <= endOfMonth) {
+        forecastThisMonth += val * prob;
+      }
+    }
+  }
+  return { totalOpen, weightedValue, forecastThisMonth };
+}
+
+// ─── LEADS WITH CONTACT NAME (for list view) ─────────────────────────────────
+export async function getLeadsWithContact(stageId?: number, status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (stageId) conditions.push(eq(leads.stageId, stageId));
+  if (status) conditions.push(eq(leads.status, status as "open" | "won" | "lost"));
+  const query = db
+    .select({
+      id: leads.id,
+      title: leads.title,
+      contactId: leads.contactId,
+      contactName: contacts.name,
+      contactEmail: contacts.email,
+      stageId: leads.stageId,
+      assignedUserId: leads.assignedUserId,
+      value: leads.value,
+      currency: leads.currency,
+      probability: leads.probability,
+      expectedCloseDate: leads.expectedCloseDate,
+      status: leads.status,
+      notes: leads.notes,
+      tags: leads.tags,
+      createdAt: leads.createdAt,
+      updatedAt: leads.updatedAt,
+    })
+    .from(leads)
+    .leftJoin(contacts, eq(leads.contactId, contacts.id))
+    .orderBy(desc(leads.createdAt));
+  if (conditions.length > 0) return query.where(and(...conditions));
+  return query;
 }

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `lead_activities` (`id` int AUTO_INCREMENT NOT NULL, `lead_id` int NOT NULL, `user_id` int, `type` enum('created','stage_changed','status_changed','note_added','whatsapp_sent','email_sent','invoice_generated','contract_generated','value_updated','score_updated','manual') NOT NULL, `description` text NOT NULL, `metadata` json, `createdAt` timestamp NOT NULL DEFAULT (now()), CONSTRAINT `lead_activities_id` PRIMARY KEY(`id`))",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute CREATE TABLE IF NOT EXISTS `lead_activities` (`id` int AUTO_INCREMENT NOT NULL, `lead_id` int NOT NULL, `user_id` int, `type` enum('created','stage_changed','status_changed','note_added','whatsapp_sent','email_sent','invoice_generated','contract_generated','value_updated','score_updated','manual') NOT NULL, `description` text NOT NULL, `metadata` json, `createdAt` timestamp NOT NULL DEFAULT (now()), CONSTRAINT `lead_activities_id` PRIMARY KEY(`id`))",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 146
+}

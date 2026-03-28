@@ -70,6 +70,11 @@ import {
   getLeadsWithoutInteraction48h,
   getContractsExpiringIn30Days,
   createRenewalLead,
+  createLeadActivity,
+  getLeadActivities,
+  computeLeadScore,
+  getPipelineForecast,
+  getLeadsWithContact,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -261,28 +266,65 @@ const pipelineRouter = router({
     value: z.string().optional(),
     probability: z.number().optional(),
     status: z.enum(["open", "won", "lost"]).optional(),
+    lostReason: z.string().optional(),
+    source: z.enum(["manual", "whatsapp", "import", "website", "event", "referral", "cold_outreach"]).optional(),
     notes: z.string().optional(),
-  })).mutation(async ({ input }) => {
-    const { id, ...data } = input;
+    expectedCloseDate: z.date().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    const { id, lostReason, ...data } = input;
+    const prevLead = await getLeadById(id);
     const result = await updateLead(id, data);
-    // Trigger automation sequences when stage changes
-    if (data.stageId) {
+    // Log activity
+    if (data.stageId && prevLead) {
+      const stages = await getPipelineStages();
+      const prevStage = stages.find(s => s.id === prevLead.stageId);
+      const newStage = stages.find(s => s.id === data.stageId);
+      if (prevStage?.name !== newStage?.name) {
+        await createLeadActivity({ leadId: id, userId: ctx.user.id, type: "stage_changed", description: `Movido de "${prevStage?.name ?? '?'}" para "${newStage?.name ?? '?'}"` });
+      }
       try {
         const lead = await getLeadById(id);
-        const stages = await getPipelineStages();
-        const stage = stages.find(s => s.id === data.stageId);
-        if (lead && stage && lead.contactId) {
-          await scheduleAutomationForLead(id, lead.contactId, stage.name);
+        if (lead && newStage && lead.contactId) {
+          await scheduleAutomationForLead(id, lead.contactId, newStage.name);
         }
       } catch (e) {
         console.warn("[Automation] Failed to schedule for lead", id, e);
       }
+    }
+    if (data.status === "lost") {
+      await createLeadActivity({ leadId: id, userId: ctx.user.id, type: "status_changed", description: `Lead marcado como Perdido${lostReason ? `: ${lostReason}` : ""}`, metadata: { lostReason } });
+    } else if (data.status === "won") {
+      await createLeadActivity({ leadId: id, userId: ctx.user.id, type: "status_changed", description: "Lead marcado como Ganho" });
+    }
+    if (data.value && prevLead && data.value !== prevLead.value) {
+      await createLeadActivity({ leadId: id, userId: ctx.user.id, type: "value_updated", description: `Valor atualizado para R$ ${Number(data.value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` });
     }
     return result;
   }),
   deleteLead: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
     deleteLead(input.id)
   ),
+  // Sprint Funil — novas procedures
+  activities: protectedProcedure.input(z.object({ leadId: z.number() })).query(({ input }) =>
+    getLeadActivities(input.leadId)
+  ),
+  addActivity: protectedProcedure.input(z.object({
+    leadId: z.number(),
+    type: z.enum(["note_added", "whatsapp_sent", "email_sent", "invoice_generated", "contract_generated", "manual"]),
+    description: z.string().min(1),
+  })).mutation(({ input, ctx }) =>
+    createLeadActivity({ leadId: input.leadId, userId: ctx.user.id, type: input.type, description: input.description })
+  ),
+  forecast: protectedProcedure.query(() => getPipelineForecast()),
+  leadsWithContact: protectedProcedure.input(z.object({
+    stageId: z.number().optional(),
+    status: z.string().optional(),
+  })).query(({ input }) => getLeadsWithContact(input.stageId, input.status)),
+  score: protectedProcedure.input(z.object({ leadId: z.number() })).query(async ({ input }) => {
+    const lead = await getLeadById(input.leadId);
+    if (!lead) return 0;
+    return computeLeadScore(lead);
+  }),
 });
 
 // ─── WHATSAPP ROUTER ──────────────────────────────────────────────────────────

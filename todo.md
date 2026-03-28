@@ -686,3 +686,21 @@
 - [x] Ação 2: Contrato assinado → enviar magic link do portal ao cliente via WhatsApp
 - [x] Ação 3: Cron follow-up 48h — buscar leads sem interação e disparar Template WA-01
 - [x] Ação 3: Cron renovação — criar lead de renovação 30 dias antes do vencimento do contrato
+
+## Sprint Funil — 10 Melhorias no Pipeline ✅
+
+### Grupo 1 — UX Imediata
+- [x] Drawer completo do lead: sheet lateral com todos os dados, histórico, ações
+- [x] Motivo de perda obrigatório: modal ao marcar "Perdido" com categorias
+- [x] Alerta visual de lead esquecido: borda laranja em cards sem atualização há 5+ dias
+- [x] Campo de origem do lead: source (WhatsApp, Evento, Indicação, Site, Cold Outreach)
+
+### Grupo 2 — Inteligência Comercial
+- [x] Forecast de receita: header com valor total, valor ponderado e previsão do mês
+- [x] Lead scoring automático: pontuação 0-100 calculada por critérios objetivos
+- [x] Limite de WIP por coluna: configurar máximo de leads por estágio (ToC)
+
+### Grupo 3 — Integração
+- [x] Histórico de atividades por lead: log automático de cada ação com timestamp
+- [x] Vinculação lead→contrato/fatura: botões "Gerar Contrato" e "Gerar Fatura" no drawer
+- [x] Visão de lista: alternar entre Kanban e tabela com colunas ordenáveis

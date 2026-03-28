@@ -758,3 +758,20 @@ export const timeEntries = mysqlTable("time_entries", {
 });
 export type TimeEntry = typeof timeEntries.$inferSelect;
 export type InsertTimeEntry = typeof timeEntries.$inferInsert;
+
+// ─── LEAD ACTIVITIES (Sprint Funil — Grupo 3) ─────────────────────────────────
+export const leadActivities = mysqlTable("lead_activities", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("lead_id").notNull(),
+  userId: int("user_id"),
+  type: mysqlEnum("type", [
+    "created", "stage_changed", "status_changed", "note_added",
+    "whatsapp_sent", "email_sent", "invoice_generated", "contract_generated",
+    "value_updated", "score_updated", "manual"
+  ]).notNull(),
+  description: text("description").notNull(),
+  metadata: json("metadata").$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type LeadActivity = typeof leadActivities.$inferSelect;
+export type InsertLeadActivity = typeof leadActivities.$inferInsert;
