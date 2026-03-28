@@ -1,3 +1,4 @@
+import CRMLayout from "@/components/CRMLayout";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,7 @@ export default function Equipment() {
   };
 
   return (
+    <CRMLayout>
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -441,5 +443,6 @@ export default function Equipment() {
         </DialogContent>
       </Dialog>
     </div>
+    </CRMLayout>
   );
 }

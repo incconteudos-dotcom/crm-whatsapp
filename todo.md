@@ -366,3 +366,67 @@
 - [x] Página /studio-rooms com CRUD de salas, seletor de cor, barra de ocupação
 - [x] Página /equipment com CRUD de equipamentos, filtros por categoria/status, cards visuais
 - [x] Itens "Salas" e "Equipamentos" adicionados ao menu lateral
+
+## Sprint A — Fechamento Financeiro Crítico (42 pts)
+- [ ] US-049: Bloqueio de agenda até pagamento da entrada (13 pts)
+- [ ] US-043: Contrato assinado → cobrança automática de faturas (8 pts)
+- [ ] US-050: Lembrete automático do saldo antes da sessão (8 pts)
+- [ ] US-019: Planos e assinaturas recorrentes via Stripe (13 pts)
+
+## Sprint B — Dashboard Executivo, Notificações e Qualidade (37 pts)
+- [ ] US-030: Dashboard executivo com KPIs consolidados (8 pts)
+- [ ] US-033: Notificações por e-mail do sistema via Brevo (8 pts)
+- [ ] US-034: Notificações in-app em tempo real (8 pts)
+- [ ] US-035: Testes automatizados abrangentes >80% cobertura (8 pts)
+- [ ] US-073: Histórico de pagamentos e recibos (5 pts)
+
+## Sprint C — Theory of Constraints (37 pts)
+- [ ] US-037: Sessão semanal automatizada ToC (13 pts)
+- [ ] US-038: Dashboard ToC com relatório estruturado (8 pts)
+- [ ] US-039: Mapeamento de restrições por domínio (5 pts)
+- [ ] US-041: Integração itens de ação ToC com CRM (8 pts)
+- [ ] US-040: Configuração e personalização ToC (5 pts)
+- [ ] US-072: Relatório ToC integrado à rotina diária (3 pts)
+
+## Sprint D — Expansão Comercial: NPS, Follow-up e Rentabilidade (42 pts)
+- [ ] US-077: Automação de follow-up comercial por estágio (8 pts)
+- [ ] US-078: Avaliação de satisfação do cliente (NPS) via WhatsApp (5 pts)
+- [ ] US-076: Relatório de rentabilidade por tipo de serviço (5 pts)
+- [ ] US-023: Notificação automática de sessão por WhatsApp (5 pts)
+- [ ] US-028: Briefing de episódio com aprovação (8 pts)
+- [ ] US-074: Dashboard financeiro por projeto (5 pts)
+- [ ] US-069: Resumo semanal financeiro por e-mail (toda segunda) (5 pts)
+
+## Sprint E — UX Pipeline, Relatórios e Produtividade (47 pts)
+- [ ] US-012: Drag-and-drop nativo entre colunas do pipeline (8 pts)
+- [ ] US-013: Filtros avançados no pipeline (responsável, período, valor) (5 pts)
+- [ ] US-010: Importação de contatos via CSV (8 pts)
+- [ ] US-029: Controle de horas por cliente (8 pts)
+- [ ] US-031: Relatório de conversas WhatsApp (5 pts)
+- [ ] US-032: Exportação global de dados em CSV/Excel (5 pts)
+- [ ] US-057: Painel de créditos no perfil do cliente (5 pts)
+- [ ] US-071: Pendências com clientes na rotina consolidada (8 pts)
+
+## Sprint F — WhatsApp Avançado, Assinatura Digital e Complementares (58 pts)
+- [ ] US-005: Integração real com WhatsApp MCP (lharries/whatsapp-mcp) (13 pts)
+- [ ] US-007: Suporte a mídia no WhatsApp (imagens, docs, áudio) (8 pts)
+- [ ] US-015: Exportação de contrato em PDF (8 pts)
+- [ ] US-016: Assinatura digital de contratos com validade jurídica (8 pts)
+- [ ] US-060: Produtos vinculados a tipos de contrato (3 pts)
+- [ ] US-070: Resumo semanal de conversas WhatsApp (5 pts)
+
+## Sprint Design — UI/UX Pro Max (Prioridade Máxima)
+- [x] Ativar fonte Inter via Google Fonts no index.html
+- [x] Definir escala tipográfica global no index.css
+- [x] Redesenhar CRMLayout: sidebar com 6 grupos colapsáveis (Comercial, Financeiro, Produção, Documentos, Gestão, Admin)
+- [x] Mover Modelos, Catálogo, Créditos, Portal Visual, Salas, Equipamentos para submenus/Configurações
+- [x] Adicionar suporte mobile: overlay sidebar, SidebarTrigger, bottom nav mobile
+- [x] Corrigir barra branca/linha sem design no layout
+- [x] Corrigir Equipment.tsx: adicionar CRMLayout wrapper
+- [x] Corrigir StudioRooms.tsx: adicionar CRMLayout wrapper
+- [ ] Adicionar busca global ⌘K (cmdk)
+- [ ] Extrair componentes reutilizáveis: PageHeader, MetricCard, StatusBadge, EmptyState, DeleteConfirmDialog
+- [x] Agrupar sidebar em categorias com ícones de grupo e contagem de badges
+- [x] Adicionar indicador de status Z-API no rodapé do sidebar
+- [ ] Melhorar hierarquia visual dos cards do Pipeline (valor em destaque)
+- [ ] Adicionar filtros de contexto na lista de chats WhatsApp (Clientes / Leads / Todos)

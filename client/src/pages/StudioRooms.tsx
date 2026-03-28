@@ -1,3 +1,4 @@
+import CRMLayout from "@/components/CRMLayout";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -111,6 +112,7 @@ export default function StudioRooms() {
   };
 
   return (
+    <CRMLayout>
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -332,5 +334,6 @@ export default function StudioRooms() {
         </DialogContent>
       </Dialog>
     </div>
+    </CRMLayout>
   );
 }
