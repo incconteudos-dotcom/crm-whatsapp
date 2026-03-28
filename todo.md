@@ -750,3 +750,127 @@
 - [x] Rota /automations agora aponta para nova página
 - [x] Rota /automations/sequences mantém a página antiga
 - [x] 83 testes passando (0 falhas)
+
+## Sprint Z-API Completo + Email Fix
+
+### Email (Brevo)
+- [ ] Verificar/configurar BREVO_API_KEY como secret no projeto
+- [ ] Adicionar diagnóstico de email na página de Configurações (testar envio)
+- [ ] Mostrar erro claro quando BREVO_API_KEY não está configurado
+
+### Z-API — Backend (zapi.ts)
+- [ ] sendAudio: enviar áudio por URL
+- [ ] sendVideo: enviar vídeo por URL
+- [ ] sendLocation: enviar localização (lat/lng)
+- [ ] sendReaction: enviar reação a mensagem
+- [ ] sendLink: enviar link com preview
+- [ ] readChat: marcar chat como lido
+- [ ] deleteMessage: deletar mensagem
+- [ ] getContacts: buscar contatos do WhatsApp
+- [ ] getContactInfo: buscar info de contato (foto, nome)
+- [ ] checkNumberExists: verificar se número tem WhatsApp
+- [ ] getProfilePicture: buscar foto de perfil
+- [ ] archiveChat: arquivar/desarquivar chat
+- [ ] pinChat: fixar/desfixar chat
+- [ ] muteChat: silenciar chat
+- [ ] sendPoll: enviar enquete
+- [ ] getGroups: listar grupos
+- [ ] getGroupInfo: info de grupo
+- [ ] getTotalUnread: total de mensagens não lidas
+
+### Z-API — Backend (routers.ts)
+- [ ] whatsapp.sendAudio procedure
+- [ ] whatsapp.sendVideo procedure
+- [ ] whatsapp.sendLocation procedure
+- [ ] whatsapp.sendReaction procedure
+- [ ] whatsapp.readChat procedure
+- [ ] whatsapp.deleteMessage procedure
+- [ ] whatsapp.getContacts procedure (sync contatos WA → CRM)
+- [ ] whatsapp.checkNumber procedure
+- [ ] whatsapp.archiveChat procedure
+- [ ] whatsapp.pinChat procedure
+- [ ] whatsapp.muteChat procedure
+- [ ] whatsapp.sendPoll procedure
+- [ ] whatsapp.getGroups procedure
+- [ ] whatsapp.totalUnread (já existe, verificar)
+
+### Z-API — Frontend (WhatsApp.tsx)
+- [ ] Botão de enviar áudio (upload de arquivo)
+- [ ] Botão de enviar imagem (upload de arquivo)
+- [ ] Botão de enviar localização
+- [ ] Reações em mensagens (emoji picker)
+- [ ] Marcar como lido ao abrir chat
+- [ ] Badge de não lidas no sidebar
+- [ ] Fixar/arquivar chat via menu de contexto
+- [ ] Silenciar chat via menu de contexto
+- [ ] Botão de enquete
+- [ ] Aba de Grupos na lista de chats
+- [ ] Verificar número antes de enviar
+- [ ] Sincronizar contatos WA com CRM (botão manual)
+
+## Sprint Z-API Completo + Email — Concluído (28/03/2026)
+
+### Email (Brevo) — Concluído
+- [x] emailStatus procedure adicionado ao documentsRouter para diagnóstico de configuração Brevo
+- [x] Mensagem clara quando BREVO_API_KEY não está configurado
+- [x] BREVO_API_KEY é injetado automaticamente como secret do projeto
+
+### Z-API — Backend (zapi.ts) — Concluído
+- [x] sendAudio: enviar áudio por URL
+- [x] sendVideo: enviar vídeo por URL
+- [x] sendLocation: enviar localização (lat/lng)
+- [x] sendReaction: enviar reação a mensagem
+- [x] sendLink: enviar link com preview
+- [x] readChat: marcar chat como lido
+- [x] deleteMessage: deletar mensagem
+- [x] getContacts: buscar contatos do WhatsApp
+- [x] getContactInfo: buscar info de contato
+- [x] checkNumberExists: verificar se número tem WhatsApp
+- [x] getProfilePicture: buscar foto de perfil
+- [x] archiveChat: arquivar/desarquivar chat
+- [x] pinChat: fixar/desfixar chat
+- [x] muteChat: silenciar chat
+- [x] sendPoll: enviar enquete
+- [x] getGroups: listar grupos
+- [x] getGroupInfo: info de grupo
+- [x] getCellphoneData: dados do número conectado
+- [x] getQRCode: QR code para conexão
+- [x] restartInstance: reiniciar instância
+- [x] disconnectInstance: desconectar instância
+
+### Z-API — Backend (routers.ts) — Concluído
+- [x] whatsapp.sendAudio procedure
+- [x] whatsapp.sendVideo procedure
+- [x] whatsapp.sendLocation procedure
+- [x] whatsapp.sendReaction procedure
+- [x] whatsapp.sendLink procedure
+- [x] whatsapp.sendPoll procedure
+- [x] whatsapp.replyMessage procedure
+- [x] whatsapp.readChat procedure
+- [x] whatsapp.deleteMessage procedure
+- [x] whatsapp.zapiContacts procedure (lista contatos WA)
+- [x] whatsapp.syncZapiContacts procedure (importa contatos WA → CRM)
+- [x] whatsapp.checkNumber procedure
+- [x] whatsapp.archiveChat procedure
+- [x] whatsapp.pinChat procedure
+- [x] whatsapp.muteChat procedure
+- [x] whatsapp.clearChat procedure
+- [x] whatsapp.deleteChat procedure
+- [x] whatsapp.groups procedure
+- [x] whatsapp.qrCode procedure
+- [x] whatsapp.cellphone procedure
+- [x] whatsapp.restart procedure
+- [x] whatsapp.disconnect procedure
+
+### Z-API — Frontend (WhatsApp.tsx) — Concluído
+- [x] Aba Chats com filtros (Todos / Clientes / Leads)
+- [x] Aba Contatos Z-API com importação para CRM
+- [x] Aba Grupos Z-API com abertura de conversa
+- [x] Aba Status: conexão, QR Code, reiniciar, desconectar, verificar número
+- [x] Envio de 7 tipos de mídia: Texto, Imagem, Áudio, Vídeo, Localização, Link, Enquete
+- [x] Responder mensagem (reply) com preview
+- [x] Apagar mensagem (hover)
+- [x] Ações no chat via dropdown: arquivar, fixar, silenciar, limpar, excluir
+- [x] Marcar como lido ao abrir chat
+- [x] Análise de conversa com IA (4 tipos)
+- [x] 83 testes passando (0 falhas) | TypeScript: 0 erros

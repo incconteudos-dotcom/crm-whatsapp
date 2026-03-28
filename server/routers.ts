@@ -78,7 +78,16 @@ import {
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
-import { sendText, sendDocument, getInstanceStatus, getChats, getChatMessages } from "./zapi";
+import {
+  sendText, sendDocument, sendImage, sendAudio, sendVideo, sendLocation, sendLink,
+  sendReaction, sendPoll, deleteMessage as zapiDeleteMessage, replyMessage,
+  getInstanceStatus, getChats, getChatMessages,
+  readChat, archiveChat, pinChat, muteChat, clearChat, deleteChat, getTotalUnread,
+  getContacts as zapiGetContacts, getContactInfo, checkNumberExists, getProfilePicture,
+  getGroups, getGroupInfo,
+  getQRCode, restartInstance, disconnectInstance, getCellphoneData,
+  normalizePhone,
+} from "./zapi";
 import { STUDIO_PRODUCTS } from "./stripe/products";
 import { getDb } from "./db";
 import { users as usersTable } from "../drizzle/schema";
@@ -421,6 +430,189 @@ const whatsappRouter = router({
     return { analysis: response.choices[0]?.message?.content ?? "Análise não disponível." };
   }),
   totalUnread: protectedProcedure.query(() => getTotalUnreadChats()),
+
+  // ── New Z-API extended procedures ──────────────────────────────────────────
+
+  sendAudio: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    audioUrl: z.string().url(),
+  })).mutation(async ({ input }) => {
+    const result = await sendAudio(input.phone, input.audioUrl);
+    return { success: true, messageId: result.messageId };
+  }),
+
+  sendVideo: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    videoUrl: z.string().url(),
+    caption: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const result = await sendVideo(input.phone, input.videoUrl, input.caption);
+    return { success: true, messageId: result.messageId };
+  }),
+
+  sendImage: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    imageUrl: z.string().url(),
+    caption: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const result = await sendImage(input.phone, input.imageUrl, input.caption);
+    return { success: true, messageId: result.messageId };
+  }),
+
+  sendLocation: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    latitude: z.number(),
+    longitude: z.number(),
+    name: z.string().optional(),
+    address: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const result = await sendLocation(input.phone, input.latitude, input.longitude, input.name, input.address);
+    return { success: true, messageId: result.messageId };
+  }),
+
+  sendLink: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    message: z.string(),
+    linkUrl: z.string().url(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    imageUrl: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const result = await sendLink(input.phone, input.message, input.linkUrl, input.title, input.description, input.imageUrl);
+    return { success: true, messageId: result.messageId };
+  }),
+
+  sendReaction: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    messageId: z.string(),
+    reaction: z.string(),
+  })).mutation(async ({ input }) => {
+    const result = await sendReaction(input.phone, input.messageId, input.reaction);
+    return { success: true, messageId: result.messageId };
+  }),
+
+  sendPoll: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    name: z.string(),
+    options: z.array(z.string()).min(2).max(12),
+    selectableCount: z.number().optional(),
+  })).mutation(async ({ input }) => {
+    const result = await sendPoll(input.phone, input.name, input.options, input.selectableCount);
+    return { success: true, messageId: result.messageId };
+  }),
+
+  deleteMessage: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    messageId: z.string(),
+    owner: z.boolean().optional(),
+  })).mutation(async ({ input }) => {
+    return zapiDeleteMessage(input.phone, input.messageId, input.owner ?? true);
+  }),
+
+  replyMessage: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    message: z.string().min(1),
+    messageId: z.string(),
+  })).mutation(async ({ input, ctx }) => {
+    const userName = ctx.user.name ?? "Usuário";
+    const prefixedMessage = `[${userName}]: ${input.message}`;
+    const result = await replyMessage(input.phone, prefixedMessage, input.messageId);
+    await upsertWhatsappMessage({
+      messageId: result.messageId,
+      chatJid: input.phone,
+      content: prefixedMessage,
+      isFromMe: true,
+      crmUserId: ctx.user.id,
+      crmUserName: userName,
+      timestamp: Date.now(),
+    });
+    return { success: true, messageId: result.messageId };
+  }),
+
+  readChat: whatsappProcedure.input(z.object({ phone: z.string() })).mutation(async ({ input }) => {
+    return readChat(input.phone);
+  }),
+
+  archiveChat: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    archive: z.boolean().default(true),
+  })).mutation(async ({ input }) => {
+    return archiveChat(input.phone, input.archive);
+  }),
+
+  pinChat: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    pin: z.boolean().default(true),
+  })).mutation(async ({ input }) => {
+    return pinChat(input.phone, input.pin);
+  }),
+
+  muteChat: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    mute: z.boolean().default(true),
+    duration: z.number().optional(),
+  })).mutation(async ({ input }) => {
+    return muteChat(input.phone, input.mute, input.duration);
+  }),
+
+  clearChat: whatsappProcedure.input(z.object({ phone: z.string() })).mutation(async ({ input }) => {
+    return clearChat(input.phone);
+  }),
+
+  deleteChat: whatsappProcedure.input(z.object({ phone: z.string() })).mutation(async ({ input }) => {
+    return deleteChat(input.phone);
+  }),
+
+  totalUnreadZapi: whatsappProcedure.query(() => getTotalUnread()),
+
+  zapiContacts: whatsappProcedure.query(() => zapiGetContacts(0, 200)),
+
+  contactInfo: whatsappProcedure.input(z.object({ phone: z.string() })).query(({ input }) =>
+    getContactInfo(input.phone)
+  ),
+
+  checkNumber: whatsappProcedure.input(z.object({ phone: z.string() })).query(({ input }) =>
+    checkNumberExists(input.phone)
+  ),
+
+  profilePicture: whatsappProcedure.input(z.object({ phone: z.string() })).query(({ input }) =>
+    getProfilePicture(input.phone)
+  ),
+
+  groups: whatsappProcedure.query(() => getGroups()),
+
+  groupInfo: whatsappProcedure.input(z.object({ groupId: z.string() })).query(({ input }) =>
+    getGroupInfo(input.groupId)
+  ),
+
+  qrCode: whatsappProcedure.query(() => getQRCode()),
+
+  restart: whatsappProcedure.mutation(() => restartInstance()),
+
+  disconnect: whatsappProcedure.mutation(() => disconnectInstance()),
+
+  cellphone: whatsappProcedure.query(() => getCellphoneData()),
+
+  syncZapiContacts: whatsappProcedure.mutation(async () => {
+    const contacts = await zapiGetContacts(0, 500);
+    let synced = 0;
+    for (const c of contacts) {
+      if (!c.phone) continue;
+      const name = c.name ?? c.notify ?? c.vname ?? c.short ?? "Contato WA";
+      try {
+        await createContact({
+          name,
+          phone: c.phone,
+          source: "whatsapp",
+          whatsappJid: c.phone,
+        });
+        synced++;
+      } catch {
+        // Skip duplicates
+      }
+    }
+    return { synced, total: contacts.length };
+  }),
 });
 
 // ─── CONTRACTS ROUTER ─────────────────────────────────────────────────────────
@@ -1000,6 +1192,17 @@ const stripeRouter = router({
 
 // ─── DOCUMENTS ROUTER (PDF generation & sending) ─────────────────────────────────
 const documentsRouter = router({
+  emailStatus: protectedProcedure.query(() => {
+    const hasKey = !!(process.env.BREVO_API_KEY && process.env.BREVO_API_KEY.length > 10);
+    return {
+      configured: hasKey,
+      fromEmail: process.env.BREVO_FROM_EMAIL ?? "noreply@patioestudioscrm.manus.space",
+      fromName: process.env.BREVO_FROM_NAME ?? "Pátio Estúdio de Podcast",
+      message: hasKey
+        ? "Brevo configurado e pronto para envio"
+        : "BREVO_API_KEY não configurado — vá em Configurações → Secrets e adicione a chave da API Brevo",
+    };
+  }),
   generateInvoicePdf: protectedProcedure.input(z.object({ invoiceId: z.number() })).mutation(async ({ input }) => {
     const { buildInvoiceHtml, uploadDocumentPdf } = await import("./pdf");
     const invoice = await getInvoiceById(input.invoiceId);
