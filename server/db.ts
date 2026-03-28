@@ -64,9 +64,12 @@ import {
   studioRooms,
   equipment,
   equipmentBookings,
+  notifications,
   type InsertStudioRoom,
   type InsertEquipment,
   type InsertEquipmentBooking,
+  type InsertNotification,
+  type Notification,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -1588,4 +1591,166 @@ export async function updateContactSubscription(contactId: number, data: {
   await db.update(contacts)
     .set({ ...data, updatedAt: new Date() })
     .where(eq(contacts.id, contactId));
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+export async function createNotification(data: InsertNotification): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(notifications).values(data);
+}
+
+export async function getNotifications(userId: number): Promise<Notification[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(50);
+}
+
+export async function getUnreadNotificationCount(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+  return Number(result[0]?.count ?? 0);
+}
+
+export async function markNotificationRead(id: number, userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(notifications)
+    .set({ isRead: true })
+    .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+}
+
+export async function markAllNotificationsRead(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(notifications)
+    .set({ isRead: true })
+    .where(eq(notifications.userId, userId));
+}
+
+// ─── DASHBOARD ACTION ITEMS ───────────────────────────────────────────────────
+export async function getDashboardActionItems() {
+  const db = await getDb();
+  if (!db) return { staleLeads: [], overdueInvoices: [], unpaidBookings: [] };
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const in48h = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  const now = new Date();
+
+  // Leads parados há mais de 7 dias sem atualização
+  const staleLeads = await db.select({
+    id: leads.id,
+    title: leads.title,
+    value: leads.value,
+    updatedAt: leads.updatedAt,
+  }).from(leads)
+    .where(and(
+      eq(leads.status, "open"),
+      sql`${leads.updatedAt} < ${sevenDaysAgo}`
+    ))
+    .orderBy(leads.updatedAt)
+    .limit(5);
+
+  // Faturas vencendo em 48h ou já vencidas
+  const overdueInvoices = await db.select({
+    id: invoices.id,
+    number: invoices.number,
+    total: invoices.total,
+    dueDate: invoices.dueDate,
+    status: invoices.status,
+  }).from(invoices)
+    .where(and(
+      sql`${invoices.status} IN ('sent', 'overdue')`,
+      sql`${invoices.dueDate} IS NOT NULL`,
+      sql`${invoices.dueDate} <= ${in48h}`
+    ))
+    .orderBy(invoices.dueDate)
+    .limit(5);
+
+  // Agendamentos com pagamento pendente
+  const unpaidBookings = await db.select({
+    id: studioBookings.id,
+    title: studioBookings.title,
+    startAt: studioBookings.startAt,
+    value: studioBookings.value,
+    paymentStatus: studioBookings.paymentStatus,
+  }).from(studioBookings)
+    .where(and(
+      eq(studioBookings.paymentStatus, "pending_payment"),
+      sql`${studioBookings.startAt} >= ${now}`
+    ))
+    .orderBy(studioBookings.startAt)
+    .limit(5);
+
+  return { staleLeads, overdueInvoices, unpaidBookings };
+}
+
+export async function getDashboardKpis() {
+  const db = await getDb();
+  if (!db) return null;
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+
+  // Receita do mês atual
+  const [revenueThis] = await db.select({
+    total: sql<number>`COALESCE(SUM(CAST(${invoices.total} AS DECIMAL(12,2))), 0)`
+  }).from(invoices).where(and(
+    eq(invoices.status, "paid"),
+    sql`${invoices.paidAt} >= ${startOfMonth}`
+  ));
+
+  // Receita do mês anterior
+  const [revenueLast] = await db.select({
+    total: sql<number>`COALESCE(SUM(CAST(${invoices.total} AS DECIMAL(12,2))), 0)`
+  }).from(invoices).where(and(
+    eq(invoices.status, "paid"),
+    sql`${invoices.paidAt} >= ${startOfLastMonth}`,
+    sql`${invoices.paidAt} <= ${endOfLastMonth}`
+  ));
+
+  // Leads ativos
+  const [activeLeads] = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(leads).where(eq(leads.status, "open"));
+
+  // Taxa de conversão (leads ganhos / total)
+  const [totalLeads] = await db.select({ count: sql<number>`COUNT(*)` }).from(leads);
+  const [wonLeads] = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(leads).where(eq(leads.status, "won"));
+
+  // Sessões da semana
+  const [weekSessions] = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(studioBookings).where(sql`${studioBookings.startAt} >= ${startOfWeek}`);
+
+  const revenueThisMonth = Number(revenueThis?.total ?? 0);
+  const revenueLastMonth = Number(revenueLast?.total ?? 0);
+  const revenueChange = revenueLastMonth > 0
+    ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100
+    : 0;
+
+  const totalLeadsCount = Number(totalLeads?.count ?? 0);
+  const wonLeadsCount = Number(wonLeads?.count ?? 0);
+  const conversionRate = totalLeadsCount > 0
+    ? Math.round((wonLeadsCount / totalLeadsCount) * 100)
+    : 0;
+
+  return {
+    revenueThisMonth,
+    revenueLastMonth,
+    revenueChange: Math.round(revenueChange * 10) / 10,
+    activeLeads: Number(activeLeads?.count ?? 0),
+    conversionRate,
+    weekSessions: Number(weekSessions?.count ?? 0),
+  };
 }

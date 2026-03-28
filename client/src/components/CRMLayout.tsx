@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { cn } from "@/lib/utils";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import NotificationBell from "@/components/NotificationBell";
 import {
   BarChart3, BookOpen, Calendar, CheckSquare, ChevronLeft, ChevronRight,
   ChevronDown, CreditCard, FileText, FolderOpen, Home, Library, LogOut,
@@ -455,13 +456,16 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
             </div>
             <span className="text-sm font-semibold text-foreground">CRM Studio</span>
           </div>
-          {totalUnread > 0 && (
-            <Link href="/whatsapp" className="ml-auto">
-              <span className="min-w-[20px] h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5">
-                {totalUnread > 99 ? "99+" : totalUnread}
-              </span>
-            </Link>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            {totalUnread > 0 && (
+              <Link href="/whatsapp">
+                <span className="min-w-[20px] h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5">
+                  {totalUnread > 99 ? "99+" : totalUnread}
+                </span>
+              </Link>
+            )}
+            <NotificationBell />
+          </div>
         </header>
 
         {/* Page content */}

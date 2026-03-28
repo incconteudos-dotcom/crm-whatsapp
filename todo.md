@@ -373,12 +373,12 @@
 - [x] US-050: Lembrete automático do saldo antes da sessão (8 pts)
 - [x] US-019: Planos e assinaturas recorrentes via Stripe (13 pts)
 
-## Sprint B — Dashboard Executivo, Notificações e Qualidade (37 pts)
-- [ ] US-030: Dashboard executivo com KPIs consolidados (8 pts)
-- [ ] US-033: Notificações por e-mail do sistema via Brevo (8 pts)
-- [ ] US-034: Notificações in-app em tempo real (8 pts)
-- [ ] US-035: Testes automatizados abrangentes >80% cobertura (8 pts)
-- [ ] US-073: Histórico de pagamentos e recibos (5 pts)
+## Sprint B — Dashboard Executivo, Notificações e Qualidade (37 pts) ✅
+- [x] US-030: Dashboard executivo com KPIs consolidados (8 pts)
+- [x] US-033: Notificações por e-mail do sistema via Brevo (8 pts)
+- [x] US-034: Notificações in-app em tempo real (8 pts)
+- [x] US-035: Testes automatizados abrangentes >80% cobertura (8 pts)
+- [x] US-073: Histórico de pagamentos e recibos (5 pts)
 
 ## Sprint C — Theory of Constraints (37 pts)
 - [ ] US-037: Sessão semanal automatizada ToC (13 pts)
@@ -459,3 +459,34 @@
 - [ ] Backend: webhook para `customer.subscription.created/updated/deleted`
 - [ ] Adicionar coluna `stripeSubscriptionId` na tabela contacts
 - [ ] UI: página /subscriptions com planos disponíveis e status da assinatura do cliente
+
+## Sprint B — Detalhamento de Implementação
+
+### US-030: Dashboard Executivo
+- [ ] Backend: procedure `dashboard.actionItems` — leads parados >7 dias, faturas vencendo em 48h, sessões sem pagamento
+- [ ] Backend: procedure `dashboard.kpis` consolidado (receita do mês, leads ativos, taxa de conversão, sessões da semana)
+- [ ] UI: seção "O que fazer hoje" no Dashboard com cards acionáveis por categoria
+- [ ] UI: KPIs com variação percentual em relação ao mês anterior
+
+### US-034: Notificações in-app
+- [ ] Schema: tabela `notifications` (userId, type, title, message, read, link, createdAt)
+- [ ] Backend: procedure `notifications.list`, `notifications.markRead`, `notifications.markAllRead`
+- [ ] Backend: helper `createNotification()` chamado em eventos críticos (pagamento, contrato assinado, novo lead)
+- [ ] UI: sino no topo do sidebar com badge de contagem de não lidas
+- [ ] UI: dropdown de notificações com lista e ação "Marcar todas como lidas"
+- [ ] UI: badge de mensagens não lidas no item WhatsApp do sidebar
+
+### US-033: Notificações por e-mail do sistema
+- [ ] Backend: enviar email via Brevo ao owner quando: novo lead criado, contrato assinado, pagamento confirmado, sessão confirmada
+- [ ] Backend: template HTML de email de notificação do sistema
+- [ ] Configuração: respeitar preferências de notificação do usuário (Configurações)
+
+### US-073: Histórico de pagamentos e recibos
+- [ ] Backend: procedure `payments.history` consolidado (Stripe + faturas pagas)
+- [ ] UI: página /payments melhorada com filtros de período, exportação CSV e recibo por item
+
+### US-035: Cobertura de testes >80%
+- [ ] Adicionar testes para módulo de Estúdio (createBooking, getBookings, conflito de horário)
+- [ ] Adicionar testes para módulo de Contratos (create, sign, autoInvoice)
+- [ ] Adicionar testes para módulo de Portal do Cliente (generateToken, validateToken)
+- [ ] Adicionar testes para Sprint A (generateEntryInvoice, confirmPayment, sendBalanceReminder)

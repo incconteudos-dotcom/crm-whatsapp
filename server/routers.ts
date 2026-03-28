@@ -47,6 +47,13 @@ import {
   autoGenerateInvoicesOnContractSign,
   getBookingsWithPendingPaymentIn48h, markBookingReminderSent,
   updateContactSubscription,
+  createNotification,
+  getNotifications,
+  getUnreadNotificationCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+  getDashboardActionItems,
+  getDashboardKpis,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -655,6 +662,26 @@ const tasksRouter = router({
 const dashboardRouter = router({
   stats: protectedProcedure.query(() => getDashboardStats()),
   activities: protectedProcedure.query(() => getRecentActivities(20)),
+  actionItems: protectedProcedure.query(() => getDashboardActionItems()),
+  kpis: protectedProcedure.query(() => getDashboardKpis()),
+});
+
+// ─── NOTIFICATIONS ROUTER ─────────────────────────────────────────────
+const notificationsRouter = router({
+  list: protectedProcedure.query(({ ctx }) => getNotifications(ctx.user.id)),
+  unreadCount: protectedProcedure.query(({ ctx }) => getUnreadNotificationCount(ctx.user.id)),
+  markRead: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input, ctx }) =>
+    markNotificationRead(input.id, ctx.user.id)
+  ),
+  markAllRead: protectedProcedure.mutation(({ ctx }) => markAllNotificationsRead(ctx.user.id)),
+  create: protectedProcedure.input(z.object({
+    type: z.string(),
+    title: z.string(),
+    message: z.string(),
+    link: z.string().optional(),
+  })).mutation(({ input, ctx }) =>
+    createNotification({ ...input, userId: ctx.user.id })
+  ),
 });
 
 // ─── ANALYTICS ROUTER ───────────────────────────────────────────────────────
@@ -1790,6 +1817,7 @@ export const appRouter = router({
   studioRooms: studioRoomsRouter,
   equipment: equipmentRouter,
   sprintA: sprintARouter,
+  notifications: notificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

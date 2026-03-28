@@ -628,3 +628,17 @@ export const equipmentBookings = mysqlTable("equipment_bookings", {
 });
 export type EquipmentBooking = typeof equipmentBookings.$inferSelect;
 export type InsertEquipmentBooking = typeof equipmentBookings.$inferInsert;
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // new_lead | payment | contract_signed | booking | system
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  link: varchar("link", { length: 500 }),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

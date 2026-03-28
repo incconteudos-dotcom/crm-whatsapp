@@ -31,6 +31,7 @@ import Equipment from "./pages/Equipment";
 import StudioRooms from "./pages/StudioRooms";
 import ClientPortalDashboard, { ClientPortalMagicEntry } from "./pages/ClientPortalV2";
 import BrandSettings from "./pages/BrandSettings";
+import PaymentHistory from "./pages/PaymentHistory";
 
 function Router() {
   return (
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/automations" component={Automations} />
       <Route path="/equipment" component={Equipment} />
       <Route path="/studio-rooms" component={StudioRooms} />
+      <Route path="/payment-history" component={PaymentHistory} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
