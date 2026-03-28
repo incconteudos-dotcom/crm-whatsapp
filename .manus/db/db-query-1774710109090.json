@@ -1,0 +1,142 @@
+{
+  "query": "SHOW TABLES",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute SHOW TABLES",
+  "rows": [
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "activities"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "automation_executions"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "automation_sequences"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "automation_steps"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "billing_reminders"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "brand_settings"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "client_portal_tokens"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "contact_tag_assignments"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "contact_tags"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "contacts"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "contract_templates"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "contracts"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "credit_transactions"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "daily_routines"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "episode_comments"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "episodes"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "equipment"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "equipment_bookings"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "invoices"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "leads"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "message_templates"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "notifications"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "nps_responses"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "pipeline_stages"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "pj_documents"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "podcasts"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "portal_magic_links"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "products"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "project_links"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "projects"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "quotes"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "routine_templates"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "studio_bookings"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "studio_rooms"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "tasks"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "toc_action_items"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "toc_configs"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "toc_constraints"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "toc_sessions"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "users"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "whatsapp_analysis"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "whatsapp_chats"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU": "whatsapp_messages"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU\n__drizzle_migrations\nactivities\nautomation_executions\nautomation_sequences\nautomation_steps\nbilling_reminders\nbrand_settings\nclient_portal_tokens\ncontact_tag_assignments\ncontact_tags\ncontacts\ncontract_templates\ncontracts\ncredit_transactions\ndaily_routines\nepisode_comments\nepisodes\nequipment\nequipment_bookings\ninvoices\nleads\nmessage_templates\nnotifications\nnps_responses\npipeline_stages\npj_documents\npodcasts\nportal_magic_links\nproducts\nproject_links\nprojects\nquotes\nroutine_templates\nstudio_bookings\nstudio_rooms\ntasks\ntoc_action_items\ntoc_configs\ntoc_constraints\ntoc_sessions\nusers\nwhatsapp_analysis\nwhatsapp_chats\nwhatsapp_messages\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

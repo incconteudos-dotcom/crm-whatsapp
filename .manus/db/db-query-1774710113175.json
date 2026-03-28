@@ -1,0 +1,25 @@
+{
+  "query": "SHOW TABLES LIKE 'podcasts'; SHOW TABLES LIKE 'nps_responses'; SHOW TABLES LIKE 'whatsapp_analysis'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute SHOW TABLES LIKE 'podcasts'; SHOW TABLES LIKE 'nps_responses'; SHOW TABLES LIKE 'whatsapp_analysis'",
+  "rows": [
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (podcasts)": "podcasts"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (podcasts)": "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (nps_responses)"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (podcasts)": "nps_responses"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (podcasts)": "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (whatsapp_analysis)"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (podcasts)": "whatsapp_analysis"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (podcasts)\npodcasts\nTables_in_Cy2Gc9yd7vWL7aTK7BRymU (nps_responses)\nnps_responses\nTables_in_Cy2Gc9yd7vWL7aTK7BRymU (whatsapp_analysis)\nwhatsapp_analysis\n",
+  "stderr": "",
+  "execution_time_ms": 72
+}

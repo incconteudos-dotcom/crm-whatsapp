@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `episodes` (`id` int AUTO_INCREMENT NOT NULL, `podcast_id` int NOT NULL, `title` varchar(255) NOT NULL, `number` int, `description` text, `guest_name` varchar(255), `guest_bio` text, `recording_date` timestamp NULL, `publish_date` timestamp NULL, `duration` int, `script_url` text, `raw_audio_url` text, `edited_audio_url` text, `thumbnail_url` text, `published_url` text, `production_status` enum('roteiro','gravacao','edicao','revisao','agendado','publicado') DEFAULT 'roteiro', `studio_booking_id` int, `assigned_editor_id` int, `tags` json, `notes` text, `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `episodes_id` PRIMARY KEY(`id`))",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute CREATE TABLE IF NOT EXISTS `episodes` (`id` int AUTO_INCREMENT NOT NULL, `podcast_id` int NOT NULL, `title` varchar(255) NOT NULL, `number` int, `description` text, `guest_name` varchar(255), `guest_bio` text, `recording_date` timestamp NULL, `publish_date` timestamp NULL, `duration` int, `script_url` text, `raw_audio_url` text, `edited_audio_url` text, `thumbnail_url` text, `published_url` text, `production_status` enum('roteiro','gravacao','edicao','revisao','agendado','publicado') DEFAULT 'roteiro', `studio_booking_id` int, `assigned_editor_id` int, `tags` json, `notes` text, `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `episodes_id` PRIMARY KEY(`id`))",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 169
+}

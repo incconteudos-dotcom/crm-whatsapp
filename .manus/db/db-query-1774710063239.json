@@ -1,0 +1,16 @@
+{
+  "query": "SHOW TABLES LIKE 'episode%'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute SHOW TABLES LIKE 'episode%'",
+  "rows": [
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (episode%)": "episode_comments"
+    },
+    {
+      "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (episode%)": "episodes"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Cy2Gc9yd7vWL7aTK7BRymU (episode%)\nepisode_comments\nepisodes\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}
