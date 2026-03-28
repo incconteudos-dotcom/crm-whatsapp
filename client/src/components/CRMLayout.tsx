@@ -79,6 +79,7 @@ const navGroups = [
       { icon: Target, label: "Theory of Constraints", path: "/toc" },
       { icon: BarChart3, label: "Analytics", path: "/analytics" },
       { icon: DownloadCloud, label: "Exportar Dados", path: "/export" },
+      { icon: Zap, label: "Playbook de Automações", path: "/playbook" },
     ],
   },
 ];

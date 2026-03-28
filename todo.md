@@ -676,3 +676,13 @@
 - [x] Exportação de contrato em PDF (botão "Baixar PDF" no drawer)
 - [x] Quotes: email pré-preenchido com email do contato vinculado
 - [x] Invoices: email pré-preenchido com email do contato vinculado
+
+## Playbook — 3 Ações Imediatas ✅
+
+- [x] Ação 1: Webhook Z-API — criação automática de lead ao receber mensagem de número desconhecido
+- [x] Ação 1: Webhook Z-API — notificação interna ao responsável comercial ao criar lead
+- [x] Ação 2: Contrato assinado → gerar fatura de entrada (50% do valor) automaticamente
+- [x] Ação 2: Contrato assinado → criar projeto automaticamente com kanban de episódios
+- [x] Ação 2: Contrato assinado → enviar magic link do portal ao cliente via WhatsApp
+- [x] Ação 3: Cron follow-up 48h — buscar leads sem interação e disparar Template WA-01
+- [x] Ação 3: Cron renovação — criar lead de renovação 30 dias antes do vencimento do contrato

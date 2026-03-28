@@ -4,6 +4,9 @@
  * Receives real-time events from Z-API (incoming messages, status updates, etc.)
  * and persists them to the local database.
  *
+ * Playbook Ação 1: Auto-cria contato + lead no pipeline ao receber mensagem
+ * de número desconhecido. Notifica o owner via Manus Notification.
+ *
  * Z-API sends POST requests to /api/zapi/webhook with JSON payloads.
  * Docs: https://developer.z-api.io/webhooks/introduction
  */
@@ -12,9 +15,9 @@ import type { Request, Response } from "express";
 import {
   upsertWhatsappChat,
   upsertWhatsappMessage,
-  getWhatsappChats,
-  linkChatToContact,
+  autoCreateLeadFromWhatsapp,
 } from "./db";
+import { notifyOwner } from "./_core/notification";
 
 // ─── Z-API payload types ─────────────────────────────────────────────────────
 
@@ -97,8 +100,8 @@ export async function zapiWebhookHandler(req: Request, res: Response) {
     const mediaType = extractMediaType(payload);
     const timestamp = payload.momment ?? Date.now();
     const isFromMe = payload.fromMe ?? false;
-    const messageId =
-      payload.messageId ?? `zapi_${chatJid}_${timestamp}`;
+    const messageId = payload.messageId ?? `zapi_${chatJid}_${timestamp}`;
+    const isGroup = chatJid.endsWith("@g.us") || chatJid.includes("-");
 
     // Upsert the chat
     await upsertWhatsappChat({
@@ -107,12 +110,32 @@ export async function zapiWebhookHandler(req: Request, res: Response) {
       lastMessageAt: new Date(timestamp),
       lastMessagePreview: content.slice(0, 100),
       unreadCount: isFromMe ? 0 : 1,
-      isGroup: chatJid.endsWith("@g.us") || chatJid.includes("-"),
+      isGroup,
     });
 
-    // Auto-link chat to contact by phone number (runs in background, non-blocking)
-    if (!isFromMe && !chatJid.endsWith("@g.us")) {
-      linkChatToContact(chatJid).catch(() => {});
+    // ── PLAYBOOK AÇÃO 1: Auto-criar contato + lead para números desconhecidos ──
+    // Executa apenas para mensagens recebidas (não enviadas) e chats individuais
+    if (!isFromMe && !isGroup) {
+      const phone = chatJid.split("@")[0];
+      autoCreateLeadFromWhatsapp({
+        jid: chatJid,
+        name: payload.senderName ?? payload.chatName,
+        phone,
+        firstMessage: content.slice(0, 200),
+      }).then(result => {
+        if (result) {
+          console.log(
+            `[Z-API Webhook] Auto-lead #${result.leadId} criado para contato #${result.contactId} (${phone})`
+          );
+          // Notificar o owner sobre novo lead via WhatsApp
+          notifyOwner({
+            title: "Novo Lead via WhatsApp",
+            content: `Contato recebido de ${payload.senderName ?? payload.chatName ?? phone}. Lead #${result.leadId} criado automaticamente no pipeline.\n\nPrimeira mensagem: "${content.slice(0, 100)}"`,
+          }).catch(() => {});
+        }
+      }).catch(err => {
+        console.error("[Z-API Webhook] Erro ao auto-criar lead:", err);
+      });
     }
 
     // Upsert the message

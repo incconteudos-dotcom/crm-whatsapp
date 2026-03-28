@@ -65,6 +65,11 @@ import {
   exportContactsData, exportInvoicesData, exportQuotesData, exportContractsData,
   getWhatsappConversationReport,
   signContract,
+  createEntryInvoiceOnSign,
+  createProjectOnContractSign,
+  getLeadsWithoutInteraction48h,
+  getContractsExpiringIn30Days,
+  createRenewalLead,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -2374,7 +2379,7 @@ const sprintERouter = router({
 
 // ─── SPRINT F ROUTER ────────────────────────────────────────────────────────
 const sprintFRouter = router({
-  // US-016: Digital signature
+  // US-016: Digital signature + Playbook Ação 2 (encadeamento automático)
   signContract: protectedProcedure.input(z.object({
     contractId: z.number(),
     signatureData: z.string(),
@@ -2386,6 +2391,15 @@ const sprintFRouter = router({
       signerName: input.signerName,
       signerEmail: input.signerEmail,
     });
+    // ── PLAYBOOK AÇÃO 2: Encadeamento automático ao assinar ──
+    // Fatura de entrada (50%) + Projeto criados em background
+    Promise.all([
+      createEntryInvoiceOnSign(input.contractId),
+      createProjectOnContractSign(input.contractId),
+    ]).then(([invoiceId, projectId]) => {
+      if (invoiceId) console.log(`[Playbook A2] Fatura entrada #${invoiceId} criada para contrato #${input.contractId}`);
+      if (projectId) console.log(`[Playbook A2] Projeto #${projectId} criado para contrato #${input.contractId}`);
+    }).catch(err => console.error("[Playbook A2] Erro encadeamento contrato:", err));
     return { success: true, hash };
   }),
   // US-007: Send media via WhatsApp
@@ -2422,6 +2436,62 @@ const sprintFRouter = router({
   })).mutation(async ({ input }) => {
     await updateContractTemplate(input.templateId, { variables: JSON.stringify({ productIds: input.productIds }) });
     return { success: true };
+  }),
+});
+
+// ─── PLAYBOOK ROUTER (Ações 1, 2, 3) ─────────────────────────────────────────
+const playbookRouter = router({
+  // Ação 3a: Listar leads sem interação nas últimas 48h (para cron de follow-up)
+  leadsStale48h: protectedProcedure.query(async () => {
+    return getLeadsWithoutInteraction48h();
+  }),
+  // Ação 3b: Listar contratos vencendo em 30 dias (para cron de renovação)
+  contractsExpiring30d: protectedProcedure.query(async () => {
+    return getContractsExpiringIn30Days();
+  }),
+  // Ação 3c: Disparar follow-up via WhatsApp para leads estáticos (Template WA-01)
+  triggerFollowUp: protectedProcedure.input(z.object({
+    leadId: z.number(),
+    phone: z.string(),
+    contactName: z.string(),
+  })).mutation(async ({ input }) => {
+    const msg = `Olá, ${input.contactName}! Aqui é o time do Estudio Podcast. Notamos que você entrou em contato conosco recentemente e gostaríamos de entender melhor como podemos ajudá-lo. Tem um momento para conversarmos?`;
+    try {
+      await sendText(input.phone, msg);
+      return { success: true, message: msg };
+    } catch (e) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: String(e) });
+    }
+  }),
+  // Ação 3d: Criar lead de renovação para contrato próximo do vencimento
+  triggerRenewal: protectedProcedure.input(z.object({
+    contractId: z.number(),
+    phone: z.string().optional(),
+    contactName: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const leadId = await createRenewalLead(input.contractId);
+    // Enviar mensagem de renovação via WhatsApp se tiver número
+    if (input.phone && input.contactName) {
+      const msg = `Olá, ${input.contactName}! Seu contrato com o Estúdio Podcast está próximo do vencimento. Gostaríamos de conversar sobre a renovação e garantir a continuidade do seu projeto. Quando podemos falar?`;
+      await sendText(input.phone, msg).catch(() => {});
+    }
+    return { success: true, leadId };
+  }),
+  // Ação 3e: Executar cron completo (chamado manualmente ou por scheduler)
+  runFollowUpCron: protectedProcedure.mutation(async () => {
+    const staleLeads = await getLeadsWithoutInteraction48h();
+    const expiringContracts = await getContractsExpiringIn30Days();
+    console.log(`[Playbook Cron] ${staleLeads.length} leads estáticos | ${expiringContracts.length} contratos vencendo`);
+    // Criar leads de renovação para contratos vencendo
+    const renewalResults = await Promise.allSettled(
+      expiringContracts.map(c => createRenewalLead(c.id))
+    );
+    const created = renewalResults.filter(r => r.status === "fulfilled" && r.value).length;
+    return {
+      staleLeads: staleLeads.length,
+      expiringContracts: expiringContracts.length,
+      renewalLeadsCreated: created,
+    };
   }),
 });
 
@@ -2475,5 +2545,6 @@ export const appRouter = router({
   sprintD: sprintDRouter,
   sprintE: sprintERouter,
   sprintF: sprintFRouter,
+  playbook: playbookRouter,
 });
 export type AppRouter = typeof appRouter;

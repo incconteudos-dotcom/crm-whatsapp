@@ -36,6 +36,7 @@ import { ToC } from "./pages/ToC";
 import WhatsAppAnalysis from "./pages/WhatsAppAnalysis";
 import TimeTracking from "./pages/TimeTracking";
 import ExportData from "./pages/ExportData";
+import PlaybookAutomations from "./pages/PlaybookAutomations";
 
 function Router() {
   return (
@@ -73,6 +74,7 @@ function Router() {
       <Route path="/whatsapp-analysis" component={WhatsAppAnalysis} />
       <Route path="/time-tracking" component={TimeTracking} />
       <Route path="/export" component={ExportData} />
+      <Route path="/playbook" component={PlaybookAutomations} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

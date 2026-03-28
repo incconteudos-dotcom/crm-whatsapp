@@ -2087,3 +2087,175 @@ export async function signContract(id: number, data: { signatureData: string; si
   }).where(eq(contracts.id, id));
   return hash;
 }
+
+// ─── PLAYBOOK — AÇÃO 1: Auto-criação de lead via webhook Z-API ────────────────
+
+export async function getOpenLeadByContact(contactId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.contactId, contactId), eq(leads.status, "open")))
+    .orderBy(desc(leads.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function autoCreateLeadFromWhatsapp(data: {
+  jid: string;
+  name?: string;
+  phone: string;
+  firstMessage?: string;
+}): Promise<{ contactId: number; leadId: number } | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const allContacts = await db
+    .select({ id: contacts.id, phone: contacts.phone })
+    .from(contacts)
+    .where(sql`phone IS NOT NULL`);
+  const pp = data.phone.replace(/\D/g, "");
+  const existing = allContacts.find(c => {
+    const cp = (c.phone ?? "").replace(/\D/g, "");
+    return cp === pp || cp.endsWith(pp.slice(-11)) || pp.endsWith(cp.slice(-11));
+  });
+
+  let contactId: number;
+  if (existing) {
+    contactId = existing.id;
+    await db.update(whatsappChats).set({ contactId }).where(eq(whatsappChats.jid, data.jid));
+  } else {
+    const [res] = await db.insert(contacts).values({
+      name: data.name ?? data.phone,
+      phone: data.phone,
+      whatsappJid: data.jid,
+      source: "whatsapp",
+    });
+    contactId = (res as any).insertId as number;
+    await db.update(whatsappChats).set({ contactId }).where(eq(whatsappChats.jid, data.jid));
+  }
+
+  const openLead = await getOpenLeadByContact(contactId);
+  if (openLead) return { contactId, leadId: openLead.id };
+
+  const stages = await db
+    .select()
+    .from(pipelineStages)
+    .where(eq(pipelineStages.isDefault, true))
+    .limit(1);
+  const stageId = stages[0]?.id;
+
+  const [leadRes] = await db.insert(leads).values({
+    title: `Lead WhatsApp — ${data.name ?? data.phone}`,
+    contactId,
+    stageId,
+    status: "open",
+    notes: data.firstMessage ? `Primeira mensagem: "${data.firstMessage}"` : "Lead criado automaticamente via WhatsApp.",
+    tags: ["whatsapp", "auto"],
+  });
+  const leadId = (leadRes as any).insertId as number;
+  return { contactId, leadId };
+}
+
+// ─── PLAYBOOK — AÇÃO 2: Encadeamento ao assinar contrato ─────────────────────
+
+export async function createEntryInvoiceOnSign(contractId: number): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [contract] = await db.select().from(contracts).where(eq(contracts.id, contractId)).limit(1);
+  if (!contract || !contract.value) return null;
+  const total = Number(contract.value);
+  const entry = total * 0.5;
+  const number = `FAT-${Date.now()}-ENTRADA`;
+  const [res] = await db.insert(invoices).values({
+    number,
+    contactId: contract.contactId ?? undefined,
+    contractId,
+    assignedUserId: contract.assignedUserId ?? undefined,
+    status: "sent",
+    items: [{ description: `Entrada — ${contract.title}`, quantity: 1, unitPrice: entry, total: entry }],
+    subtotal: entry.toFixed(2),
+    tax: "0",
+    total: entry.toFixed(2),
+    currency: "BRL",
+    paymentPlan: "installment_50_50",
+    installmentNumber: 1,
+    notes: `Fatura de entrada (50%) gerada automaticamente ao assinar contrato #${contractId}`,
+  });
+  return (res as any).insertId as number;
+}
+
+export async function createProjectOnContractSign(contractId: number): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [contract] = await db.select().from(contracts).where(eq(contracts.id, contractId)).limit(1);
+  if (!contract) return null;
+  const existing = await db.select({ id: projects.id }).from(projects)
+    .where(sql`notes LIKE ${`%contrato #${contractId}%`}`).limit(1);
+  if (existing.length > 0) return existing[0].id;
+  const [res] = await db.insert(projects).values({
+    name: contract.title,
+    contactId: contract.contactId ?? undefined,
+    status: "briefing",
+    type: "podcast",
+    totalValue: contract.value ?? undefined,
+    assignedTo: contract.assignedUserId ?? undefined,
+    notes: `Projeto criado automaticamente ao assinar contrato #${contractId}`,
+  });
+  return (res as any).insertId as number;
+}
+
+// ─── PLAYBOOK — AÇÃO 3: Crons de follow-up e renovação ───────────────────────
+
+export async function getLeadsWithoutInteraction48h() {
+  const db = await getDb();
+  if (!db) return [];
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  return db
+    .select({ id: leads.id, title: leads.title, contactId: leads.contactId, updatedAt: leads.updatedAt })
+    .from(leads)
+    .where(and(eq(leads.status, "open"), sql`${leads.updatedAt} < ${cutoff}`))
+    .orderBy(leads.updatedAt)
+    .limit(50);
+}
+
+export async function getContractsExpiringIn30Days() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  const in30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  return db
+    .select({ id: contracts.id, title: contracts.title, contactId: contracts.contactId, validUntil: contracts.validUntil, value: contracts.value })
+    .from(contracts)
+    .where(and(
+      eq(contracts.status, "signed"),
+      sql`${contracts.validUntil} IS NOT NULL`,
+      sql`${contracts.validUntil} >= ${now}`,
+      sql`${contracts.validUntil} <= ${in30}`
+    ))
+    .orderBy(contracts.validUntil)
+    .limit(50);
+}
+
+export async function createRenewalLead(contractId: number): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [contract] = await db.select().from(contracts).where(eq(contracts.id, contractId)).limit(1);
+  if (!contract) return null;
+  const existing = await db.select({ id: leads.id }).from(leads)
+    .where(sql`notes LIKE ${`%renovação do contrato #${contractId}%`}`).limit(1);
+  if (existing.length > 0) return existing[0].id;
+  const stages = await db.select().from(pipelineStages).where(eq(pipelineStages.isDefault, true)).limit(1);
+  const stageId = stages[0]?.id;
+  const [res] = await db.insert(leads).values({
+    title: `Renovação — ${contract.title}`,
+    contactId: contract.contactId ?? undefined,
+    stageId,
+    status: "open",
+    value: contract.value ?? undefined,
+    notes: `Lead de renovação criado automaticamente para o contrato #${contractId} que vence em ${contract.validUntil ? new Date(contract.validUntil).toLocaleDateString("pt-BR") : "breve"}.`,
+    tags: ["renovação", "auto"],
+  });
+  return (res as any).insertId as number;
+}
