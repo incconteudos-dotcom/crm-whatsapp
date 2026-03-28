@@ -897,3 +897,14 @@
 - [x] Reescrever Products.tsx: badge de status Stripe (sincronizado/sem sync), botão Sincronizar, botão Checkout, link para Stripe Dashboard, banner de aviso para produtos sem sync, stats cards
 - [x] Criar testes stripe.products.test.ts: 8 testes cobrindo create, update, price change, archive, centavos, 404 recovery, checkout com/sem customer
 - [x] 91 testes passando, TypeScript 0 erros
+
+## Sprint Auditoria de Lógica — Correções
+
+- [ ] BUG-01: signContract não marca lead vinculado como "won" ao assinar
+- [ ] BUG-02: runAll não executa automações de fato — apenas enfileira sem chamar run()
+- [ ] BUG-03: webhook Stripe não trata checkout de produto (crm_product_id) — não notifica nem registra crédito
+- [ ] BUG-04: invoicesRouter.create não define status="draft" explicitamente (depende do default do banco)
+- [ ] BUG-05: convertToInvoice não copia o campo currency do orçamento para a fatura
+- [ ] BUG-06: createEntryInvoiceOnSign não verifica se já existe fatura de entrada para o contrato (pode criar duplicata)
+- [ ] BUG-07: automação onboarding_post_payment pode disparar múltiplas vezes para a mesma fatura (sem flag de enviado)
+- [ ] BUG-08: analytics usa paidAt para receita mas fatura pode ser marcada como paid sem paidAt (via update manual)

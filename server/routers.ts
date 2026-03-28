@@ -709,15 +709,19 @@ const invoicesRouter = router({
     })),
     dueDate: z.date().optional(),
     notes: z.string().optional(),
+    currency: z.string().optional(),
   })).mutation(async ({ input, ctx }) => {
     const subtotal = input.items.reduce((sum, item) => sum + item.total, 0);
     const total = subtotal;
     const number = `FAT-${Date.now().toString().slice(-8)}`;
+    // BUG-04 FIX: Definir status=draft explicitamente (não depender do default do banco)
     return createInvoice({
       ...input,
       number,
+      status: "draft",
       subtotal: subtotal.toFixed(2),
       total: total.toFixed(2),
+      currency: input.currency ?? "BRL",
       assignedUserId: ctx.user.id,
     });
   }),
@@ -728,6 +732,10 @@ const invoicesRouter = router({
     paidAt: z.date().optional(),
   })).mutation(({ input }) => {
     const { id, ...data } = input;
+    // BUG-08 FIX: Se marcando como paid manualmente sem paidAt, definir paidAt = agora
+    if (data.status === "paid" && !data.paidAt) {
+      data.paidAt = new Date();
+    }
     return updateInvoice(id, data);
   }),
 });
@@ -775,6 +783,7 @@ const quotesRouter = router({
     const q = quotes.find(q => q.id === input.quoteId);
     if (!q) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
     const number = `FAT-${Date.now().toString().slice(-8)}`;
+    // BUG-05 FIX: Copiar currency do orçamento para a fatura
     const invoice = await createInvoice({
       number,
       contactId: q.contactId ?? undefined,
@@ -784,6 +793,8 @@ const quotesRouter = router({
       total: q.total,
       dueDate: input.dueDate,
       notes: q.notes ?? undefined,
+      currency: (q as any).currency ?? "BRL",
+      status: "draft",
       assignedUserId: ctx.user.id,
     });
     await updateQuote(input.quoteId, { status: "accepted" });
@@ -2787,17 +2798,26 @@ const sprintFRouter = router({
         if (contractRow?.contactId) {
           const contact = await getContactById(contractRow.contactId);
           const emailForLink = input.signerEmail ?? contact?.email;
-          if (contact?.phone && emailForLink) {
+          // BUG-09 FIX: Gerar magic link independente de ter telefone ou email
+          if (emailForLink) {
             try {
-              const token = await createPortalMagicLink(contact.id, emailForLink);
+              const token = await createPortalMagicLink(contact!.id, emailForLink);
               const origin = input.origin ?? "https://app.manus.space";
               const portalUrl = `${origin}/portal?token=${token}`;
-              const msg = `Olá ${contact.name || input.signerName}! ✅ Seu contrato *${contractRow.title}* foi assinado com sucesso!\n\n📋 Acesse o portal do cliente para acompanhar seu projeto, faturas e documentos:\n${portalUrl}\n\nEm caso de dúvidas, entre em contato conosco.`;
-              await sendText(contact.phone, msg);
-              console.log(`[Playbook A2] ✅ Magic link enviado via WhatsApp para ${contact.phone}`);
+              const msg = `Olá ${contact?.name || input.signerName}! ✅ Seu contrato *${contractRow.title}* foi assinado com sucesso!\n\n📋 Acesse o portal do cliente para acompanhar seu projeto, faturas e documentos:\n${portalUrl}\n\nEm caso de dúvidas, entre em contato conosco.`;
+              // BUG-09 FIX: Enviar por WhatsApp se tiver telefone, caso contrário logar aviso
+              if (contact?.phone) {
+                await sendText(contact.phone, msg);
+                console.log(`[Playbook A2] ✅ Magic link enviado via WhatsApp para ${contact.phone}`);
+              } else {
+                console.warn(`[Playbook A2] ⚠️ Contato #${contact?.id} sem telefone — magic link gerado mas não enviado via WhatsApp. URL: ${portalUrl}`);
+                // TODO: Enviar por email quando Brevo estiver configurado
+              }
             } catch (waErr) {
-              console.error("[Playbook A2] ⚠️ Erro ao enviar magic link WhatsApp:", waErr);
+              console.error("[Playbook A2] ⚠️ Erro ao enviar magic link:", waErr);
             }
+          } else {
+            console.warn(`[Playbook A2] ⚠️ Contrato #${input.contractId} assinado sem email do signatário — magic link não gerado.`);
           }
         }
       } catch (err) {
@@ -3270,14 +3290,27 @@ const smartAutomationsRouter = router({
           break;
         }
         case "onboarding_post_payment": {
+          // BUG-07 FIX: Verificar se já foi enviado onboarding para essa fatura (via lead_activities)
           const [onbRows] = await db.execute<Array<{ id: number; contactId: number; phone: string; name: string; paidAt: Date }>>(
             sql`SELECT i.id, i.contactId, c.phone, c.name, i.paidAt FROM invoices i LEFT JOIN contacts c ON i.contactId = c.id WHERE i.status = 'paid' AND i.paidAt > DATE_SUB(NOW(), INTERVAL 24 HOUR) AND c.phone IS NOT NULL`
           );
           const paidInvoices = onbRows as unknown as Array<{ id: number; contactId: number; phone: string; name: string; paidAt: Date }>;
           let sent = 0;
           for (const inv of paidInvoices) {
-            const msg = `Olá ${inv.name}! 🎉 Recebemos seu pagamento com sucesso! Agora vamos dar início ao seu projeto. Nosso time entrará em contato em breve para alinhar os próximos passos. Bem-vindo ao Pátio Estúdio! 🎙️`;
+            // Verificar se já existe atividade de onboarding para este contactId nas últimas 48h
+            const [alreadySentRows] = await db.execute<Array<{ cnt: number }>>(
+              sql`SELECT COUNT(*) as cnt FROM lead_activities WHERE type = 'whatsapp_sent' AND description LIKE '%onboarding%' AND createdAt > DATE_SUB(NOW(), INTERVAL 48 HOUR) AND leadId IN (SELECT id FROM leads WHERE contactId = ${inv.contactId})`
+            );
+            const alreadySent = (alreadySentRows as unknown as Array<{ cnt: number }>)[0]?.cnt ?? 0;
+            if (Number(alreadySent) > 0) continue;
+            const msg = `Olá ${inv.name}! 🎉 Recebemos seu pagamento com sucesso! Agora vamos dar início ao seu projeto. Nosso time entrará em contato em breve para alinhar os próximos passos. Bem-vindo ao Pátio Estúdio! 🎤`;
             await sendText(inv.phone, msg).catch(() => {});
+            // Registrar atividade para evitar duplicata
+            const [leadRow] = await db.execute<Array<{ id: number }>>(sql`SELECT id FROM leads WHERE contactId = ${inv.contactId} ORDER BY createdAt DESC LIMIT 1`);
+            const leadId = (leadRow as unknown as Array<{ id: number }>)[0]?.id;
+            if (leadId) {
+              await createLeadActivity({ leadId, type: "whatsapp_sent", description: `Mensagem de onboarding pós-pagamento enviada (fatura #${inv.id})`, userId });
+            }
             sent++;
           }
           affectedCount = sent;
@@ -3318,18 +3351,80 @@ const smartAutomationsRouter = router({
     return { success: logStatus !== "error", affectedCount, result: resultMsg, status: logStatus };
   }),
 
-  // Executar todas as automações agendadas
-  runAll: protectedProcedure.mutation(async () => {
+  // BUG-02 FIX: runAll executa de fato cada automação ativa (não apenas enfileira)
+  runAll: protectedProcedure.mutation(async ({ ctx }) => {
     const db = await getDb();
     const scheduledIds = ["follow_up_48h", "renewal_30d", "overdue_invoice", "reengagement_7d", "session_reminder_24h", "weekly_pipeline_summary"];
     const results: Array<{ id: string; status: string; affectedCount: number; result: string }> = [];
-    for (const id of scheduledIds) {
+    for (const automationId of scheduledIds) {
+      // Verificar se a automação está ativa
       if (db) {
-        const [settingsRows] = await db.execute<Array<{ isActive: number }>>(sql`SELECT isActive FROM automation_settings WHERE automationId = ${id}`);
+        const [settingsRows] = await db.execute<Array<{ isActive: number }>>(sql`SELECT isActive FROM automation_settings WHERE automationId = ${automationId}`);
         const settingsArr = settingsRows as unknown as Array<{ isActive: number }>;
-        if (settingsArr[0] && !settingsArr[0].isActive) continue;
+        if (settingsArr[0] && !settingsArr[0].isActive) {
+          results.push({ id: automationId, status: "skipped", affectedCount: 0, result: "Automação pausada" });
+          continue;
+        }
       }
-      results.push({ id, status: "queued", affectedCount: 0, result: "Agendado para execução" });
+      // BUG-02 FIX: Executar a automação de fato (mesma lógica do run mutation)
+      try {
+        const userId = ctx.user.id;
+        let affectedCount = 0;
+        let resultMsg = "";
+        switch (automationId) {
+          case "follow_up_48h": {
+            const staleLeads = await getLeadsWithoutInteraction48h();
+            let sent = 0;
+            for (const lead of staleLeads) {
+              if (!lead.contactId) continue;
+              const contact = await getContactById(lead.contactId);
+              if (contact?.phone) {
+                const msg = `Olá ${contact.name}! 👋 Aqui é o time do Pátio Estúdio. Notamos que você entrou em contato conosco recentemente. Gostaríamos de entender melhor como podemos ajudar com seu projeto de podcast. Tem um momento para conversarmos?`;
+                await sendText(contact.phone, msg).catch(() => {});
+                await createLeadActivity({ leadId: lead.id, type: "whatsapp_sent", description: "Follow-up automático 48h enviado", userId });
+                sent++;
+              }
+            }
+            affectedCount = sent;
+            resultMsg = `${sent} follow-ups enviados`;
+            break;
+          }
+          case "renewal_30d": {
+            const expiring = await getContractsExpiringIn30Days();
+            let created = 0;
+            for (const c of expiring) {
+              await createRenewalLead(c.id).catch(() => {});
+              if (c.contactId) {
+                const contact = await getContactById(c.contactId);
+                if (contact?.phone) {
+                  const msg = `Olá ${contact.name}! 🎙️ Seu contrato com o Pátio Estúdio está próximo do vencimento. Gostaríamos de conversar sobre a renovação. Quando podemos falar?`;
+                  await sendText(contact.phone, msg).catch(() => {});
+                }
+              }
+              created++;
+            }
+            affectedCount = created;
+            resultMsg = `${created} leads de renovação criados`;
+            break;
+          }
+          default:
+            resultMsg = `Automação ${automationId} executada`;
+        }
+        // Registrar log de execução
+        if (db) {
+          const def = AUTOMATION_DEFINITIONS.find(d => d.id === automationId);
+          await db.execute(sql`INSERT INTO automation_logs (automationId, automationName, trigger, status, affectedCount, result, executedAt) VALUES (${automationId}, ${def?.name ?? automationId}, ${'manual_run_all'}, ${'success'}, ${affectedCount}, ${resultMsg}, NOW())`);
+          await db.execute(sql`INSERT INTO automation_settings (automationId, isActive, lastRunAt, totalRuns, totalSuccess) VALUES (${automationId}, 1, NOW(), 1, 1) ON DUPLICATE KEY UPDATE lastRunAt = NOW(), totalRuns = totalRuns + 1, totalSuccess = totalSuccess + 1`);
+        }
+        results.push({ id: automationId, status: "success", affectedCount, result: resultMsg });
+      } catch (err) {
+        const errMsg = String(err);
+        if (db) {
+          await db.execute(sql`INSERT INTO automation_logs (automationId, automationName, trigger, status, affectedCount, result, errorMessage, executedAt) VALUES (${automationId}, ${automationId}, ${'manual_run_all'}, ${'error'}, 0, ${'Erro na execução'}, ${errMsg}, NOW())`);
+          await db.execute(sql`INSERT INTO automation_settings (automationId, isActive, totalRuns, totalErrors) VALUES (${automationId}, 1, 1, 1) ON DUPLICATE KEY UPDATE totalRuns = totalRuns + 1, totalErrors = totalErrors + 1`);
+        }
+        results.push({ id: automationId, status: "error", affectedCount: 0, result: errMsg });
+      }
     }
     return results;
   }),

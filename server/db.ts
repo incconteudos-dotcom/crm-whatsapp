@@ -2079,6 +2079,8 @@ export async function signContract(id: number, data: { signatureData: string; si
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   const hash = (await import("crypto")).createHash("sha256").update(JSON.stringify(data)).digest("hex");
+  // BUG-01 FIX: Buscar leadId do contrato ANTES de assinar para marcar como won
+  const [contractRow] = await db.select({ leadId: contracts.leadId }).from(contracts).where(eq(contracts.id, id)).limit(1);
   await db.update(contracts).set({
     status: "signed",
     signedAt: new Date(),
@@ -2087,6 +2089,11 @@ export async function signContract(id: number, data: { signatureData: string; si
     signatureUrl: `data:signature;hash=${hash}`,
     updatedAt: new Date(),
   }).where(eq(contracts.id, id));
+  // BUG-01 FIX: Marcar lead vinculado como "won" ao assinar contrato
+  if (contractRow?.leadId) {
+    await db.update(leads).set({ status: "won", updatedAt: new Date() }).where(eq(leads.id, contractRow.leadId));
+    console.log(`[signContract] ✅ Lead #${contractRow.leadId} marcado como WON (contrato #${id} assinado)`);
+  }
   return hash;
 }
 
@@ -2167,6 +2174,13 @@ export async function createEntryInvoiceOnSign(contractId: number): Promise<numb
   if (!db) return null;
   const [contract] = await db.select().from(contracts).where(eq(contracts.id, contractId)).limit(1);
   if (!contract || !contract.value) return null;
+  // BUG-06 FIX: Verificar se já existe fatura de entrada para evitar duplicatas
+  const existingEntry = await db.select({ id: invoices.id }).from(invoices)
+    .where(and(eq(invoices.contractId, contractId), sql`${invoices.notes} LIKE ${'%Fatura de entrada%'}`)).limit(1);
+  if (existingEntry.length > 0) {
+    console.log(`[createEntryInvoiceOnSign] Fatura de entrada já existe para contrato #${contractId} (id: ${existingEntry[0].id})`);
+    return existingEntry[0].id;
+  }
   const total = Number(contract.value);
   const entry = total * 0.5;
   const number = `FAT-${Date.now()}-ENTRADA`;
