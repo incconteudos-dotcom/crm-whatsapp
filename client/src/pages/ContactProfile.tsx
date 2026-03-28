@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import PJOnboarding from "@/components/PJOnboarding";
 import { toast } from "sonner";
 import { useState } from "react";
 import { formatDistanceToNow, format } from "date-fns";
@@ -302,6 +303,7 @@ export default function ContactProfile() {
             <TabsTrigger value="quotes"><BookOpen className="w-3.5 h-3.5 mr-1.5" />Orçamentos ({quotes.length})</TabsTrigger>
             <TabsTrigger value="contracts"><FileText className="w-3.5 h-3.5 mr-1.5" />Contratos ({contracts.length})</TabsTrigger>
             <TabsTrigger value="bookings"><Calendar className="w-3.5 h-3.5 mr-1.5" />Estúdio ({bookings.length})</TabsTrigger>
+            <TabsTrigger value="pj"><Building2 className="w-3.5 h-3.5 mr-1.5" />Dados PJ</TabsTrigger>
           </TabsList>
 
           <TabsContent value="leads" className="mt-4 space-y-3">
@@ -391,6 +393,10 @@ export default function ContactProfile() {
                   <Badge className={cn("text-xs border shrink-0", statusColors[b.status ?? "scheduled"])}>{statusLabels[b.status ?? "scheduled"]}</Badge>
                 </div>
               ))}
+          </TabsContent>
+
+          <TabsContent value="pj" className="mt-4">
+            <PJOnboarding contactId={contactId} />
           </TabsContent>
         </Tabs>
       </div>

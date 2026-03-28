@@ -2,7 +2,8 @@ import CRMLayout from "@/components/CRMLayout";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { Calendar, Plus, Clock, User, Mic, CheckCircle, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -67,6 +68,15 @@ export default function Studio() {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  // Conflict check — only fires when both dates are set
+  const conflictStart = useMemo(() => form.startAt ? new Date(form.startAt) : null, [form.startAt]);
+  const conflictEnd = useMemo(() => form.endAt ? new Date(form.endAt) : null, [form.endAt]);
+  const { data: conflictData } = trpc.studio.checkConflict.useQuery(
+    { startAt: conflictStart!, endAt: conflictEnd!, studio: form.studio || undefined },
+    { enabled: !!conflictStart && !!conflictEnd && conflictStart < conflictEnd }
+  );
+  const hasConflict = conflictData?.hasConflict ?? false;
 
   const updateMutation = trpc.studio.update.useMutation({
     onSuccess: () => { toast.success("Sessão atualizada!"); utils.studio.bookings.invalidate(); },
@@ -260,6 +270,17 @@ export default function Studio() {
                 <Input type="datetime-local" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} className="mt-1.5 bg-input border-border" />
               </div>
             </div>
+            {hasConflict && conflictData?.conflictingBooking && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm">
+                <AlertTriangle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-red-400">Conflito de horário detectado</p>
+                  <p className="text-red-300/80 text-xs mt-0.5">
+                    Já existe a sessão <strong>{conflictData.conflictingBooking.title}</strong> agendada neste horário em {conflictData.conflictingBooking.studio ?? "Estúdio"}.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Produtor / Editor</Label>

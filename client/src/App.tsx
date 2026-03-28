@@ -24,6 +24,7 @@ import Products from "./pages/Products";
 import Projects from "./pages/Projects";
 import ContractTemplates from "./pages/ContractTemplates";
 import Credits from "./pages/Credits";
+import DailyRoutine from "./pages/DailyRoutine";
 
 function Router() {
   return (
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/projects" component={Projects} />
       <Route path="/contract-templates" component={ContractTemplates} />
       <Route path="/credits" component={Credits} />
+      <Route path="/routine" component={DailyRoutine} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

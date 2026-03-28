@@ -26,6 +26,10 @@ import {
   getContractTemplates, getContractTemplateById, createContractTemplate, updateContractTemplate, deleteContractTemplate, incrementTemplateUsage,
   getAllContactTags, createContactTag, deleteContactTag, getTagsForContact, assignTagToContact, removeTagFromContact,
   getCreditBalance, getCreditHistory, addCreditTransaction,
+  getPjDocumentByContact, createPjDocument, updatePjDocument,
+  getRoutineTemplatesByRole, getAllRoutineTemplates, createRoutineTemplate, updateRoutineTemplate, deleteRoutineTemplate, seedDefaultRoutines,
+  getDailyRoutine, upsertDailyRoutine,
+  checkStudioConflict,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -581,6 +585,12 @@ const studioRouter = router({
   delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
     deleteStudioBooking(input.id)
   ),
+  checkConflict: protectedProcedure.input(z.object({
+    startAt: z.date(),
+    endAt: z.date(),
+    studio: z.string().optional(),
+    excludeId: z.number().optional(),
+  })).query(({ input }) => checkStudioConflict(input.startAt, input.endAt, input.studio, input.excludeId)),
 });
 
 // ─── TASKS ROUTER ─────────────────────────────────────────────────────────────
@@ -1172,6 +1182,145 @@ const creditsRouter = router({
   }),
 });
 
+// ─── PJ ONBOARDING ROUTER ───────────────────────────────────────────────────
+const pjRouter = router({
+  get: protectedProcedure.input(z.object({ contactId: z.number() })).query(({ input }) =>
+    getPjDocumentByContact(input.contactId)
+  ),
+  save: protectedProcedure.input(z.object({
+    contactId: z.number(),
+    cnpj: z.string().optional(),
+    razaoSocial: z.string().optional(),
+    nomeFantasia: z.string().optional(),
+    inscricaoEstadual: z.string().optional(),
+    enderecoCompleto: z.string().optional(),
+    responsavelNome: z.string().optional(),
+    responsavelCpf: z.string().optional(),
+    responsavelEmail: z.string().optional(),
+    responsavelTelefone: z.string().optional(),
+    documentUrl: z.string().optional(),
+    notes: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const existing = await getPjDocumentByContact(input.contactId);
+    if (existing) {
+      await updatePjDocument(existing.id, input);
+      return { success: true, id: existing.id };
+    } else {
+      const result = await createPjDocument({ ...input, status: "pending" });
+      return { success: true, id: (result as { insertId: number }).insertId };
+    }
+  }),
+  extractFromDocument: protectedProcedure.input(z.object({
+    contactId: z.number(),
+    documentUrl: z.string(),
+    documentText: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const prompt = `Você é um assistente especializado em extração de dados de documentos empresariais brasileiros.
+Analise o texto abaixo e extraia as informações da empresa. Retorne APENAS um JSON com os campos:
+cnpj, razaoSocial, nomeFantasia, inscricaoEstadual, enderecoCompleto, responsavelNome, responsavelCpf, responsavelEmail, responsavelTelefone.
+Se um campo não estiver presente, use null.
+
+Texto do documento:
+${input.documentText ?? "Documento enviado via URL: " + input.documentUrl}`;
+    const response = await invokeLLM({
+      messages: [{ role: "user", content: prompt }],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "pj_data",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              cnpj: { type: ["string", "null"] },
+              razaoSocial: { type: ["string", "null"] },
+              nomeFantasia: { type: ["string", "null"] },
+              inscricaoEstadual: { type: ["string", "null"] },
+              enderecoCompleto: { type: ["string", "null"] },
+              responsavelNome: { type: ["string", "null"] },
+              responsavelCpf: { type: ["string", "null"] },
+              responsavelEmail: { type: ["string", "null"] },
+              responsavelTelefone: { type: ["string", "null"] },
+            },
+            required: ["cnpj", "razaoSocial", "nomeFantasia", "inscricaoEstadual", "enderecoCompleto", "responsavelNome", "responsavelCpf", "responsavelEmail", "responsavelTelefone"],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+    const rawContent = response.choices[0]?.message?.content;
+    const content = typeof rawContent === "string" ? rawContent : "{}";
+    const extracted = JSON.parse(content);
+    // Save extracted data
+    const existing = await getPjDocumentByContact(input.contactId);
+    if (existing) {
+      await updatePjDocument(existing.id, { ...extracted, documentUrl: input.documentUrl, status: "completed", extractedData: extracted });
+    } else {
+      await createPjDocument({ contactId: input.contactId, ...extracted, documentUrl: input.documentUrl, status: "completed", extractedData: extracted });
+    }
+    return { success: true, data: extracted };
+  }),
+});
+
+// ─── ROUTINES ROUTER ──────────────────────────────────────────────────────────
+const routinesRouter = router({
+  templates: protectedProcedure.query(async () => {
+    await seedDefaultRoutines();
+    return getAllRoutineTemplates();
+  }),
+  myTemplates: protectedProcedure.query(async ({ ctx }) => {
+    await seedDefaultRoutines();
+    return getRoutineTemplatesByRole(ctx.user.role ?? "assistente");
+  }),
+  today: protectedProcedure.query(async ({ ctx }) => {
+    const today = new Date().toISOString().split("T")[0];
+    const [templates, routine] = await Promise.all([
+      getRoutineTemplatesByRole(ctx.user.role ?? "assistente"),
+      getDailyRoutine(ctx.user.id, today),
+    ]);
+    return {
+      templates,
+      completedItems: routine?.completedItems ?? [],
+      date: today,
+    };
+  }),
+  toggleItem: protectedProcedure.input(z.object({
+    templateId: z.number(),
+    completed: z.boolean(),
+  })).mutation(async ({ input, ctx }) => {
+    const today = new Date().toISOString().split("T")[0];
+    const routine = await getDailyRoutine(ctx.user.id, today);
+    const current = routine?.completedItems ?? [];
+    let updated: number[];
+    if (input.completed) {
+      updated = Array.from(new Set([...current, input.templateId]));
+    } else {
+      updated = current.filter((id: number) => id !== input.templateId);
+    }
+    await upsertDailyRoutine(ctx.user.id, today, updated);
+    return { success: true, completedItems: updated };
+  }),
+  createTemplate: adminProcedure.input(z.object({
+    role: z.enum(["admin", "gerente", "analista", "assistente"]),
+    title: z.string().min(1),
+    description: z.string().optional(),
+    order: z.number().optional(),
+  })).mutation(({ input }) => createRoutineTemplate(input)),
+  updateTemplate: adminProcedure.input(z.object({
+    id: z.number(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    order: z.number().optional(),
+    isActive: z.boolean().optional(),
+  })).mutation(({ input }) => {
+    const { id, ...data } = input;
+    return updateRoutineTemplate(id, data);
+  }),
+  deleteTemplate: adminProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
+    deleteRoutineTemplate(input.id)
+  ),
+});
+
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -1205,6 +1354,8 @@ export const appRouter = router({
   contractTemplates: contractTemplatesRouter,
   contactTags: contactTagsRouter,
   credits: creditsRouter,
+  pj: pjRouter,
+  routines: routinesRouter,
 });
 
 export type AppRouter = typeof appRouter;

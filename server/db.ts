@@ -39,6 +39,10 @@ import {
   type InsertProject,
   type InsertContractTemplate,
   type InsertCreditTransaction,
+  pjDocuments,
+  dailyRoutines,
+  routineTemplates,
+  type InsertPjDocument,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -882,4 +886,114 @@ export async function addCreditTransaction(data: InsertCreditTransaction) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   await db.insert(creditTransactions).values(data);
+}
+
+// ─── PJ DOCUMENTS ─────────────────────────────────────────────────────────────
+export async function getPjDocumentByContact(contactId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(pjDocuments).where(eq(pjDocuments.contactId, contactId)).limit(1);
+  return result[0];
+}
+export async function createPjDocument(data: InsertPjDocument) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(pjDocuments).values(data);
+  return result;
+}
+export async function updatePjDocument(id: number, data: Partial<InsertPjDocument>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(pjDocuments).set({ ...data, updatedAt: new Date() }).where(eq(pjDocuments.id, id));
+}
+
+// ─── ROUTINE TEMPLATES ────────────────────────────────────────────────────────
+export async function getRoutineTemplatesByRole(role: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(routineTemplates)
+    .where(and(eq(routineTemplates.role, role), eq(routineTemplates.isActive, true)))
+    .orderBy(routineTemplates.order);
+}
+export async function getAllRoutineTemplates() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(routineTemplates).orderBy(routineTemplates.role, routineTemplates.order);
+}
+export async function createRoutineTemplate(data: { role: string; title: string; description?: string; order?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(routineTemplates).values(data);
+  return result;
+}
+export async function updateRoutineTemplate(id: number, data: { title?: string; description?: string; order?: number; isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(routineTemplates).set(data).where(eq(routineTemplates.id, id));
+}
+export async function deleteRoutineTemplate(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(routineTemplates).where(eq(routineTemplates.id, id));
+}
+export async function seedDefaultRoutines() {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(routineTemplates).limit(1);
+  if (existing.length > 0) return;
+  await db.insert(routineTemplates).values([
+    // Admin
+    { role: "admin", title: "Verificar KPIs do dia (receita, leads, agendamentos)", order: 1 },
+    { role: "admin", title: "Revisar usuários pendentes de aprovação", order: 2 },
+    { role: "admin", title: "Checar faturas vencidas ou a vencer hoje", order: 3 },
+    { role: "admin", title: "Revisar pipeline de vendas", order: 4 },
+    { role: "admin", title: "Responder mensagens WhatsApp não lidas", order: 5 },
+    // Gerente
+    { role: "gerente", title: "Verificar agendamentos do dia no estúdio", order: 1 },
+    { role: "gerente", title: "Revisar tarefas pendentes da equipe", order: 2 },
+    { role: "gerente", title: "Checar orçamentos aguardando aprovação", order: 3 },
+    { role: "gerente", title: "Atualizar status dos projetos em andamento", order: 4 },
+    { role: "gerente", title: "Responder mensagens WhatsApp não lidas", order: 5 },
+    // Analista
+    { role: "analista", title: "Verificar leads novos no pipeline", order: 1 },
+    { role: "analista", title: "Atualizar status das tarefas em andamento", order: 2 },
+    { role: "analista", title: "Registrar atividades do dia anterior", order: 3 },
+    { role: "analista", title: "Checar lembretes de cobrança do dia", order: 4 },
+    // Assistente
+    { role: "assistente", title: "Confirmar agendamentos do dia", order: 1 },
+    { role: "assistente", title: "Verificar tarefas atribuídas a mim", order: 2 },
+    { role: "assistente", title: "Responder mensagens WhatsApp pendentes", order: 3 },
+    { role: "assistente", title: "Atualizar cadastros de contatos incompletos", order: 4 },
+  ]);
+}
+
+// ─── DAILY ROUTINES ───────────────────────────────────────────────────────────
+export async function getDailyRoutine(userId: number, date: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(dailyRoutines)
+    .where(and(eq(dailyRoutines.userId, userId), eq(dailyRoutines.date, date)))
+    .limit(1);
+  return result[0];
+}
+export async function upsertDailyRoutine(userId: number, date: string, completedItems: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(dailyRoutines).values({ userId, date, completedItems })
+    .onDuplicateKeyUpdate({ set: { completedItems, updatedAt: new Date() } });
+}
+
+// ─// ─── STUDIO CONFLICT CHECK ────────────────────────────────────────────────
+export async function checkStudioConflict(startAt: Date, endAt: Date, studio?: string, excludeId?: number) {
+  const db = await getDb();
+  if (!db) return { hasConflict: false, conflictingBooking: null };
+  const conditions: ReturnType<typeof sql>[] = [
+    sql`${studioBookings.status} NOT IN ('cancelled')`,
+    sql`${studioBookings.startAt} < ${endAt.toISOString()}`,
+    sql`${studioBookings.endAt} > ${startAt.toISOString()}`,
+  ];
+  if (studio) conditions.push(sql`${studioBookings.studio} = ${studio}`);
+  if (excludeId) conditions.push(sql`${studioBookings.id} != ${excludeId}`);
+  const results = await db.select().from(studioBookings).where(and(...conditions)).limit(1);
+  return { hasConflict: results.length > 0, conflictingBooking: results[0] ?? null };
 }

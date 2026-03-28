@@ -383,3 +383,50 @@ export const projectLinks = mysqlTable("project_links", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type ProjectLink = typeof projectLinks.$inferSelect;
+
+// ─── PJ DOCUMENTS (Onboarding PJ) ────────────────────────────────────────────
+export const pjDocuments = mysqlTable("pj_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contactId").notNull(),
+  cnpj: varchar("cnpj", { length: 18 }),
+  razaoSocial: varchar("razao_social", { length: 255 }),
+  nomeFantasia: varchar("nome_fantasia", { length: 255 }),
+  inscricaoEstadual: varchar("inscricao_estadual", { length: 64 }),
+  enderecoCompleto: text("endereco_completo"),
+  responsavelNome: varchar("responsavel_nome", { length: 255 }),
+  responsavelCpf: varchar("responsavel_cpf", { length: 14 }),
+  responsavelEmail: varchar("responsavel_email", { length: 320 }),
+  responsavelTelefone: varchar("responsavel_telefone", { length: 32 }),
+  documentUrl: text("document_url"),
+  extractedData: json("extracted_data").$type<Record<string, string>>(),
+  status: mysqlEnum("status", ["pending", "processing", "completed", "error"]).default("pending"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type PjDocument = typeof pjDocuments.$inferSelect;
+export type InsertPjDocument = typeof pjDocuments.$inferInsert;
+
+// ─── DAILY ROUTINES ───────────────────────────────────────────────────────────
+export const dailyRoutines = mysqlTable("daily_routines", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
+  completedItems: json("completed_items").$type<number[]>().default([]),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type DailyRoutine = typeof dailyRoutines.$inferSelect;
+
+// ─── ROUTINE TEMPLATES ────────────────────────────────────────────────────────
+export const routineTemplates = mysqlTable("routine_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  role: varchar("role", { length: 64 }).notNull(), // admin, gerente, analista, assistente
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  order: int("order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type RoutineTemplate = typeof routineTemplates.$inferSelect;

@@ -315,3 +315,10 @@
 - [x] Página /credits — saldo por cliente com histórico de transações (crédito/débito/bônus/reembolso)
 - [x] 3 modelos padrão prontos (Podcast, Locução, NDA)
 - [x] Menu lateral atualizado com Projetos, Modelos e Créditos
+
+## Sprint 3 — Onboarding PJ, Rotinas e Conflitos de Horário
+- [x] Tabelas pj_documents, daily_routines, routine_templates criadas no banco
+- [x] Onboarding PJ com extração por IA (CNPJ, Razão Social, documentos) — aba PJ no perfil do contato
+- [x] Rotinas Diárias por role — página /routine com checklist personalizado por cargo
+- [x] Conflitos de horário no Estúdio — validação em tempo real ao preencher data/hora
+- [x] Rota /routine registrada no App.tsx e item no menu lateral
