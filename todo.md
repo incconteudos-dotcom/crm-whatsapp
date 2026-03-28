@@ -294,3 +294,11 @@
 - [x] Backend: procedure portal.sendViaWhatsApp (busca telefone do contato, monta mensagem, envia via Z-API)
 - [x] Contracts.tsx: botão "Enviar Link via WhatsApp" aparece após gerar o link do portal
 - [x] Quotes.tsx: botão "Enviar Link via WhatsApp" aparece após gerar o link do portal
+
+## Sprint 1 — Fluxo Comercial (Concluída)
+- [x] Catálogo de produtos/serviços (CRUD completo, categorias, unidades)
+- [x] Seletor "Do Catálogo" em Orçamentos (inserção de produtos)
+- [x] Seletor "Do Catálogo" em Faturas (inserção de produtos)
+- [x] Converter orçamento aceito em contrato (procedure + botão no drawer)
+- [x] Lembretes automáticos de cobrança (agendar, cancelar, listar por fatura)
+- [x] Modal de agendamento de lembrete no drawer de Faturas (canal + data + mensagem)

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   Receipt, Plus, CheckCircle, Send, CreditCard, SplitSquareHorizontal,
   ExternalLink, Copy, Loader2, AlertCircle, Mail, MessageSquare,
-  User, DollarSign, Calendar, Clock, ArrowRight, X, Filter, Download, Search,
+  User, DollarSign, Calendar, Clock, ArrowRight, X, Filter, Download, Search, Package, Bell,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useLocation } from "wouter";
@@ -37,6 +38,41 @@ const fmt = (v: string | number | null | undefined) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     typeof v === "string" ? parseFloat(v) : (v ?? 0)
   );
+
+// ─── ADD FROM CATALOG BUTTON ─────────────────────────────────────────────────
+function AddFromCatalogButton({ onSelect }: { onSelect: (p: { name: string; unitPrice: string }) => void }) {
+  const [open, setOpen] = useState(false);
+  const { data: products = [] } = trpc.products.list.useQuery({ activeOnly: true });
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="gap-1.5 border-purple-500/40 text-purple-300 hover:bg-purple-500/10">
+        <Package className="w-3.5 h-3.5" /> Do Catálogo
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Selecionar do Catálogo</DialogTitle></DialogHeader>
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {products.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto no catálogo ainda.</p>
+            ) : products.map(p => (
+              <button
+                key={p.id}
+                onClick={() => { onSelect(p); setOpen(false); }}
+                className="w-full text-left flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors border border-border/50"
+              >
+                <div>
+                  <p className="text-sm font-medium">{p.name}</p>
+                  {p.description && <p className="text-xs text-muted-foreground line-clamp-1">{p.description}</p>}
+                </div>
+                <span className="text-sm font-semibold text-green-400 ml-3">R$ {Number(p.unitPrice).toFixed(2)}</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 function exportInvoicesCSV(invoices: any[]) {
   const header = ["Número", "Cliente", "Status", "Total", "Vencimento", "Criada em"];
@@ -84,9 +120,19 @@ export default function Invoices() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
 
+  // Billing reminders
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [reminderDate, setReminderDate] = useState("");
+  const [reminderChannel, setReminderChannel] = useState<"whatsapp" | "email">("whatsapp");
+  const [reminderMessage, setReminderMessage] = useState("");
+
   const utils = trpc.useUtils();
   const { data: invoices, isLoading } = trpc.invoices.list.useQuery();
   const selectedInvoice = invoices?.find(i => i.id === selectedId) ?? null;
+  const { data: invoiceReminders = [] } = trpc.billingReminders.list.useQuery(
+    { invoiceId: selectedId ?? 0 },
+    { enabled: !!selectedId }
+  );
 
   const filteredInvoices = useMemo(() => {
     if (!invoices) return [];
@@ -141,6 +187,21 @@ export default function Invoices() {
       setEmailOpen(false);
     },
     onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const createReminderMutation = trpc.billingReminders.create.useMutation({
+    onSuccess: () => {
+      toast.success("Lembrete agendado!");
+      setReminderOpen(false);
+      setReminderDate(""); setReminderMessage("");
+      utils.billingReminders.list.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const cancelReminderMutation = trpc.billingReminders.cancel.useMutation({
+    onSuccess: () => { toast.success("Lembrete cancelado."); utils.billingReminders.list.invalidate(); },
+    onError: (e) => toast.error(e.message),
   });
 
   const sendWhatsAppMutation = trpc.documents.sendByWhatsapp.useMutation({
@@ -454,6 +515,39 @@ export default function Invoices() {
                       </div>
                     )}
 
+                    {/* Billing Reminders */}
+                    {selectedInvoice.status !== "paid" && selectedInvoice.status !== "cancelled" && (
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 border-orange-500/30 text-orange-300 hover:bg-orange-500/10"
+                        onClick={() => setReminderOpen(true)}
+                      >
+                        <Bell className="w-4 h-4" /> Agendar Lembrete de Cobrança
+                      </Button>
+                    )}
+
+                    {/* Reminders list */}
+                    {invoiceReminders.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Lembretes Agendados</p>
+                        {invoiceReminders.map((r: any) => (
+                          <div key={r.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2">
+                            <div>
+                              <p className="text-xs font-medium">{r.channel === "whatsapp" ? "WhatsApp" : "Email"} · {format(new Date(r.scheduledAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                              <p className={`text-xs mt-0.5 ${r.status === "sent" ? "text-green-400" : r.status === "failed" ? "text-red-400" : r.status === "cancelled" ? "text-zinc-500" : "text-yellow-400"}`}>
+                                {r.status === "sent" ? "Enviado" : r.status === "failed" ? "Falhou" : r.status === "cancelled" ? "Cancelado" : "Pendente"}
+                              </p>
+                            </div>
+                            {r.status === "pending" && (
+                              <Button size="sm" variant="ghost" className="text-zinc-400 hover:text-red-400 h-7 px-2" onClick={() => cancelReminderMutation.mutate({ id: r.id })}>
+                                <X className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     {/* Status transitions */}
                     {selectedInvoice.status === "draft" && (
                       <Button className="w-full gap-2" variant="outline" onClick={() => { updateMutation.mutate({ id: selectedInvoice.id, status: "sent" }); setSelectedId(null); }}>
@@ -546,9 +640,12 @@ export default function Invoices() {
                   </div>
                 ))}
               </div>
-              <Button variant="outline" size="sm" className="mt-2" onClick={() => setItems(prev => [...prev, { description: "", quantity: 1, unitPrice: 0, total: 0 }])}>
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> Adicionar item
-              </Button>
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" size="sm" onClick={() => setItems(prev => [...prev, { description: "", quantity: 1, unitPrice: 0, total: 0 }])}>
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Adicionar item
+                </Button>
+                <AddFromCatalogButton onSelect={(p) => setItems(prev => [...prev, { description: p.name, quantity: 1, unitPrice: Number(p.unitPrice), total: Number(p.unitPrice) }])} />
+              </div>
             </div>
 
             <div className="bg-muted/20 rounded-lg p-4 flex justify-between items-center">
@@ -634,6 +731,62 @@ export default function Invoices() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => { setPayOpen(false); setSplitLinks(null); }}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* ─── REMINDER MODAL ───────────────────────────────────────────── */}
+      <Dialog open={reminderOpen} onOpenChange={setReminderOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-orange-400" /> Agendar Lembrete de Cobrança
+            </DialogTitle>
+            <DialogDescription>O lembrete será enviado automaticamente na data e hora escolhidas.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Canal</Label>
+              <Select value={reminderChannel} onValueChange={v => setReminderChannel(v as "whatsapp" | "email")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Data e Hora *</Label>
+              <Input type="datetime-local" value={reminderDate} onChange={e => setReminderDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Mensagem personalizada (opcional)</Label>
+              <Textarea
+                placeholder="Olá! Passando para lembrar sobre a fatura..."
+                value={reminderMessage}
+                onChange={e => setReminderMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReminderOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (!reminderDate || !selectedId) return;
+                createReminderMutation.mutate({
+                  invoiceId: selectedId,
+                  contactId: selectedInvoice?.contactId ?? undefined,
+                  channel: reminderChannel,
+                  scheduledAt: new Date(reminderDate),
+                  message: reminderMessage || undefined,
+                });
+              }}
+              disabled={!reminderDate || createReminderMutation.isPending}
+              className="gap-2 bg-orange-600 hover:bg-orange-700"
+            >
+              {createReminderMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+              Agendar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -20,6 +20,8 @@ import {
   getMonthlyRevenue, getTopClientsByRevenue, getLeadConversionFunnel,
   createPortalToken, getPortalToken, approvePortalDocument,
   linkChatToContact,
+  getProducts, getProductById, createProduct, updateProduct, deleteProduct,
+  getBillingReminders, createBillingReminder, cancelBillingReminder,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -456,9 +458,43 @@ const quotesRouter = router({
       notes: q.notes ?? undefined,
       assignedUserId: ctx.user.id,
     });
-    // Mark quote as accepted
     await updateQuote(input.quoteId, { status: "accepted" });
     return invoice;
+  }),
+  convertToContract: protectedProcedure.input(z.object({
+    quoteId: z.number(),
+    title: z.string().optional(),
+    validUntil: z.date().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    const quotes = await getQuotes();
+    const q = quotes.find(q => q.id === input.quoteId);
+    if (!q) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
+    // Build contract content from quote items
+    const itemLines = (q.items ?? []).map((item: { description: string; quantity: number; unitPrice: number; total: number }) =>
+      `- ${item.description}: ${item.quantity}x R$ ${Number(item.unitPrice).toFixed(2)} = R$ ${Number(item.total).toFixed(2)}`
+    ).join("\n");
+    const content = [
+      `CONTRATO DE PRESTAÇÃO DE SERVIÇOS`,
+      ``,
+      `Originado do Orçamento ${q.number}`,
+      ``,
+      `SERVIÇOS CONTRATADOS:`,
+      itemLines,
+      ``,
+      `VALOR TOTAL: R$ ${Number(q.total ?? 0).toFixed(2)}`,
+      q.notes ? `\nOBSERVAÇÕES:\n${q.notes}` : "",
+    ].filter(l => l !== undefined).join("\n");
+    const contract = await createContract({
+      title: input.title ?? `Contrato — ${q.number}`,
+      contactId: q.contactId ?? undefined,
+      leadId: q.leadId ?? undefined,
+      value: q.total,
+      content,
+      validUntil: input.validUntil,
+      assignedUserId: ctx.user.id,
+    });
+    await updateQuote(input.quoteId, { status: "accepted" });
+    return contract;
   }),
 });
 
@@ -956,7 +992,58 @@ const documentsRouter = router({
   }),
 });
 
-// ─── APP ROUTER ───────────────────────────────────────────────────────────────
+// // ─── PRODUCTS ROUTER ────────────────────────────────────────────────────────────
+const productsRouter = router({
+  list: protectedProcedure.input(z.object({ activeOnly: z.boolean().optional() })).query(({ input }) =>
+    getProducts(input.activeOnly ?? true)
+  ),
+  get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
+    getProductById(input.id)
+  ),
+  create: managerProcedure.input(z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+    category: z.enum(["episode", "package", "studio", "service", "other"]).optional(),
+    unitPrice: z.string(),
+    currency: z.string().optional(),
+    unit: z.string().optional(),
+  })).mutation(({ input }) => createProduct(input)),
+  update: managerProcedure.input(z.object({
+    id: z.number(),
+    name: z.string().optional(),
+    description: z.string().optional(),
+    category: z.enum(["episode", "package", "studio", "service", "other"]).optional(),
+    unitPrice: z.string().optional(),
+    currency: z.string().optional(),
+    unit: z.string().optional(),
+    active: z.boolean().optional(),
+  })).mutation(({ input }) => {
+    const { id, ...data } = input;
+    return updateProduct(id, data);
+  }),
+  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
+    deleteProduct(input.id)
+  ),
+});
+
+// ─── BILLING REMINDERS ROUTER ────────────────────────────────────────────────────────────
+const billingRemindersRouter = router({
+  list: protectedProcedure.input(z.object({ invoiceId: z.number().optional() })).query(({ input }) =>
+    getBillingReminders(input.invoiceId)
+  ),
+  create: protectedProcedure.input(z.object({
+    invoiceId: z.number(),
+    contactId: z.number().optional(),
+    channel: z.enum(["whatsapp", "email"]),
+    scheduledAt: z.date(),
+    message: z.string().optional(),
+  })).mutation(({ input }) => createBillingReminder(input)),
+  cancel: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
+    cancelBillingReminder(input.id)
+  ),
+});
+
+// ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -983,6 +1070,8 @@ export const appRouter = router({
   documents: documentsRouter,
   analytics: analyticsRouter,
   portal: portalRouter,
+  products: productsRouter,
+  billingReminders: billingRemindersRouter,
 });
 
 export type AppRouter = typeof appRouter;

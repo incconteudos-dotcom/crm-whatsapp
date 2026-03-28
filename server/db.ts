@@ -25,8 +25,14 @@ import {
   type InsertActivity,
   type InsertWhatsappChat,
   type InsertWhatsappMessage,
+  products,
+  billingReminders,
+  clientPortalTokens,
+  type InsertBillingReminder,
+  type InsertClientPortalToken,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import crypto from "crypto";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -612,8 +618,6 @@ export async function getLeadConversionFunnel() {
 }
 
 // ─── CLIENT PORTAL ────────────────────────────────────────────────────────────
-import { clientPortalTokens, type InsertClientPortalToken } from "../drizzle/schema";
-import crypto from "crypto";
 
 export async function createPortalToken(data: { type: "contract" | "invoice" | "quote"; documentId: number; contactId?: number; expiresInDays?: number }) {
   const db = await getDb();
@@ -657,4 +661,78 @@ export async function linkChatToContact(jid: string) {
   if (match) {
     await db.update(whatsappChats).set({ contactId: match.id }).where(eq(whatsappChats.jid, jid));
   }
+}
+
+// ─── PRODUCTS (CATÁLOGO) ──────────────────────────────────────────────────────
+export async function getProducts(activeOnly = true) {
+  const db = await getDb();
+  if (!db) return [];
+  if (activeOnly) return db.select().from(products).where(eq(products.active, true)).orderBy(products.category, products.name);
+  return db.select().from(products).orderBy(products.category, products.name);
+}
+
+export async function getProductById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [row] = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  return row;
+}
+
+export async function createProduct(data: { name: string; description?: string; category?: "episode" | "package" | "studio" | "service" | "other"; unitPrice: string; currency?: string; unit?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(products).values({ ...data, active: true });
+}
+
+export async function updateProduct(id: number, data: Partial<{ name: string; description: string; category: "episode" | "package" | "studio" | "service" | "other"; unitPrice: string; currency: string; unit: string; active: boolean }>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(products).set({ ...data, updatedAt: new Date() }).where(eq(products.id, id));
+}
+
+export async function deleteProduct(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(products).set({ active: false, updatedAt: new Date() }).where(eq(products.id, id));
+}
+
+// ─── BILLING REMINDERS ────────────────────────────────────────────────────────
+export async function getBillingReminders(invoiceId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  if (invoiceId) return db.select().from(billingReminders).where(eq(billingReminders.invoiceId, invoiceId)).orderBy(billingReminders.scheduledAt);
+  return db.select().from(billingReminders).orderBy(billingReminders.scheduledAt);
+}
+
+export async function createBillingReminder(data: InsertBillingReminder) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(billingReminders).values(data);
+}
+
+export async function cancelBillingReminder(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(billingReminders).set({ status: "cancelled" }).where(eq(billingReminders.id, id));
+}
+
+export async function getPendingBillingReminders() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  return db.select().from(billingReminders)
+    .where(and(eq(billingReminders.status, "pending"), sql`scheduledAt <= ${now}`))
+    .orderBy(billingReminders.scheduledAt);
+}
+
+export async function markReminderSent(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(billingReminders).set({ status: "sent", sentAt: new Date() }).where(eq(billingReminders.id, id));
+}
+
+export async function markReminderFailed(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(billingReminders).set({ status: "failed" }).where(eq(billingReminders.id, id));
 }

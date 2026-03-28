@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import {
   BookOpen, Plus, CheckCircle, XCircle, Send, Clock, Mail, Loader2,
-  MessageSquare, ArrowRight, User, DollarSign, Calendar, X, FileText, Download, Search, Link, Copy,
+  MessageSquare, ArrowRight, User, DollarSign, Calendar, X, FileText, Download, Search, Link, Copy, Package, FileSignature,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -51,6 +51,41 @@ function exportQuotesCSV(quotes: any[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = "orcamentos.csv"; a.click();
   URL.revokeObjectURL(url);
+}
+
+// ─── ADD FROM CATALOG BUTTON ─────────────────────────────────────────────────
+function AddFromCatalogButton({ onSelect }: { onSelect: (p: { name: string; unitPrice: string }) => void }) {
+  const [open, setOpen] = useState(false);
+  const { data: products = [] } = trpc.products.list.useQuery({ activeOnly: true });
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="gap-1.5 border-purple-500/40 text-purple-300 hover:bg-purple-500/10">
+        <Package className="w-3.5 h-3.5" /> Do Catálogo
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Selecionar do Catálogo</DialogTitle></DialogHeader>
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {products.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto no catálogo ainda.</p>
+            ) : products.map(p => (
+              <button
+                key={p.id}
+                onClick={() => { onSelect(p); setOpen(false); }}
+                className="w-full text-left flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors border border-border/50"
+              >
+                <div>
+                  <p className="text-sm font-medium">{p.name}</p>
+                  {p.description && <p className="text-xs text-muted-foreground line-clamp-1">{p.description}</p>}
+                </div>
+                <span className="text-sm font-semibold text-green-400 ml-3">R$ {Number(p.unitPrice).toFixed(2)}</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 export default function Quotes() {
@@ -139,6 +174,16 @@ export default function Quotes() {
       setEmailOpen(false);
     },
     onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const convertToContractMutation = trpc.quotes.convertToContract.useMutation({
+    onSuccess: () => {
+      toast.success("Orçamento convertido em contrato!");
+      setSelectedId(null);
+      utils.quotes.list.invalidate();
+      navigate("/contracts");
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const convertToInvoiceMutation = trpc.quotes.convertToInvoice.useMutation({
@@ -428,14 +473,24 @@ export default function Quotes() {
                       </div>
                     )}
                     {(selectedQuote.status === "accepted" || selectedQuote.status === "sent") && (
-                      <Button
-                        className="w-full gap-2 bg-cyan-600 hover:bg-cyan-700"
-                        onClick={() => convertToInvoiceMutation.mutate({ quoteId: selectedQuote.id })}
-                        disabled={convertToInvoiceMutation.isPending}
-                      >
-                        {convertToInvoiceMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                        Converter em Fatura
-                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          className="gap-2 bg-cyan-600 hover:bg-cyan-700"
+                          onClick={() => convertToInvoiceMutation.mutate({ quoteId: selectedQuote.id })}
+                          disabled={convertToInvoiceMutation.isPending}
+                        >
+                          {convertToInvoiceMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                          Converter em Fatura
+                        </Button>
+                        <Button
+                          className="gap-2 bg-indigo-600 hover:bg-indigo-700"
+                          onClick={() => convertToContractMutation.mutate({ quoteId: selectedQuote.id })}
+                          disabled={convertToContractMutation.isPending}
+                        >
+                          {convertToContractMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />}
+                          Converter em Contrato
+                        </Button>
+                      </div>
                     )}
                     {(selectedQuote.status === "draft" || selectedQuote.status === "sent") && (
                       <Button variant="outline" className="w-full gap-2 text-orange-400 border-orange-500/30 hover:bg-orange-500/10" onClick={() => { updateMutation.mutate({ id: selectedQuote.id, status: "expired" }); setSelectedId(null); }}>
@@ -567,9 +622,12 @@ export default function Quotes() {
                   </div>
                 ))}
               </div>
-              <Button variant="outline" size="sm" className="mt-2" onClick={() => setItems(prev => [...prev, { description: "", quantity: 1, unitPrice: 0, total: 0 }])}>
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> Adicionar item
-              </Button>
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" size="sm" onClick={() => setItems(prev => [...prev, { description: "", quantity: 1, unitPrice: 0, total: 0 }])}>
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Adicionar item
+                </Button>
+                <AddFromCatalogButton onSelect={(p) => setItems(prev => [...prev, { description: p.name, quantity: 1, unitPrice: Number(p.unitPrice), total: Number(p.unitPrice) }])} />
+              </div>
             </div>
 
             <div className="bg-muted/20 rounded-lg p-4 space-y-2">

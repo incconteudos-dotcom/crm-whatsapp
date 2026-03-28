@@ -13,6 +13,7 @@ import {
   Home,
   LogOut,
   MessageSquare,
+  Package,
   Receipt,
   Settings,
   Shield,
@@ -36,6 +37,7 @@ const navItems = [
   { icon: CheckSquare, label: "Tarefas", path: "/tasks" },
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
   { icon: CreditCard, label: "Pagamentos", path: "/payments" },
+  { icon: Package, label: "Catálogo", path: "/products" },
 ];
 
 const adminItems = [

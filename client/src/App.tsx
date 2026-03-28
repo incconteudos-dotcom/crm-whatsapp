@@ -20,6 +20,7 @@ import Payments from "./pages/Payments";
 import Settings from "./pages/Settings";
 import ContactProfile from "./pages/ContactProfile";
 import ClientPortal from "./pages/ClientPortal";
+import Products from "./pages/Products";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/contacts/:id" component={ContactProfile} />
       <Route path="/portal/:token" component={ClientPortal} />
+      <Route path="/products" component={Products} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

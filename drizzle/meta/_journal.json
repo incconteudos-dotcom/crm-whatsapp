@@ -29,6 +29,13 @@
       "when": 1774655174252,
       "tag": "0003_late_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1774660254015,
+      "tag": "0004_deep_maginty",
+      "breakpoints": true
     }
   ]
 }

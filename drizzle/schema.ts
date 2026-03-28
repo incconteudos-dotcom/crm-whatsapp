@@ -275,3 +275,34 @@ export const clientPortalTokens = mysqlTable("client_portal_tokens", {
 });
 export type ClientPortalToken = typeof clientPortalTokens.$inferSelect;
 export type InsertClientPortalToken = typeof clientPortalTokens.$inferInsert;
+
+// ─── PRODUCT CATALOG ─────────────────────────────────────────────────────────
+export const products = mysqlTable("products", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: mysqlEnum("category", ["episode", "package", "studio", "service", "other"]).default("service"),
+  unitPrice: decimal("unitPrice", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 8 }).default("BRL"),
+  unit: varchar("unit", { length: 64 }).default("un"),
+  active: boolean("active").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = typeof products.$inferInsert;
+
+// ─── BILLING REMINDERS ───────────────────────────────────────────────────────
+export const billingReminders = mysqlTable("billing_reminders", {
+  id: int("id").autoincrement().primaryKey(),
+  invoiceId: int("invoiceId").notNull(),
+  contactId: int("contactId"),
+  channel: mysqlEnum("channel", ["whatsapp", "email"]).notNull(),
+  scheduledAt: timestamp("scheduledAt").notNull(),
+  sentAt: timestamp("sentAt"),
+  status: mysqlEnum("status", ["pending", "sent", "failed", "cancelled"]).default("pending"),
+  message: text("message"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type BillingReminder = typeof billingReminders.$inferSelect;
+export type InsertBillingReminder = typeof billingReminders.$inferInsert;
