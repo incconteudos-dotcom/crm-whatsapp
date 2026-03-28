@@ -397,22 +397,22 @@
 - [ ] US-074: Dashboard financeiro por projeto (5 pts)
 - [ ] US-069: Resumo semanal financeiro por e-mail (toda segunda) (5 pts)
 
-## Sprint E — UX Pipeline, Relatórios e Produtividade (47 pts)
-- [ ] US-012: Drag-and-drop nativo entre colunas do pipeline (8 pts)
-- [ ] US-013: Filtros avançados no pipeline (responsável, período, valor) (5 pts)
-- [ ] US-010: Importação de contatos via CSV (8 pts)
-- [ ] US-029: Controle de horas por cliente (8 pts)
-- [ ] US-031: Relatório de conversas WhatsApp (5 pts)
-- [ ] US-032: Exportação global de dados em CSV/Excel (5 pts)
-- [ ] US-057: Painel de créditos no perfil do cliente (5 pts)
-- [ ] US-071: Pendências com clientes na rotina consolidada (8 pts)
+## Sprint E — UX Pipeline, Relatórios e Produtividade (47 pts) ✅
+- [x] US-012: Drag-and-drop nativo entre colunas do pipeline (8 pts)
+- [x] US-013: Filtros avançados no pipeline (responsável, período, valor) (5 pts)
+- [x] US-010: Importação de contatos via CSV (8 pts)
+- [x] US-029: Controle de horas por cliente (8 pts)
+- [x] US-031: Relatório de conversas WhatsApp (5 pts)
+- [x] US-032: Exportação global de dados em CSV/Excel (5 pts)
+- [x] US-057: Painel de créditos no perfil do cliente (5 pts)
+- [x] US-071: Pendências com clientes na rotina consolidada (8 pts)
 
-## Sprint F — WhatsApp Avançado, Assinatura Digital e Complementares (58 pts)
-- [ ] US-007: Suporte a mídia no WhatsApp (imagens, docs, áudio) (8 pts)
-- [ ] US-015: Exportação de contrato em PDF (8 pts)
-- [ ] US-016: Assinatura digital de contratos com validade jurídica (8 pts)
-- [ ] US-060: Produtos vinculados a tipos de contrato (3 pts)
-- [ ] US-070: Resumo semanal de conversas WhatsApp (5 pts)
+## Sprint F — WhatsApp Avançado, Assinatura Digital e Complementares (58 pts) ✅
+- [x] US-007: Suporte a mídia no WhatsApp (imagens, docs, áudio) (8 pts)
+- [x] US-015: Exportação de contrato em PDF (8 pts)
+- [x] US-016: Assinatura digital de contratos com validade jurídica (8 pts)
+- [x] US-060: Produtos vinculados a tipos de contrato (3 pts)
+- [x] US-070: Resumo semanal de conversas WhatsApp (5 pts)
 
 ## Sprint Design — UI/UX Pro Max (Prioridade Máxima)
 - [x] Ativar fonte Inter via Google Fonts no index.html
@@ -600,3 +600,63 @@
 ### US-069: Resumo Semanal Financeiro por E-mail
 - [x] Backend: sprintDRouter.sendWeeklyFinancialSummary — compila KPIs e envia via Brevo
 - [x] UI: botão "Enviar Resumo Agora" na aba Notificações das Configurações
+
+## Sprint E — UX Pipeline, Relatórios e Produtividade (47 pts) — Em Andamento
+
+### US-012: Drag-and-drop nativo entre colunas do pipeline (8 pts)
+- [ ] Instalar @dnd-kit/core e @dnd-kit/sortable
+- [ ] Refatorar Pipeline.tsx para usar DndContext e SortableContext por coluna
+- [ ] Persistir nova posição via trpc.pipeline.moveLead ao soltar card
+
+### US-013: Filtros avançados no pipeline (5 pts)
+- [ ] UI: barra de filtros no topo do kanban (responsável, período, valor mín/máx, tag)
+- [ ] Backend: procedure pipeline.getLeads aceitar filtros opcionais
+
+### US-010: Importação de contatos via CSV (8 pts)
+- [ ] Backend: procedure contacts.importCSV — parse CSV, validar campos, upsert contatos
+- [ ] UI: modal de importação em Contacts.tsx com upload, preview e confirmação
+
+### US-029: Controle de horas por cliente (8 pts)
+- [ ] Schema: tabela time_entries (contactId, projectId, description, minutes, date, userId)
+- [ ] Backend: CRUD de time_entries
+- [ ] UI: página /time-tracking com registro de horas, filtro por cliente/projeto, total por período
+
+### US-031: Relatório de conversas WhatsApp (5 pts)
+- [ ] Backend: procedure whatsapp.conversationReport — total de mensagens, tempo médio de resposta, chats por contato
+- [ ] UI: aba "Relatório" na página WhatsApp com métricas e gráficos
+
+### US-032: Exportação global de dados em CSV/Excel (5 pts)
+- [ ] Backend: procedures export.contacts, export.invoices, export.quotes, export.contracts
+- [ ] UI: botão "Exportar CSV" em Contacts, Invoices, Quotes, Contracts
+
+### US-057: Painel de créditos no perfil do cliente (5 pts)
+- [ ] UI: aba "Créditos" no perfil do contato (/contacts/:id) com saldo e histórico de transações
+
+### US-071: Pendências com clientes na rotina consolidada (8 pts)
+- [ ] Backend: procedure routine.clientPendencies — faturas vencidas, leads parados, sessões sem pagamento por contato
+- [ ] UI: seção "Pendências com Clientes" na página /routine
+
+## Sprint F — WhatsApp Avançado, Assinatura Digital e Complementares (58 pts)
+
+### US-007: Suporte a mídia no WhatsApp (8 pts)
+- [ ] Backend: procedure whatsapp.sendMedia — enviar imagem/doc/áudio via Z-API
+- [ ] UI: botão de anexo no chat WhatsApp com seletor de tipo (imagem, documento, áudio)
+- [ ] UI: renderizar mensagens de mídia recebidas (imagem inline, link para doc/áudio)
+
+### US-015: Exportação de contrato em PDF (8 pts)
+- [ ] Backend: procedure contracts.exportPDF — gerar PDF via html-to-pdf com template do contrato
+- [ ] UI: botão "Baixar PDF" no drawer de detalhes do contrato
+
+### US-016: Assinatura digital de contratos com validade jurídica (8 pts)
+- [ ] Schema: colunas signature_data, signed_ip, signed_user_agent em contracts
+- [ ] Backend: procedure contracts.sign — salvar hash SHA-256 do conteúdo + IP + timestamp
+- [ ] UI: modal de assinatura com canvas (desenho) ou digitação do nome + confirmação
+- [ ] UI: exibir badge "Assinado digitalmente" com data/IP no drawer do contrato
+
+### US-060: Produtos vinculados a tipos de contrato (3 pts)
+- [ ] Schema: coluna product_ids (json) em contract_templates
+- [ ] UI: seletor de produtos ao criar/editar modelo de contrato
+
+### US-070: Resumo semanal de conversas WhatsApp (5 pts)
+- [ ] Backend: procedure whatsapp.weeklyConversationSummary — IA resume os principais temas das conversas da semana
+- [ ] UI: botão "Resumo da Semana" na página WhatsApp com modal de resultado

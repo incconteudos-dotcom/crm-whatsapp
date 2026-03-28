@@ -6,7 +6,7 @@ import {
   Mail, Loader2, MessageSquare, Download, User, Calendar, DollarSign,
   FileSignature, ChevronRight, Search, X as XIcon, Link, Copy,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -114,6 +114,15 @@ export default function Contracts() {
   const [waJid, setWaJid] = useState("");
   const [waMessage, setWaMessage] = useState("");
 
+  // Digital signature modal state
+  const [signOpen, setSignOpen] = useState(false);
+  const [signContractId, setSignContractId] = useState<number | null>(null);
+  const [signName, setSignName] = useState("");
+  const [signEmail, setSignEmail] = useState("");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasSig, setHasSig] = useState(false);
+
   const utils = trpc.useUtils();
   const { data: contracts, isLoading } = trpc.contracts.list.useQuery();
   const { data: contacts } = trpc.contacts.list.useQuery({});
@@ -198,6 +207,60 @@ export default function Contracts() {
     },
     onError: (e) => toast.error(`Erro ao enviar WhatsApp: ${e.message}`),
   });
+
+  const signContractMutation = trpc.sprintF.signContract.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Contrato assinado! Hash: ${data.hash.substring(0, 16)}...`);
+      setSignOpen(false);
+      setSignName(""); setSignEmail(""); setHasSig(false);
+      const ctx = canvasRef.current?.getContext("2d");
+      if (ctx && canvasRef.current) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      utils.contracts.list.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const openSignModal = (contract: ContractWithContact, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSignContractId(contract.id);
+    setSignName(contract.signerName ?? contract.contactName ?? "");
+    setSignEmail(contract.signerEmail ?? contract.contactEmail ?? "");
+    setHasSig(false);
+    setSignOpen(true);
+  };
+
+  const startDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d"); if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    setIsDrawing(true);
+  };
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d"); if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.lineCap = "round";
+    ctx.stroke();
+    setHasSig(true);
+  };
+  const stopDraw = () => setIsDrawing(false);
+  const clearCanvas = () => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d"); if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSig(false);
+  };
+  const handleSign = () => {
+    if (!signContractId || !signName.trim() || !hasSig) {
+      toast.error("Preencha o nome e desenhe a assinatura"); return;
+    }
+    const sigData = canvasRef.current?.toDataURL("image/png") ?? "";
+    signContractMutation.mutate({ contractId: signContractId, signatureData: sigData, signerName: signName, signerEmail: signEmail || undefined });
+  };
 
   const openDrawer = (contract: ContractWithContact) => {
     setSelectedContract(contract);
@@ -502,11 +565,10 @@ export default function Contracts() {
                     <Button
                       size="sm"
                       className="bg-green-600 hover:bg-green-700"
-                      onClick={() => updateMutation.mutate({ id: selectedContract.id, status: "signed", signedAt: new Date() })}
-                      disabled={updateMutation.isPending}
+                      onClick={() => openSignModal(selectedContract)}
                     >
-                      <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                      Registrar Assinatura
+                      <FileSignature className="w-3.5 h-3.5 mr-1.5" />
+                      Assinar Digitalmente
                     </Button>
                   )}
                   {selectedContract.status !== "cancelled" && selectedContract.status !== "signed" && (
@@ -820,6 +882,68 @@ export default function Contracts() {
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando...</>
               ) : (
                 <><MessageSquare className="w-4 h-4 mr-2" />Enviar via WhatsApp</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Digital Signature Modal */}
+      <Dialog open={signOpen} onOpenChange={setSignOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSignature className="w-5 h-5 text-green-400" /> Assinatura Digital
+            </DialogTitle>
+            <DialogDescription>Desenhe a assinatura no campo abaixo para assinar o contrato com validade jurídica.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Nome do Signatário *</Label>
+                <Input value={signName} onChange={e => setSignName(e.target.value)} placeholder="Nome completo" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email (opcional)</Label>
+                <Input type="email" value={signEmail} onChange={e => setSignEmail(e.target.value)} placeholder="email@exemplo.com" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Assinatura *</Label>
+                <Button variant="ghost" size="sm" onClick={clearCanvas} className="text-xs text-muted-foreground h-6 px-2">Limpar</Button>
+              </div>
+              <canvas
+                ref={canvasRef}
+                width={460}
+                height={160}
+                className="w-full rounded-lg border border-border bg-muted/30 cursor-crosshair touch-none"
+                style={{ touchAction: "none" }}
+                onMouseDown={startDraw}
+                onMouseMove={draw}
+                onMouseUp={stopDraw}
+                onMouseLeave={stopDraw}
+              />
+              <p className="text-xs text-muted-foreground">Desenhe sua assinatura com o mouse no campo acima.</p>
+            </div>
+            {hasSig && (
+              <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                <p className="text-xs text-green-300">Assinatura capturada. Um hash SHA-256 será gerado para validação.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSignOpen(false)}>Cancelar</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleSign}
+              disabled={!hasSig || !signName.trim() || signContractMutation.isPending}
+            >
+              {signContractMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Assinando...</>
+              ) : (
+                <><FileSignature className="w-4 h-4 mr-2" />Confirmar Assinatura</>
               )}
             </Button>
           </DialogFooter>

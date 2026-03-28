@@ -82,6 +82,8 @@ import {
   npsResponses,
   type InsertWhatsappAnalysis,
   type InsertNpsResponse,
+  timeEntries,
+  type InsertTimeEntry,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -1986,4 +1988,102 @@ export async function getNpsStats() {
   const npsScore = Math.round(((promoters - detractors) / total) * 100);
   const avgScore = Math.round((all.reduce((s, r) => s + (r.score ?? 0), 0) / total) * 10) / 10;
   return { total, responded: total, promoters, passives, detractors, npsScore, avgScore };
+}
+
+// ─── TIME ENTRIES (Sprint E — US-029) ─────────────────────────────────────────
+export async function getTimeEntries(filters?: { contactId?: number; projectId?: number; userId?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.contactId) conditions.push(eq(timeEntries.contactId, filters.contactId));
+  if (filters?.projectId) conditions.push(eq(timeEntries.projectId, filters.projectId));
+  if (filters?.userId) conditions.push(eq(timeEntries.userId, filters.userId));
+  const q = db.select().from(timeEntries).orderBy(desc(timeEntries.date));
+  return conditions.length > 0 ? q.where(and(...conditions)) : q;
+}
+export async function createTimeEntry(data: InsertTimeEntry) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(timeEntries).values(data);
+  return (result as { insertId: number }).insertId;
+}
+export async function updateTimeEntry(id: number, data: Partial<InsertTimeEntry>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(timeEntries).set({ ...data, updatedAt: new Date() }).where(eq(timeEntries.id, id));
+}
+export async function deleteTimeEntry(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(timeEntries).where(eq(timeEntries.id, id));
+}
+export async function getTimeEntrySummary(contactId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const q = db.select({
+    contactId: timeEntries.contactId,
+    projectId: timeEntries.projectId,
+    totalMinutes: sql<number>`SUM(${timeEntries.minutes})`,
+    totalEntries: sql<number>`COUNT(*)`,
+  }).from(timeEntries).groupBy(timeEntries.contactId, timeEntries.projectId);
+  if (contactId) return q.where(eq(timeEntries.contactId, contactId));
+  return q;
+}
+
+// ─── EXPORT HELPERS (Sprint E — US-032) ───────────────────────────────────────
+export async function exportContactsData() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(contacts).orderBy(desc(contacts.createdAt));
+}
+export async function exportInvoicesData() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(invoices).orderBy(desc(invoices.createdAt));
+}
+export async function exportQuotesData() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(quotes).orderBy(desc(quotes.createdAt));
+}
+export async function exportContractsData() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(contracts).orderBy(desc(contracts.createdAt));
+}
+
+// ─── WHATSAPP CONVERSATION REPORT (Sprint E — US-031) ─────────────────────────
+export async function getWhatsappConversationReport() {
+  const db = await getDb();
+  if (!db) return { totalChats: 0, totalMessages: 0, avgMessagesPerChat: 0, topChats: [] };
+  const [chatCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(whatsappChats);
+  const [msgCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(whatsappMessages);
+  const topChats = await db.select({
+    chatJid: whatsappMessages.chatJid,
+    messageCount: sql<number>`COUNT(*)`,
+  }).from(whatsappMessages).groupBy(whatsappMessages.chatJid).orderBy(sql`COUNT(*) DESC`).limit(10);
+  const total = Number(chatCount?.count ?? 0);
+  const msgs = Number(msgCount?.count ?? 0);
+  return {
+    totalChats: total,
+    totalMessages: msgs,
+    avgMessagesPerChat: total > 0 ? Math.round(msgs / total) : 0,
+    topChats,
+  };
+}
+
+// ─── CONTRACT SIGNATURE (Sprint F — US-016) ───────────────────────────────────
+export async function signContract(id: number, data: { signatureData: string; signerName: string; signerEmail?: string; signerIp?: string; signerUserAgent?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const hash = (await import("crypto")).createHash("sha256").update(JSON.stringify(data)).digest("hex");
+  await db.update(contracts).set({
+    status: "signed",
+    signedAt: new Date(),
+    signerName: data.signerName,
+    signerEmail: data.signerEmail,
+    signatureUrl: `data:signature;hash=${hash}`,
+    updatedAt: new Date(),
+  }).where(eq(contracts.id, id));
+  return hash;
 }

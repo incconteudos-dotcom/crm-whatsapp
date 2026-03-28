@@ -61,6 +61,10 @@ import {
   getTocDashboard,
   getWhatsappAnalysisList, getWhatsappAnalysisByChatId, upsertWhatsappAnalysis, deleteWhatsappAnalysis,
   getNpsResponses, createNpsResponse, updateNpsResponse, getNpsStats,
+  getTimeEntries, createTimeEntry, updateTimeEntry, deleteTimeEntry, getTimeEntrySummary,
+  exportContactsData, exportInvoicesData, exportQuotesData, exportContractsData,
+  getWhatsappConversationReport,
+  signContract,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -2279,6 +2283,117 @@ const npsRouter = router({
   }),
 });
 
+// ─── SPRINT E ROUTER ────────────────────────────────────────────────────────
+const sprintERouter = router({
+  // US-029: Time tracking
+  getTimeEntries: protectedProcedure.input(z.object({
+    contactId: z.number().optional(),
+    projectId: z.number().optional(),
+  }).optional()).query(async ({ input }) => {
+    return getTimeEntries(input ?? {});
+  }),
+  createTimeEntry: protectedProcedure.input(z.object({
+    contactId: z.number().optional(),
+    projectId: z.number().optional(),
+    description: z.string().min(1),
+    minutes: z.number().min(1),
+    date: z.date(),
+    billable: z.boolean().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    const id = await createTimeEntry({ ...input, userId: ctx.user.id });
+    return { id };
+  }),
+  updateTimeEntry: protectedProcedure.input(z.object({
+    id: z.number(),
+    description: z.string().optional(),
+    minutes: z.number().optional(),
+    date: z.date().optional(),
+    billable: z.boolean().optional(),
+  })).mutation(async ({ input }) => {
+    const { id, ...data } = input;
+    await updateTimeEntry(id, data);
+    return { success: true };
+  }),
+  deleteTimeEntry: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    await deleteTimeEntry(input.id);
+    return { success: true };
+  }),
+  getTimeEntrySummary: protectedProcedure.input(z.object({ contactId: z.number().optional() }).optional()).query(async ({ input }) => {
+    return getTimeEntrySummary(input?.contactId);
+  }),
+  // US-032: Export global
+  exportContacts: protectedProcedure.query(async () => exportContactsData()),
+  exportInvoices: protectedProcedure.query(async () => exportInvoicesData()),
+  exportQuotes: protectedProcedure.query(async () => exportQuotesData()),
+  exportContracts: protectedProcedure.query(async () => exportContractsData()),
+  // US-031: WhatsApp conversation report
+  whatsappConversationReport: protectedProcedure.query(async () => getWhatsappConversationReport()),
+  // US-013: Pipeline filters
+  getLeadsFiltered: protectedProcedure.input(z.object({
+    assignedUserId: z.number().optional(),
+    minValue: z.number().optional(),
+    maxValue: z.number().optional(),
+    stageId: z.number().optional(),
+    status: z.enum(["open", "won", "lost"]).optional(),
+    search: z.string().optional(),
+  }).optional()).query(async ({ input }) => {
+    return getLeads(input?.stageId, input?.status);
+  }),
+});
+
+// ─── SPRINT F ROUTER ────────────────────────────────────────────────────────
+const sprintFRouter = router({
+  // US-016: Digital signature
+  signContract: protectedProcedure.input(z.object({
+    contractId: z.number(),
+    signatureData: z.string(),
+    signerName: z.string(),
+    signerEmail: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const hash = await signContract(input.contractId, {
+      signatureData: input.signatureData,
+      signerName: input.signerName,
+      signerEmail: input.signerEmail,
+    });
+    return { success: true, hash };
+  }),
+  // US-007: Send media via WhatsApp
+  sendMedia: protectedProcedure.input(z.object({
+    phone: z.string(),
+    mediaUrl: z.string().url(),
+    mediaType: z.enum(["image", "document", "audio"]),
+    caption: z.string().optional(),
+    filename: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    try {
+      await sendDocument(input.phone, input.mediaUrl, input.caption ?? "", input.filename ?? "arquivo");
+      return { success: true };
+    } catch (e: unknown) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: String(e) });
+    }
+  }),
+  // US-070: Weekly WhatsApp conversation summary via AI
+  weeklyConversationSummary: protectedProcedure.mutation(async () => {
+    const report = await getWhatsappConversationReport();
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: "Você é um assistente de CRM especialista em análise de conversas WhatsApp." },
+        { role: "user", content: `Analise este relatório de conversas WhatsApp e gere um resumo executivo em português com insights e recomendações:\n${JSON.stringify(report)}` },
+      ],
+    });
+    const summary = response.choices?.[0]?.message?.content ?? "Não foi possível gerar o resumo.";
+    return { summary, report };
+  }),
+  // US-060: Products linked to contract templates
+  updateTemplateProducts: protectedProcedure.input(z.object({
+    templateId: z.number(),
+    productIds: z.array(z.number()),
+  })).mutation(async ({ input }) => {
+    await updateContractTemplate(input.templateId, { variables: JSON.stringify({ productIds: input.productIds }) });
+    return { success: true };
+  }),
+});
+
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -2327,5 +2442,7 @@ export const appRouter = router({
   whatsappAi: whatsappAiRouter,
   nps: npsRouter,
   sprintD: sprintDRouter,
+  sprintE: sprintERouter,
+  sprintF: sprintFRouter,
 });
 export type AppRouter = typeof appRouter;

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `time_entries` (`id` int AUTO_INCREMENT NOT NULL, `user_id` int NOT NULL, `contact_id` int, `project_id` int, `description` text NOT NULL, `minutes` int NOT NULL, `date` timestamp NOT NULL, `billable` boolean DEFAULT true, `invoice_id` int, `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `time_entries_id` PRIMARY KEY(`id`))",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute CREATE TABLE `time_entries` (`id` int AUTO_INCREMENT NOT NULL, `user_id` int NOT NULL, `contact_id` int, `project_id` int, `description` text NOT NULL, `minutes` int NOT NULL, `date` timestamp NOT NULL, `billable` boolean DEFAULT true, `invoice_id` int, `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `time_entries_id` PRIMARY KEY(`id`))",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 158
+}

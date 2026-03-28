@@ -741,3 +741,20 @@ export const npsResponses = mysqlTable("nps_responses", {
 });
 export type NpsResponse = typeof npsResponses.$inferSelect;
 export type InsertNpsResponse = typeof npsResponses.$inferInsert;
+
+// ─── TIME ENTRIES (Sprint E — US-029) ─────────────────────────────────────────
+export const timeEntries = mysqlTable("time_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  contactId: int("contact_id"),
+  projectId: int("project_id"),
+  description: text("description").notNull(),
+  minutes: int("minutes").notNull(),
+  date: timestamp("date").notNull(),
+  billable: boolean("billable").default(true),
+  invoiceId: int("invoice_id"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TimeEntry = typeof timeEntries.$inferSelect;
+export type InsertTimeEntry = typeof timeEntries.$inferInsert;
