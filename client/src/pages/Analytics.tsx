@@ -53,8 +53,8 @@ export default function Analytics() {
   // Studio sessions by type
   const sessionTypeData = [
     { name: "Gravação", value: bookings?.filter(b => b.sessionType === "recording").length ?? 0 },
-    { name: "Edição", value: bookings?.filter(b => b.sessionType === "mixing").length ?? 0 },
-    { name: "Pós-Prod.", value: bookings?.filter(b => b.sessionType === "mastering").length ?? 0 },
+    { name: "Edição de Episódio", value: bookings?.filter(b => b.sessionType === "mixing").length ?? 0 },
+    { name: "Pós-Produção", value: bookings?.filter(b => b.sessionType === "mastering").length ?? 0 },
     { name: "Revisão", value: bookings?.filter(b => b.sessionType === "rehearsal").length ?? 0 },
     { name: "Outros", value: bookings?.filter(b => b.sessionType === "other").length ?? 0 },
   ].filter(d => d.value > 0);

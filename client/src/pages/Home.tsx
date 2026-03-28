@@ -58,7 +58,7 @@ export default function Home() {
             <span className="text-primary">inteligência</span>
           </h1>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Plataforma completa para estúdios musicais e agências criativas. Integre WhatsApp, gerencie contratos, faturas, agendamentos e muito mais.
+            Plataforma completa para estúdios de podcast e produção de conteúdo. Integre WhatsApp, gerencie contratos, faturas, agendamentos e muito mais.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
@@ -86,7 +86,7 @@ export default function Home() {
               { icon: Zap, color: "text-purple-400 bg-purple-500/10", title: "Pipeline de Vendas", desc: "Visualize e gerencie seus leads em um kanban intuitivo com estágios personalizáveis." },
               { icon: Users, color: "text-blue-400 bg-blue-500/10", title: "Gestão de Contatos", desc: "Cadastre e organize contatos com histórico completo de interações e notas." },
               { icon: FileText, color: "text-orange-400 bg-orange-500/10", title: "Contratos Inteligentes", desc: "Gere contratos com IA, envie para assinatura digital e acompanhe o status." },
-              { icon: Calendar, color: "text-pink-400 bg-pink-500/10", title: "Agendamento de Estúdio", desc: "Gerencie sessões de gravação, mixagem e masterização com calendário visual." },
+              { icon: Calendar, color: "text-pink-400 bg-pink-500/10", title: "Agendamento de Estúdio", desc: "Gerencie sessões de gravação, edição e pós-produção de podcast com calendário visual." },
               { icon: BarChart3, color: "text-cyan-400 bg-cyan-500/10", title: "Analytics Completo", desc: "Relatórios detalhados de pipeline, receita, conversão e performance da equipe." },
             ].map((feature, i) => (
               <div key={i} className="bg-card border border-border rounded-xl p-6">

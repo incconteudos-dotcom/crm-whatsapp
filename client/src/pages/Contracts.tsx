@@ -88,16 +88,20 @@ function exportContractsCSV(contracts: ContractWithContact[]) {
 
 export default function Contracts() {
   const [, navigate] = useLocation();
+  // Read query params for pre-filling from contact profile
+  const searchParams = new URLSearchParams(window.location.search);
+  const preContactId = searchParams.get("contactId") ?? "";
+  const preContactName = searchParams.get("contactName") ?? "";
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterSearch, setFilterSearch] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [selectedContract, setSelectedContract] = useState<ContractWithContact | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(!!preContactId);
   const [aiGenOpen, setAiGenOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", value: "", signerName: "", signerEmail: "", content: "", contactId: "" });
-  const [aiForm, setAiForm] = useState({ title: "", contactName: "", value: "", description: "", contractType: "produção de podcast" });
+  const [form, setForm] = useState({ title: preContactName ? `Contrato — ${preContactName}` : "", value: "", signerName: preContactName, signerEmail: "", content: "", contactId: preContactId });
+  const [aiForm, setAiForm] = useState({ title: preContactName ? `Contrato — ${preContactName}` : "", contactName: preContactName, value: "", description: "", contractType: "produção de podcast" });
   const [generatedContent, setGeneratedContent] = useState("");
 
   // Email modal state
@@ -208,6 +212,13 @@ export default function Contracts() {
     onError: (e) => toast.error(`Erro ao enviar WhatsApp: ${e.message}`),
   });
 
+  const generatePdfMutation = trpc.contracts.generatePdf.useMutation({
+    onSuccess: (data) => {
+      window.open(data.url, "_blank");
+      toast.success("PDF gerado! Abrindo em nova aba...");
+    },
+    onError: (e) => toast.error(`Erro ao gerar PDF: ${e.message}`),
+  });
   const signContractMutation = trpc.sprintF.signContract.useMutation({
     onSuccess: (data) => {
       toast.success(`Contrato assinado! Hash: ${data.hash.substring(0, 16)}...`);
@@ -583,6 +594,16 @@ export default function Contracts() {
                       Cancelar
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-orange-500/40 text-orange-300 hover:bg-orange-500/10"
+                    onClick={() => generatePdfMutation.mutate({ contractId: selectedContract.id })}
+                    disabled={generatePdfMutation.isPending}
+                  >
+                    {generatePdfMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />}
+                    Baixar PDF
+                  </Button>
                   <Button
                     size="sm"
                     variant="outline"

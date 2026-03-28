@@ -18,8 +18,8 @@ import { ptBR } from "date-fns/locale";
 
 const sessionTypeLabels: Record<string, string> = {
   recording: "Gravação de Podcast",
-  mixing: "Edição de Áudio",
-  mastering: "Pós-Produção",
+  mixing: "Edição de Episódio",
+  mastering: "Pós-Produção de Podcast",
   rehearsal: "Revisão de Episódio",
   other: "Outro",
 };

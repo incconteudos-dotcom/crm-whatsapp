@@ -419,6 +419,37 @@ const contractsRouter = router({
     });
     return { content: response.choices[0]?.message?.content ?? "" };
   }),
+  generatePdf: protectedProcedure.input(z.object({ contractId: z.number() })).mutation(async ({ input }) => {
+    const { uploadDocumentPdf } = await import("./pdf");
+    const contract = await getContractById(input.contractId);
+    if (!contract) throw new TRPCError({ code: "NOT_FOUND", message: "Contrato não encontrado" });
+    const contractWithContact = (await getContractsWithContact()).find(c => c.id === input.contractId);
+    const clientName = contractWithContact?.contactName ?? contract.signerName ?? "Cliente";
+    const safeContent = (contract.content ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><style>
+      body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #333; }
+      h1 { color: #1a1a2e; border-bottom: 2px solid #6366f1; padding-bottom: 10px; font-size: 22px; }
+      .meta { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; }
+      .meta p { margin: 5px 0; font-size: 14px; }
+      .content { line-height: 1.8; white-space: pre-wrap; margin-top: 20px; font-size: 14px; }
+      .signature { margin-top: 60px; border-top: 1px solid #ccc; padding-top: 20px; }
+      .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #999; }
+    </style></head><body>
+      <h1>${contract.title}</h1>
+      <div class="meta">
+        <p><strong>Cliente:</strong> ${clientName}</p>
+        ${contract.value ? `<p><strong>Valor:</strong> R$ ${Number(contract.value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>` : ""}
+        ${contract.validUntil ? `<p><strong>Válido até:</strong> ${new Date(contract.validUntil).toLocaleDateString("pt-BR")}</p>` : ""}
+        <p><strong>Status:</strong> ${contract.status ?? "rascunho"}</p>
+        ${contract.signedAt ? `<p><strong>Assinado em:</strong> ${new Date(contract.signedAt).toLocaleDateString("pt-BR")}</p>` : ""}
+      </div>
+      <div class="content">${safeContent}</div>
+      ${contract.signatureUrl ? `<div class="signature"><p><strong>Assinatura Digital:</strong></p><img src="${contract.signatureUrl}" style="max-width:300px;border:1px solid #ccc;padding:10px;border-radius:4px" /></div>` : ""}
+      <div class="footer">Documento gerado em ${new Date().toLocaleDateString("pt-BR")} &mdash; CRM Studio</div>
+    </body></html>`;
+    const url = await uploadDocumentPdf(html, `contrato-${contract.id}`);
+    return { url, filename: `Contrato-${contract.title.replace(/\s+/g, "-")}.pdf` };
+  }),
 });
 
 // ─── INVOICES ROUTER ──────────────────────────────────────────────────────────

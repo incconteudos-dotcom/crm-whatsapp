@@ -660,3 +660,19 @@
 ### US-070: Resumo semanal de conversas WhatsApp (5 pts)
 - [ ] Backend: procedure whatsapp.weeklyConversationSummary — IA resume os principais temas das conversas da semana
 - [ ] UI: botão "Resumo da Semana" na página WhatsApp com modal de resultado
+
+## Sprint G — Itens Pendentes Consolidados ✅
+
+- [x] Badge de mensagens não lidas no sidebar ao lado de "WhatsApp"
+- [x] Vincular chat Z-API ao contato automaticamente (cruzar número no webhook)
+- [x] Notificação automática ao confirmar agendamento no Estúdio (toggle + Z-API)
+- [x] Correção de enums de podcast: remover referências musicais (contractType, sessionType)
+- [x] Botão "Novo Lead" no perfil do cliente → pré-preenchido via query params
+- [x] Botão "Nova Fatura" no perfil do cliente → pré-preenchido via query params
+- [x] Botão "Novo Orçamento" no perfil do cliente → pré-preenchido via query params
+- [x] Botão "Novo Contrato" no perfil do cliente → pré-preenchido via query params
+- [x] Redesenho do perfil do cliente: layout duas colunas com sidebar de dados
+- [x] Produtos vinculados a tipos de contrato (seletor no modelo de contrato)
+- [x] Exportação de contrato em PDF (botão "Baixar PDF" no drawer)
+- [x] Quotes: email pré-preenchido com email do contato vinculado
+- [x] Invoices: email pré-preenchido com email do contato vinculado
