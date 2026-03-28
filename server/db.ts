@@ -49,6 +49,10 @@ import {
   type InsertPodcast,
   type InsertEpisode,
   type InsertEpisodeComment,
+  brandSettings,
+  portalMagicLinks,
+  type InsertBrandSettings,
+  type InsertPortalMagicLink,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -1084,4 +1088,69 @@ export async function createEpisodeComment(data: InsertEpisodeComment) {
   if (!db) throw new Error("DB not available");
   const [result] = await db.insert(episodeComments).values(data);
   return result;
+}
+
+// ─── BRAND SETTINGS ──────────────────────────────────────────────────────────
+export async function getBrandSettings() {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(brandSettings).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function upsertBrandSettings(data: Partial<InsertBrandSettings>) {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await getBrandSettings();
+  if (existing) {
+    await db.update(brandSettings).set(data).where(eq(brandSettings.id, existing.id));
+    return (await db.select().from(brandSettings).where(eq(brandSettings.id, existing.id)))[0];
+  } else {
+    await db.insert(brandSettings).values({ companyName: "Pátio Estúdio", ...data });
+    return getBrandSettings();
+  }
+}
+
+// ─── PORTAL MAGIC LINKS ───────────────────────────────────────────────────────
+export async function createPortalMagicLink(contactId: number, email: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  await db.insert(portalMagicLinks).values({ token, contactId, email, expiresAt });
+  return token;
+}
+
+export async function validatePortalMagicLink(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(portalMagicLinks).where(eq(portalMagicLinks.token, token)).limit(1);
+  const link = rows[0];
+  if (!link) return null;
+  if (link.usedAt) return null; // already used
+  if (link.expiresAt < new Date()) return null; // expired
+  // Mark as used
+  await db.update(portalMagicLinks).set({ usedAt: new Date() }).where(eq(portalMagicLinks.id, link.id));
+  return link;
+}
+
+export async function getPortalDataForContact(contactId: number) {
+  const db = await getDb();
+  if (!db) return { contact: null, contracts: [], invoices: [], quotes: [], projects: [], podcasts: [] };
+  const [contact, contractsList, invoicesList, quotesList, projectsList, podcastsList] = await Promise.all([
+    db.select().from(contacts).where(eq(contacts.id, contactId)).limit(1),
+    db.select().from(contracts).where(eq(contracts.contactId, contactId)).orderBy(desc(contracts.createdAt)),
+    db.select().from(invoices).where(eq(invoices.contactId, contactId)).orderBy(desc(invoices.createdAt)),
+    db.select().from(quotes).where(eq(quotes.contactId, contactId)).orderBy(desc(quotes.createdAt)),
+    db.select().from(projects).where(eq(projects.contactId, contactId)).orderBy(desc(projects.createdAt)),
+    db.select().from(podcasts).where(eq(podcasts.contactId, contactId)).orderBy(desc(podcasts.createdAt)),
+  ]);
+  return {
+    contact: contact[0] ?? null,
+    contracts: contractsList,
+    invoices: invoicesList,
+    quotes: quotesList,
+    projects: projectsList,
+    podcasts: podcastsList,
+  };
 }

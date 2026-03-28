@@ -24,6 +24,7 @@ import {
   Zap,
   ClipboardList,
   Mic2,
+  Palette,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -52,6 +53,7 @@ const navItems = [
 
 const adminItems = [
   { icon: Shield, label: "Usuários", path: "/users" },
+  { icon: Palette, label: "Portal Visual", path: "/brand-settings" },
   { icon: Settings, label: "Configurações", path: "/settings" },
 ];
 

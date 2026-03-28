@@ -33,6 +33,8 @@ import {
   getPodcasts, getPodcastById, createPodcast, updatePodcast, deletePodcast,
   getEpisodesByPodcast, getEpisodeById, createEpisode, updateEpisode, deleteEpisode,
   getEpisodeComments, createEpisodeComment,
+  getBrandSettings, upsertBrandSettings,
+  createPortalMagicLink, validatePortalMagicLink, getPortalDataForContact,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -1426,6 +1428,59 @@ const podcastsRouter = router({
   ),
 });
 
+// ─── BRAND SETTINGS ROUTER ─────────────────────────────────────────────────
+const brandRouter = router({
+  get: publicProcedure.query(() => getBrandSettings()),
+  update: adminProcedure.input(z.object({
+    companyName: z.string().optional(),
+    logoUrl: z.string().optional(),
+    primaryColor: z.string().optional(),
+    accentColor: z.string().optional(),
+    tagline: z.string().optional(),
+    website: z.string().optional(),
+    supportEmail: z.string().optional(),
+    supportPhone: z.string().optional(),
+    footerText: z.string().optional(),
+  })).mutation(({ input }) => upsertBrandSettings(input)),
+});
+
+// ─── PORTAL MAGIC LINK ROUTER ─────────────────────────────────────────────────
+const portalMagicRouter = router({
+  sendMagicLink: protectedProcedure.input(z.object({
+    contactId: z.number(),
+    email: z.string().email(),
+    origin: z.string(),
+  })).mutation(async ({ input }) => {
+    const token = await createPortalMagicLink(input.contactId, input.email);
+    const portalUrl = `${input.origin}/portal/magic/${token}`;
+    const { sendEmail } = await import("./email");
+    await sendEmail({
+      to: input.email,
+      subject: "Seu acesso ao Portal do Cliente",
+      htmlContent: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px">
+        <h2 style="color:#7c3aed">Acesso ao Portal do Cliente</h2>
+        <p>Olá! Clique no botão abaixo para acessar seu portal personalizado.</p>
+        <p>O link é válido por <strong>7 dias</strong> e pode ser usado apenas uma vez.</p>
+        <a href="${portalUrl}" style="display:inline-block;margin:24px 0;padding:14px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">Acessar Portal</a>
+        <p style="font-size:12px;color:#888">Se o botão não funcionar, copie e cole este link: ${portalUrl}</p>
+      </div>`,
+    });
+    return { success: true, token };
+  }),
+  validate: publicProcedure.input(z.object({ token: z.string() })).mutation(async ({ input }) => {
+    const link = await validatePortalMagicLink(input.token);
+    if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "Link inválido ou expirado" });
+    const data = await getPortalDataForContact(link.contactId);
+    const brand = await getBrandSettings();
+    return { ...data, brand };
+  }),
+  getData: publicProcedure.input(z.object({ contactId: z.number() })).query(async ({ input }) => {
+    const data = await getPortalDataForContact(input.contactId);
+    const brand = await getBrandSettings();
+    return { ...data, brand };
+  }),
+});
+
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -1462,6 +1517,8 @@ export const appRouter = router({
   pj: pjRouter,
   routines: routinesRouter,
   podcasts: podcastsRouter,
+  brand: brandRouter,
+  portalMagic: portalMagicRouter,
 });
 
 export type AppRouter = typeof appRouter;

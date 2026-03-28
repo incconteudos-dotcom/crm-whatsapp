@@ -333,3 +333,14 @@
 - [x] Links do Drive em vez de upload (scriptUrl, rawAudioUrl, editedAudioUrl, thumbnailUrl, publishedUrl)
 - [x] Sheet de detalhes com comentários por episódio
 - [x] Item Podcasts adicionado ao menu lateral
+
+## Sprint 8 — Portal do Cliente Completo
+- [x] Tabelas brand_settings e portal_magic_links criadas no banco
+- [x] brandRouter: get/update configurações de identidade visual
+- [x] portalMagicRouter: sendMagicLink, validate, getData
+- [x] ClientPortalV2.tsx: portal completo com projetos, contratos, faturas, podcasts, Stripe
+- [x] ClientPortalMagicEntry: validação de magic link e redirecionamento
+- [x] BrandSettings.tsx: página de configuração de identidade visual com preview
+- [x] Botão "Magic Link" no perfil do contato
+- [x] Rotas /portal/magic/:token, /portal/client/:contactId, /brand-settings
+- [x] Item "Portal Visual" no menu admin

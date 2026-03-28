@@ -57,6 +57,13 @@
       "when": 1774663161232,
       "tag": "0007_cynical_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1774663833294,
+      "tag": "0008_sparkling_frog_thor",
+      "breakpoints": true
     }
   ]
 }

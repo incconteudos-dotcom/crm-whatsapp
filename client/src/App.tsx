@@ -26,6 +26,8 @@ import ContractTemplates from "./pages/ContractTemplates";
 import Credits from "./pages/Credits";
 import DailyRoutine from "./pages/DailyRoutine";
 import Podcasts from "./pages/Podcasts";
+import ClientPortalDashboard, { ClientPortalMagicEntry } from "./pages/ClientPortalV2";
+import BrandSettings from "./pages/BrandSettings";
 
 function Router() {
   return (
@@ -46,6 +48,9 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/contacts/:id" component={ContactProfile} />
       <Route path="/portal/:token" component={ClientPortal} />
+      <Route path="/portal/magic/:token" component={ClientPortalMagicEntry} />
+      <Route path="/portal/client/:contactId" component={ClientPortalDashboard} />
+      <Route path="/brand-settings" component={BrandSettings} />
       <Route path="/products" component={Products} />
       <Route path="/projects" component={Projects} />
       <Route path="/contract-templates" component={ContractTemplates} />

@@ -490,3 +490,33 @@ export const episodeComments = mysqlTable("episode_comments", {
 });
 export type EpisodeComment = typeof episodeComments.$inferSelect;
 export type InsertEpisodeComment = typeof episodeComments.$inferInsert;
+
+// ─── BRAND SETTINGS ──────────────────────────────────────────────────────────
+export const brandSettings = mysqlTable("brand_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  companyName: varchar("company_name", { length: 255 }).notNull().default("Pátio Estúdio"),
+  logoUrl: varchar("logo_url", { length: 512 }),
+  primaryColor: varchar("primary_color", { length: 7 }).default("#7c3aed"),
+  accentColor: varchar("accent_color", { length: 7 }).default("#06b6d4"),
+  tagline: varchar("tagline", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  supportEmail: varchar("support_email", { length: 255 }),
+  supportPhone: varchar("support_phone", { length: 50 }),
+  footerText: text("footer_text"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type BrandSettings = typeof brandSettings.$inferSelect;
+export type InsertBrandSettings = typeof brandSettings.$inferInsert;
+
+// ─── PORTAL MAGIC LINKS ───────────────────────────────────────────────────────
+export const portalMagicLinks = mysqlTable("portal_magic_links", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  contactId: int("contact_id").notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PortalMagicLink = typeof portalMagicLinks.$inferSelect;
+export type InsertPortalMagicLink = typeof portalMagicLinks.$inferInsert;

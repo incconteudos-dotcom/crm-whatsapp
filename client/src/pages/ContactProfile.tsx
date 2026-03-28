@@ -4,7 +4,7 @@ import { useParams, useLocation } from "wouter";
 import {
   ArrowLeft, Mail, Phone, Building2, MessageSquare,
   Zap, Receipt, BookOpen, FileText, Calendar, Plus,
-  Send, Clock, DollarSign, AlertCircle, Loader2, ExternalLink
+  Send, Clock, DollarSign, AlertCircle, Loader2, ExternalLink, Link2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -122,6 +122,20 @@ export default function ContactProfile() {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  const sendMagicLinkMutation = trpc.portalMagic.sendMagicLink.useMutation({
+    onSuccess: () => toast.success("Magic link enviado por WhatsApp!"),
+    onError: (err: any) => toast.error(err.message || "Erro ao enviar magic link"),
+  });
+
+  const sendMagicLink = () => {
+    if (!profile?.contact) return;
+    sendMagicLinkMutation.mutate({
+      contactId,
+      email: profile.contact.email ?? "",
+      origin: window.location.origin,
+    });
+  };
 
   const updateItem = (
     setter: React.Dispatch<React.SetStateAction<InvoiceItem[]>>,
@@ -271,6 +285,11 @@ export default function ContactProfile() {
                 </Button>
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => navigate("/contracts")}>
                   <FileText className="w-4 h-4 text-orange-400" />Novo Contrato
+                </Button>
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => sendMagicLink()}
+                  disabled={sendMagicLinkMutation.isPending}>
+                  <Link2 className="w-4 h-4 text-cyan-400" />
+                  {sendMagicLinkMutation.isPending ? "Enviando..." : "Magic Link"}
                 </Button>
               </div>
             </div>
