@@ -9,6 +9,11 @@ vi.mock("./db", () => ({
   upsertWhatsappMessage: vi.fn().mockResolvedValue(undefined),
   getWhatsappChats: vi.fn().mockResolvedValue([]),
   linkChatToContact: vi.fn().mockResolvedValue(undefined),
+  autoCreateLeadFromWhatsapp: vi.fn().mockResolvedValue({ contactId: 1, leadId: 1 }),
+}));
+
+vi.mock("./_core/notification", () => ({
+  notifyOwner: vi.fn().mockResolvedValue(true),
 }));
 
 import { zapiWebhookHandler } from "./zapiWebhook";

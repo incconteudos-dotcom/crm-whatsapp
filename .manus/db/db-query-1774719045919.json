@@ -1,0 +1,598 @@
+{
+  "query": "\nSELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_DEFAULT, IS_NULLABLE \nFROM information_schema.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() \nAND TABLE_NAME IN ('leads', 'contracts', 'invoices', 'projects', 'lead_activities')\nORDER BY TABLE_NAME, ORDINAL_POSITION;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nSELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_DEFAULT, IS_NULLABLE \nFROM information_schema.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() \nAND TABLE_NAME IN ('leads', 'contracts', 'invoices', 'projects', 'lead_activities')\nORDER BY TABLE_NAME, ORDINAL_POSITION;\n",
+  "rows": [
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "title",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "contactId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "leadId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "assignedUserId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "status",
+      "DATA_TYPE": "enum",
+      "COLUMN_DEFAULT": "draft",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "content",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "value",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "currency",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "BRL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "signedAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "signatoryName",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "signatoryEmail",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "expiresAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "fileUrl",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "signatureUrl",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "notes",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "signerName",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "signerEmail",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "validUntil",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "contracts",
+      "COLUMN_NAME": "contractType",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "number",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "contactId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "leadId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "assignedUserId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "status",
+      "DATA_TYPE": "enum",
+      "COLUMN_DEFAULT": "draft",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "items",
+      "DATA_TYPE": "json",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "subtotal",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "tax",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "0",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "total",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "currency",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "BRL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "dueDate",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "paidAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "stripePaymentIntentId",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "stripePaymentUrl",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "fileUrl",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "notes",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "stripeCheckoutSessionId",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "paymentPlan",
+      "DATA_TYPE": "enum",
+      "COLUMN_DEFAULT": "full",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "installmentNumber",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "1",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "parentInvoiceId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "contractId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "invoices",
+      "COLUMN_NAME": "bookingId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "lead_id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "user_id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "type",
+      "DATA_TYPE": "enum",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "description",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "metadata",
+      "DATA_TYPE": "json",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "title",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "contactId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "stageId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "assignedUserId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "value",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "currency",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "BRL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "probability",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "0",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "expectedCloseDate",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "status",
+      "DATA_TYPE": "enum",
+      "COLUMN_DEFAULT": "open",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "notes",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "tags",
+      "DATA_TYPE": "json",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "source",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "sentiment",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "lostReason",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "name",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "contactId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "status",
+      "DATA_TYPE": "enum",
+      "COLUMN_DEFAULT": "briefing",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "type",
+      "DATA_TYPE": "enum",
+      "COLUMN_DEFAULT": "podcast",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "description",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "startDate",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "deadline",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "totalValue",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "assignedTo",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "notes",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\tCOLUMN_NAME\tDATA_TYPE\tCOLUMN_DEFAULT\tIS_NULLABLE\ncontracts\tid\tint\tNULL\tNO\ncontracts\ttitle\tvarchar\tNULL\tNO\ncontracts\tcontactId\tint\tNULL\tYES\ncontracts\tleadId\tint\tNULL\tYES\ncontracts\tassignedUserId\tint\tNULL\tYES\ncontracts\tstatus\tenum\tdraft\tYES\ncontracts\tcontent\ttext\tNULL\tYES\ncontracts\tvalue\tdecimal\tNULL\tYES\ncontracts\tcurrency\tvarchar\tBRL\tYES\ncontracts\tsignedAt\ttimestamp\tNULL\tYES\ncontracts\tsignatoryName\tvarchar\tNULL\tYES\ncontracts\tsignatoryEmail\tvarchar\tNULL\tYES\ncontracts\texpiresAt\ttimestamp\tNULL\tYES\ncontracts\tfileUrl\ttext\tNULL\tYES\ncontracts\tsignatureUrl\ttext\tNULL\tYES\ncontracts\tnotes\ttext\tNULL\tYES\ncontracts\tcreatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\ncontracts\tupdatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\ncontracts\tsignerName\tvarchar\tNULL\tYES\ncontracts\tsignerEmail\tvarchar\tNULL\tYES\ncontracts\tvalidUntil\ttimestamp\tNULL\tYES\ncontracts\tcontractType\tvarchar\tNULL\tYES\ninvoices\tid\tint\tNULL\tNO\ninvoices\tnumber\tvarchar\tNULL\tNO\ninvoices\tcontactId\tint\tNULL\tYES\ninvoices\tleadId\tint\tNULL\tYES\ninvoices\tassignedUserId\tint\tNULL\tYES\ninvoices\tstatus\tenum\tdraft\tYES\ninvoices\titems\tjson\tNULL\tYES\ninvoices\tsubtotal\tdecimal\tNULL\tYES\ninvoices\ttax\tdecimal\t0\tYES\ninvoices\ttotal\tdecimal\tNULL\tYES\ninvoices\tcurrency\tvarchar\tBRL\tYES\ninvoices\tdueDate\ttimestamp\tNULL\tYES\ninvoices\tpaidAt\ttimestamp\tNULL\tYES\ninvoices\tstripePaymentIntentId\tvarchar\tNULL\tYES\ninvoices\tstripePaymentUrl\ttext\tNULL\tYES\ninvoices\tfileUrl\ttext\tNULL\tYES\ninvoices\tnotes\ttext\tNULL\tYES\ninvoices\tcreatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\ninvoices\tupdatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\ninvoices\tstripeCheckoutSessionId\tvarchar\tNULL\tYES\ninvoices\tpaymentPlan\tenum\tfull\tYES\ninvoices\tinstallmentNumber\tint\t1\tYES\ninvoices\tparentInvoiceId\tint\tNULL\tYES\ninvoices\tcontractId\tint\tNULL\tYES\ninvoices\tbookingId\tint\tNULL\tYES\nlead_activities\tid\tint\tNULL\tNO\nlead_activities\tlead_id\tint\tNULL\tNO\nlead_activities\tuser_id\tint\tNULL\tYES\nlead_activities\ttype\tenum\tNULL\tNO\nlead_activities\tdescription\ttext\tNULL\tNO\nlead_activities\tmetadata\tjson\tNULL\tYES\nlead_activities\tcreatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\nleads\tid\tint\tNULL\tNO\nleads\ttitle\tvarchar\tNULL\tNO\nleads\tcontactId\tint\tNULL\tYES\nleads\tstageId\tint\tNULL\tYES\nleads\tassignedUserId\tint\tNULL\tYES\nleads\tvalue\tdecimal\tNULL\tYES\nleads\tcurrency\tvarchar\tBRL\tYES\nleads\tprobability\tint\t0\tYES\nleads\texpectedCloseDate\ttimestamp\tNULL\tYES\nleads\tstatus\tenum\topen\tYES\nleads\tnotes\ttext\tNULL\tYES\nleads\ttags\tjson\tNULL\tYES\nleads\tcreatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\nleads\tupdatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\nleads\tsource\tvarchar\tNULL\tYES\nleads\tsentiment\tvarchar\tNULL\tYES\nleads\tlostReason\tvarchar\tNULL\tYES\nprojects\tid\tint\tNULL\tNO\nprojects\tname\tvarchar\tNULL\tNO\nprojects\tcontactId\tint\tNULL\tYES\nprojects\tstatus\tenum\tbriefing\tYES\nprojects\ttype\tenum\tpodcast\tYES\nprojects\tdescription\ttext\tNULL\tYES\nprojects\tstartDate\ttimestamp\tNULL\tYES\nprojects\tdeadline\ttimestamp\tNULL\tYES\nprojects\ttotalValue\tdecimal\tNULL\tYES\nprojects\tassignedTo\tint\tNULL\tYES\nprojects\tnotes\ttext\tNULL\tYES\nprojects\tcreatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\nprojects\tupdatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

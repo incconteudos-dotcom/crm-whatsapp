@@ -704,3 +704,13 @@
 - [x] Histórico de atividades por lead: log automático de cada ação com timestamp
 - [x] Vinculação lead→contrato/fatura: botões "Gerar Contrato" e "Gerar Fatura" no drawer
 - [x] Visão de lista: alternar entre Kanban e tabela com colunas ordenáveis
+
+## Playbook — Teste e Correção End-to-End
+
+- [x] Auditar webhook Z-API: criação automática de lead funcional
+- [x] Auditar signContract: encadeamento fatura + projeto + magic link
+- [x] Auditar crons: follow-up 48h e renovação 30 dias
+- [x] Corrigir todos os bugs encontrados (schema sincronizado, mocks atualizados)
+- [x] Testar fluxo completo end-to-end (66 testes passando)
+- [x] Sincronizar schema.ts com banco: signatoryName, signatoryEmail, expiresAt, notes em contracts
+- [x] TypeScript: 0 erros em todos os arquivos

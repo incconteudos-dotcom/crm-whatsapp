@@ -270,7 +270,7 @@ export default function Contracts() {
       toast.error("Preencha o nome e desenhe a assinatura"); return;
     }
     const sigData = canvasRef.current?.toDataURL("image/png") ?? "";
-    signContractMutation.mutate({ contractId: signContractId, signatureData: sigData, signerName: signName, signerEmail: signEmail || undefined });
+    signContractMutation.mutate({ contractId: signContractId, signatureData: sigData, signerName: signName, signerEmail: signEmail || undefined, origin: window.location.origin });
   };
 
   const openDrawer = (contract: ContractWithContact) => {

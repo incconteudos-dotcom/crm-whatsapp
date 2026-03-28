@@ -1,0 +1,19 @@
+{
+  "query": "\nSELECT COLUMN_NAME FROM information_schema.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contracts'\nAND COLUMN_NAME IN ('contractType', 'validUntil', 'notes');\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nSELECT COLUMN_NAME FROM information_schema.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contracts'\nAND COLUMN_NAME IN ('contractType', 'validUntil', 'notes');\n",
+  "rows": [
+    {
+      "COLUMN_NAME": "notes"
+    },
+    {
+      "COLUMN_NAME": "validUntil"
+    },
+    {
+      "COLUMN_NAME": "contractType"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nnotes\nvalidUntil\ncontractType\n",
+  "stderr": "",
+  "execution_time_ms": 50
+}

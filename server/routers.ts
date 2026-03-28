@@ -2427,6 +2427,7 @@ const sprintFRouter = router({
     signatureData: z.string(),
     signerName: z.string(),
     signerEmail: z.string().optional(),
+    origin: z.string().optional(),
   })).mutation(async ({ input }) => {
     const hash = await signContract(input.contractId, {
       signatureData: input.signatureData,
@@ -2434,14 +2435,41 @@ const sprintFRouter = router({
       signerEmail: input.signerEmail,
     });
     // ── PLAYBOOK AÇÃO 2: Encadeamento automático ao assinar ──
-    // Fatura de entrada (50%) + Projeto criados em background
-    Promise.all([
-      createEntryInvoiceOnSign(input.contractId),
-      createProjectOnContractSign(input.contractId),
-    ]).then(([invoiceId, projectId]) => {
-      if (invoiceId) console.log(`[Playbook A2] Fatura entrada #${invoiceId} criada para contrato #${input.contractId}`);
-      if (projectId) console.log(`[Playbook A2] Projeto #${projectId} criado para contrato #${input.contractId}`);
-    }).catch(err => console.error("[Playbook A2] Erro encadeamento contrato:", err));
+    // Executa em background sem bloquear a resposta ao cliente
+    (async () => {
+      try {
+        const [invoiceId, projectId] = await Promise.all([
+          createEntryInvoiceOnSign(input.contractId),
+          createProjectOnContractSign(input.contractId),
+        ]);
+        if (invoiceId) console.log(`[Playbook A2] ✅ Fatura entrada #${invoiceId} criada para contrato #${input.contractId}`);
+        if (projectId) console.log(`[Playbook A2] ✅ Projeto #${projectId} criado para contrato #${input.contractId}`);
+        // Buscar dados do contrato para enviar magic link
+        const db = await getDb();
+        if (!db) return;
+        const { contracts: contractsTable } = await import("../drizzle/schema");
+        const { eq: eqOp } = await import("drizzle-orm");
+        const [contractRow] = await db.select().from(contractsTable).where(eqOp(contractsTable.id, input.contractId)).limit(1);
+        if (contractRow?.contactId) {
+          const contact = await getContactById(contractRow.contactId);
+          const emailForLink = input.signerEmail ?? contact?.email;
+          if (contact?.phone && emailForLink) {
+            try {
+              const token = await createPortalMagicLink(contact.id, emailForLink);
+              const origin = input.origin ?? "https://app.manus.space";
+              const portalUrl = `${origin}/portal?token=${token}`;
+              const msg = `Olá ${contact.name || input.signerName}! ✅ Seu contrato *${contractRow.title}* foi assinado com sucesso!\n\n📋 Acesse o portal do cliente para acompanhar seu projeto, faturas e documentos:\n${portalUrl}\n\nEm caso de dúvidas, entre em contato conosco.`;
+              await sendText(contact.phone, msg);
+              console.log(`[Playbook A2] ✅ Magic link enviado via WhatsApp para ${contact.phone}`);
+            } catch (waErr) {
+              console.error("[Playbook A2] ⚠️ Erro ao enviar magic link WhatsApp:", waErr);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[Playbook A2] ❌ Erro encadeamento contrato:", err);
+      }
+    })();
     return { success: true, hash };
   }),
   // US-007: Send media via WhatsApp
@@ -2524,13 +2552,49 @@ const playbookRouter = router({
     const staleLeads = await getLeadsWithoutInteraction48h();
     const expiringContracts = await getContractsExpiringIn30Days();
     console.log(`[Playbook Cron] ${staleLeads.length} leads estáticos | ${expiringContracts.length} contratos vencendo`);
+    let followUpsSent = 0;
+    // Enviar follow-up WhatsApp para leads estáticos que têm contato com phone
+    for (const lead of staleLeads) {
+      if (!lead.contactId) continue;
+      try {
+        const contact = await getContactById(lead.contactId);
+        if (contact?.phone) {
+          const msg = `Olá ${contact.name}! Aqui é o time do Estúdio Podcast. Notamos que você entrou em contato conosco recentemente e gostaríamos de entender melhor como podemos ajudá-lo com seu projeto de podcast. Tem um momento para conversarmos?`;
+          await sendText(contact.phone, msg);
+          // Registrar atividade de follow-up
+          await createLeadActivity({
+            leadId: lead.id,
+            type: "whatsapp_sent",
+            description: `Follow-up automático enviado via WhatsApp (Playbook Cron 48h)`,
+            userId: 1,
+          });
+          followUpsSent++;
+          console.log(`[Playbook Cron] ✅ Follow-up enviado para lead #${lead.id} (${contact.phone})`);
+        }
+      } catch (e) {
+        console.error(`[Playbook Cron] ⚠️ Erro follow-up lead #${lead.id}:`, e);
+      }
+    }
     // Criar leads de renovação para contratos vencendo
     const renewalResults = await Promise.allSettled(
-      expiringContracts.map(c => createRenewalLead(c.id))
+      expiringContracts.map(async (c) => {
+        const leadId = await createRenewalLead(c.id);
+        // Enviar mensagem de renovação se tiver contato com phone
+        if (c.contactId) {
+          const contact = await getContactById(c.contactId);
+          if (contact?.phone) {
+            const msg = `Olá ${contact.name}! Seu contrato com o Estúdio Podcast está próximo do vencimento. Gostaríamos de conversar sobre a renovação e garantir a continuidade do seu projeto de podcast. Quando podemos falar?`;
+            await sendText(contact.phone, msg).catch(() => {});
+            console.log(`[Playbook Cron] ✅ Mensagem renovação enviada para ${contact.phone}`);
+          }
+        }
+        return leadId;
+      })
     );
     const created = renewalResults.filter(r => r.status === "fulfilled" && r.value).length;
     return {
       staleLeads: staleLeads.length,
+      followUpsSent,
       expiringContracts: expiringContracts.length,
       renewalLeadsCreated: created,
     };

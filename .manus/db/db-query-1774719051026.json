@@ -1,0 +1,178 @@
+{
+  "query": "\nSELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_DEFAULT, IS_NULLABLE \nFROM information_schema.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() \nAND TABLE_NAME IN ('leads', 'lead_activities')\nORDER BY TABLE_NAME, ORDINAL_POSITION;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nSELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_DEFAULT, IS_NULLABLE \nFROM information_schema.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() \nAND TABLE_NAME IN ('leads', 'lead_activities')\nORDER BY TABLE_NAME, ORDINAL_POSITION;\n",
+  "rows": [
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "lead_id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "user_id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "type",
+      "DATA_TYPE": "enum",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "description",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "metadata",
+      "DATA_TYPE": "json",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "lead_activities",
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "title",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "contactId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "stageId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "assignedUserId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "value",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "currency",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "BRL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "probability",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "0",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "expectedCloseDate",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "status",
+      "DATA_TYPE": "enum",
+      "COLUMN_DEFAULT": "open",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "notes",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "tags",
+      "DATA_TYPE": "json",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "source",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "sentiment",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "COLUMN_NAME": "lostReason",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\tCOLUMN_NAME\tDATA_TYPE\tCOLUMN_DEFAULT\tIS_NULLABLE\nlead_activities\tid\tint\tNULL\tNO\nlead_activities\tlead_id\tint\tNULL\tNO\nlead_activities\tuser_id\tint\tNULL\tYES\nlead_activities\ttype\tenum\tNULL\tNO\nlead_activities\tdescription\ttext\tNULL\tNO\nlead_activities\tmetadata\tjson\tNULL\tYES\nlead_activities\tcreatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\nleads\tid\tint\tNULL\tNO\nleads\ttitle\tvarchar\tNULL\tNO\nleads\tcontactId\tint\tNULL\tYES\nleads\tstageId\tint\tNULL\tYES\nleads\tassignedUserId\tint\tNULL\tYES\nleads\tvalue\tdecimal\tNULL\tYES\nleads\tcurrency\tvarchar\tBRL\tYES\nleads\tprobability\tint\t0\tYES\nleads\texpectedCloseDate\ttimestamp\tNULL\tYES\nleads\tstatus\tenum\topen\tYES\nleads\tnotes\ttext\tNULL\tYES\nleads\ttags\tjson\tNULL\tYES\nleads\tcreatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\nleads\tupdatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\nleads\tsource\tvarchar\tNULL\tYES\nleads\tsentiment\tvarchar\tNULL\tYES\nleads\tlostReason\tvarchar\tNULL\tYES\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

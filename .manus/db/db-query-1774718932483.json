@@ -1,0 +1,9 @@
+{
+  "query": "SELECT i.id, i.number, i.status, i.contractId, i.total, i.notes FROM invoices i WHERE i.contractId IS NOT NULL ORDER BY i.id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute SELECT i.id, i.number, i.status, i.contractId, i.total, i.notes FROM invoices i WHERE i.contractId IS NOT NULL ORDER BY i.id DESC LIMIT 10;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 92
+}

@@ -1,0 +1,142 @@
+{
+  "query": "\nSELECT COLUMN_NAME, DATA_TYPE, COLUMN_DEFAULT, IS_NULLABLE \nFROM information_schema.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() \nAND TABLE_NAME = 'contracts'\nORDER BY ORDINAL_POSITION;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nSELECT COLUMN_NAME, DATA_TYPE, COLUMN_DEFAULT, IS_NULLABLE \nFROM information_schema.COLUMNS \nWHERE TABLE_SCHEMA = DATABASE() \nAND TABLE_NAME = 'contracts'\nORDER BY ORDINAL_POSITION;\n",
+  "rows": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "title",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "contactId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "leadId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "assignedUserId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "status",
+      "DATA_TYPE": "enum",
+      "COLUMN_DEFAULT": "draft",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "content",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "value",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "currency",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "BRL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "signedAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "signatoryName",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "signatoryEmail",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "expiresAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "fileUrl",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "signatureUrl",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "notes",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "signerName",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "signerEmail",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "validUntil",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "contractType",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL",
+      "IS_NULLABLE": "YES"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tDATA_TYPE\tCOLUMN_DEFAULT\tIS_NULLABLE\nid\tint\tNULL\tNO\ntitle\tvarchar\tNULL\tNO\ncontactId\tint\tNULL\tYES\nleadId\tint\tNULL\tYES\nassignedUserId\tint\tNULL\tYES\nstatus\tenum\tdraft\tYES\ncontent\ttext\tNULL\tYES\nvalue\tdecimal\tNULL\tYES\ncurrency\tvarchar\tBRL\tYES\nsignedAt\ttimestamp\tNULL\tYES\nsignatoryName\tvarchar\tNULL\tYES\nsignatoryEmail\tvarchar\tNULL\tYES\nexpiresAt\ttimestamp\tNULL\tYES\nfileUrl\ttext\tNULL\tYES\nsignatureUrl\ttext\tNULL\tYES\nnotes\ttext\tNULL\tYES\ncreatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\nupdatedAt\ttimestamp\tCURRENT_TIMESTAMP\tNO\nsignerName\tvarchar\tNULL\tYES\nsignerEmail\tvarchar\tNULL\tYES\nvalidUntil\ttimestamp\tNULL\tYES\ncontractType\tvarchar\tNULL\tYES\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}
