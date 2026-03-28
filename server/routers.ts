@@ -77,7 +77,7 @@ import {
   getLeadsWithContact,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
-import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
+import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer, syncProductToStripe, createProductCheckoutSession } from "./stripe/stripe";
 import {
   sendText, sendDocument, sendImage, sendAudio, sendVideo, sendLocation, sendLink,
   sendReaction, sendPoll, deleteMessage as zapiDeleteMessage, replyMessage,
@@ -90,7 +90,7 @@ import {
 } from "./zapi";
 import { STUDIO_PRODUCTS } from "./stripe/products";
 import { getDb } from "./db";
-import { users as usersTable } from "../drizzle/schema";
+import { users as usersTable, products as productsTable } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 
@@ -1357,7 +1357,7 @@ const documentsRouter = router({
   }),
 });
 
-// // ─── PRODUCTS ROUTER ────────────────────────────────────────────────────────────
+// ─── PRODUCTS ROUTER ────────────────────────────────────────────────────────────
 const productsRouter = router({
   list: protectedProcedure.input(z.object({ activeOnly: z.boolean().optional() })).query(({ input }) =>
     getProducts(input.activeOnly ?? true)
@@ -1365,6 +1365,7 @@ const productsRouter = router({
   get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
     getProductById(input.id)
   ),
+  // Cria produto no CRM e sincroniza automaticamente com Stripe Products+Prices
   create: managerProcedure.input(z.object({
     name: z.string().min(1),
     description: z.string().optional(),
@@ -1372,7 +1373,39 @@ const productsRouter = router({
     unitPrice: z.string(),
     currency: z.string().optional(),
     unit: z.string().optional(),
-  })).mutation(({ input }) => createProduct(input)),
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível" });
+    // 1. Salvar no CRM
+    await createProduct(input);
+    // 2. Buscar o produto recém-criado (último inserido com este nome)
+    const allProducts = await getProducts(false);
+    const created = allProducts.find(p => p.name === input.name && !p.stripeProductId);
+    if (!created) return { success: true, stripeSync: false };
+    // 3. Sincronizar com Stripe
+    try {
+      const { stripeProductId, stripePriceId } = await syncProductToStripe({
+        crmProductId: created.id,
+        name: created.name,
+        description: created.description,
+        unitPrice: created.unitPrice,
+        currency: created.currency,
+        category: created.category,
+        active: created.active ?? true,
+        stripeProductId: null,
+        stripePriceId: null,
+      });
+      // 4. Salvar IDs do Stripe no banco
+      await db.update(productsTable)
+        .set({ stripeProductId, stripePriceId, stripeLastSyncedAt: new Date() })
+        .where(eq(productsTable.id, created.id));
+      return { success: true, stripeSync: true, stripeProductId, stripePriceId };
+    } catch (err) {
+      console.error("[Products] Stripe sync failed (product still created):", err);
+      return { success: true, stripeSync: false, error: String(err) };
+    }
+  }),
+  // Atualiza produto no CRM e sincroniza automaticamente com Stripe
   update: managerProcedure.input(z.object({
     id: z.number(),
     name: z.string().optional(),
@@ -1382,13 +1415,110 @@ const productsRouter = router({
     currency: z.string().optional(),
     unit: z.string().optional(),
     active: z.boolean().optional(),
-  })).mutation(({ input }) => {
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível" });
     const { id, ...data } = input;
-    return updateProduct(id, data);
+    // 1. Atualizar no CRM
+    await updateProduct(id, data);
+    // 2. Buscar produto atualizado
+    const updated = await getProductById(id);
+    if (!updated) return { success: true, stripeSync: false };
+    // 3. Sincronizar com Stripe
+    try {
+      const { stripeProductId, stripePriceId } = await syncProductToStripe({
+        crmProductId: updated.id,
+        name: updated.name,
+        description: updated.description,
+        unitPrice: updated.unitPrice,
+        currency: updated.currency,
+        category: updated.category,
+        active: updated.active ?? true,
+        stripeProductId: updated.stripeProductId,
+        stripePriceId: updated.stripePriceId,
+      });
+      // 4. Salvar IDs atualizados no banco
+      await db.update(productsTable)
+        .set({ stripeProductId, stripePriceId, stripeLastSyncedAt: new Date() })
+        .where(eq(productsTable.id, id));
+      return { success: true, stripeSync: true, stripeProductId, stripePriceId };
+    } catch (err) {
+      console.error("[Products] Stripe sync failed on update:", err);
+      return { success: true, stripeSync: false, error: String(err) };
+    }
   }),
-  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
-    deleteProduct(input.id)
-  ),
+  // Desativa produto no CRM e arquiva no Stripe
+  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    const product = await getProductById(input.id);
+    // Arquivar no Stripe antes de desativar no CRM
+    if (product?.stripeProductId) {
+      try {
+        await stripe.products.update(product.stripeProductId, { active: false });
+        console.log(`[Products] Stripe product archived: ${product.stripeProductId}`);
+      } catch (err) {
+        console.error("[Products] Stripe archive failed:", err);
+      }
+    }
+    return deleteProduct(input.id);
+  }),
+  // Gera link de checkout direto para um produto do catálogo
+  checkout: protectedProcedure.input(z.object({
+    productId: z.number(),
+    quantity: z.number().min(1).default(1),
+    origin: z.string(),
+  })).mutation(async ({ input, ctx }) => {
+    const product = await getProductById(input.productId);
+    if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado" });
+    if (!product.active) throw new TRPCError({ code: "BAD_REQUEST", message: "Produto inativo" });
+    // Garantir que o produto está sincronizado com Stripe
+    if (!product.stripePriceId) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Produto ainda não sincronizado com Stripe. Aguarde alguns segundos e tente novamente.",
+      });
+    }
+    // Criar/recuperar Stripe Customer
+    const stripeCustomerId = await getOrCreateStripeCustomer({
+      stripeCustomerId: ctx.user.stripeCustomerId,
+      email: ctx.user.email,
+      name: ctx.user.name,
+      userId: ctx.user.id,
+    });
+    const { url, sessionId } = await createProductCheckoutSession({
+      crmProductId: product.id,
+      productName: product.name,
+      stripePriceId: product.stripePriceId,
+      quantity: input.quantity,
+      customerEmail: ctx.user.email,
+      customerName: ctx.user.name,
+      stripeCustomerId,
+      userId: ctx.user.id,
+      origin: input.origin,
+    });
+    return { checkoutUrl: url, sessionId };
+  }),
+  // Força re-sincronização de um produto com Stripe (útil para corrigir divergências)
+  syncToStripe: managerProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível" });
+    const product = await getProductById(input.id);
+    if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado" });
+    const { stripeProductId, stripePriceId } = await syncProductToStripe({
+      crmProductId: product.id,
+      name: product.name,
+      description: product.description,
+      unitPrice: product.unitPrice,
+      currency: product.currency,
+      category: product.category,
+      active: product.active ?? true,
+      stripeProductId: product.stripeProductId,
+      stripePriceId: product.stripePriceId,
+    });
+    await db.update(productsTable)
+      .set({ stripeProductId, stripePriceId, stripeLastSyncedAt: new Date() })
+      .where(eq(productsTable.id, input.id));
+    return { success: true, stripeProductId, stripePriceId };
+  }),
 });
 
 // ─── BILLING REMINDERS ROUTER ────────────────────────────────────────────────────────────

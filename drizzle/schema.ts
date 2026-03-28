@@ -302,6 +302,9 @@ export const products = mysqlTable("products", {
   currency: varchar("currency", { length: 8 }).default("BRL"),
   unit: varchar("unit", { length: 64 }).default("un"),
   active: boolean("active").default(true),
+  stripeProductId: varchar("stripeProductId", { length: 255 }),
+  stripePriceId: varchar("stripePriceId", { length: 255 }),
+  stripeLastSyncedAt: timestamp("stripeLastSyncedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

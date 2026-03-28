@@ -874,3 +874,26 @@
 - [x] Marcar como lido ao abrir chat
 - [x] Análise de conversa com IA (4 tipos)
 - [x] 83 testes passando (0 falhas) | TypeScript: 0 erros
+
+## Sprint Stripe — Sincronização Produto → Stripe Product+Price
+
+- [ ] Adicionar colunas stripeProductId e stripePriceId na tabela products
+- [ ] Migrar banco com as novas colunas
+- [ ] Criar helper syncProductToStripe() no stripe.ts
+- [ ] Atualizar productsRouter.create para sincronizar com Stripe automaticamente
+- [ ] Atualizar productsRouter.update para sincronizar preço/nome no Stripe
+- [ ] Atualizar productsRouter.delete para arquivar produto no Stripe
+- [ ] Adicionar procedure stripe.createProductCheckout para checkout direto por produto
+- [ ] Atualizar UI Products.tsx: mostrar badge Stripe e botão Gerar Link de Pagamento
+- [ ] Criar testes para a sincronização Stripe
+
+## Sprint Stripe — Sincronização Automática de Produtos (Catálogo → Stripe)
+
+- [x] Adicionar colunas stripeProductId, stripePriceId, stripeLastSyncedAt na tabela products (banco + schema.ts)
+- [x] Implementar syncProductToStripe() no stripe.ts: cria produto+price no Stripe ao criar, atualiza ao editar, arquiva price antigo quando preço muda, trata erro 404 de price inexistente
+- [x] Implementar createProductCheckoutSession() no stripe.ts: checkout direto por produto com priceId do Stripe
+- [x] Atualizar productsRouter: create/update/delete sincronizam automaticamente com Stripe
+- [x] Adicionar procedures syncToStripe e checkout ao productsRouter
+- [x] Reescrever Products.tsx: badge de status Stripe (sincronizado/sem sync), botão Sincronizar, botão Checkout, link para Stripe Dashboard, banner de aviso para produtos sem sync, stats cards
+- [x] Criar testes stripe.products.test.ts: 8 testes cobrindo create, update, price change, archive, centavos, 404 recovery, checkout com/sem customer
+- [x] 91 testes passando, TypeScript 0 erros

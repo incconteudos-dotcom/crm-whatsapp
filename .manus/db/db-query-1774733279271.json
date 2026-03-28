@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE products \n  ADD COLUMN stripeProductId VARCHAR(255) NULL,\n  ADD COLUMN stripePriceId VARCHAR(255) NULL,\n  ADD COLUMN stripeLastSyncedAt TIMESTAMP NULL;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nALTER TABLE products \n  ADD COLUMN stripeProductId VARCHAR(255) NULL,\n  ADD COLUMN stripePriceId VARCHAR(255) NULL,\n  ADD COLUMN stripeLastSyncedAt TIMESTAMP NULL;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 552
+}
