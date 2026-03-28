@@ -27,6 +27,8 @@ import Credits from "./pages/Credits";
 import DailyRoutine from "./pages/DailyRoutine";
 import Podcasts from "./pages/Podcasts";
 import Automations from "./pages/Automations";
+import Equipment from "./pages/Equipment";
+import StudioRooms from "./pages/StudioRooms";
 import ClientPortalDashboard, { ClientPortalMagicEntry } from "./pages/ClientPortalV2";
 import BrandSettings from "./pages/BrandSettings";
 
@@ -59,6 +61,8 @@ function Router() {
       <Route path="/routine" component={DailyRoutine} />
       <Route path="/podcasts" component={Podcasts} />
       <Route path="/automations" component={Automations} />
+      <Route path="/equipment" component={Equipment} />
+      <Route path="/studio-rooms" component={StudioRooms} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

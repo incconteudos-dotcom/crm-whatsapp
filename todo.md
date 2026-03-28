@@ -351,3 +351,18 @@
 - [x] Disparo automático ao mover lead de estágio no Pipeline
 - [x] Página /automations com 3 abas: Sequências, Templates, Histórico
 - [x] Item Automações no menu lateral
+
+## Sprint 9 — Equipamentos e Multi-Estúdio ✅
+- [x] Tabelas studio_rooms, equipment, equipment_bookings criadas no banco
+- [x] Coluna room_id adicionada em studio_bookings
+- [x] Backend: CRUD completo de salas (studioRoomsRouter)
+- [x] Backend: CRUD completo de equipamentos (equipmentRouter)
+- [x] Backend: vinculação equipamento ↔ agendamento
+- [x] Backend: relatório de ocupação por sala e por equipamento
+- [x] Seed automático de salas padrão (Estúdio A, B, Cabine de Locução)
+- [x] Studio.tsx: filtro de sala no calendário (botões coloridos)
+- [x] Studio.tsx: aba "Por Sala" com calendário multi-coluna por sala
+- [x] Studio.tsx: seletor de sala ao criar novo agendamento
+- [x] Página /studio-rooms com CRUD de salas, seletor de cor, barra de ocupação
+- [x] Página /equipment com CRUD de equipamentos, filtros por categoria/status, cards visuais
+- [x] Itens "Salas" e "Equipamentos" adicionados ao menu lateral

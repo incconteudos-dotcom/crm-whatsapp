@@ -39,6 +39,10 @@ import {
   getAutomationSteps, createAutomationStep, updateAutomationStep, deleteAutomationStep,
   getAutomationExecutions, scheduleAutomationForLead,
   getMessageTemplates, createMessageTemplate, updateMessageTemplate, deleteMessageTemplate,
+  getStudioRooms, getStudioRoomById, createStudioRoom, updateStudioRoom, deleteStudioRoom, seedDefaultStudioRooms,
+  getEquipment, getEquipmentById, createEquipment, updateEquipment, deleteEquipment,
+  getEquipmentBookingsByStudioBooking, createEquipmentBooking, deleteEquipmentBookingsByStudioBooking,
+  getEquipmentOccupancyReport, getRoomOccupancyReport,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -1595,6 +1599,89 @@ const messageTemplatesRouter = router({
   ),
 });
 
+// ─── STUDIO ROOMS ROUTER ────────────────────────────────────────────────────
+const studioRoomsRouter = router({
+  list: protectedProcedure.query(async () => {
+    await seedDefaultStudioRooms();
+    return getStudioRooms();
+  }),
+  get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
+    getStudioRoomById(input.id)
+  ),
+  create: managerProcedure.input(z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+    capacity: z.number().optional(),
+    color: z.string().optional(),
+  })).mutation(({ input }) => createStudioRoom(input)),
+  update: managerProcedure.input(z.object({
+    id: z.number(),
+    name: z.string().optional(),
+    description: z.string().optional(),
+    capacity: z.number().optional(),
+    color: z.string().optional(),
+    isActive: z.boolean().optional(),
+  })).mutation(({ input }) => {
+    const { id, ...data } = input;
+    return updateStudioRoom(id, data);
+  }),
+  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
+    deleteStudioRoom(input.id)
+  ),
+  occupancyReport: protectedProcedure.query(() => getRoomOccupancyReport()),
+});
+
+// ─── EQUIPMENT ROUTER ─────────────────────────────────────────────────────────
+const equipmentRouter = router({
+  list: protectedProcedure.input(z.object({ category: z.string().optional() })).query(({ input }) =>
+    getEquipment(input.category)
+  ),
+  get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
+    getEquipmentById(input.id)
+  ),
+  create: managerProcedure.input(z.object({
+    name: z.string().min(1),
+    category: z.string().optional(),
+    serialNumber: z.string().optional(),
+    brand: z.string().optional(),
+    model: z.string().optional(),
+    status: z.enum(["available", "in_use", "maintenance", "retired"]).optional(),
+    notes: z.string().optional(),
+    roomId: z.number().optional(),
+    purchaseDate: z.date().optional(),
+  })).mutation(({ input }) => createEquipment(input as any)),
+  update: managerProcedure.input(z.object({
+    id: z.number(),
+    name: z.string().optional(),
+    category: z.string().optional(),
+    serialNumber: z.string().optional(),
+    brand: z.string().optional(),
+    model: z.string().optional(),
+    status: z.enum(["available", "in_use", "maintenance", "retired"]).optional(),
+    notes: z.string().optional(),
+    roomId: z.number().optional(),
+  })).mutation(({ input }) => {
+    const { id, ...data } = input;
+    return updateEquipment(id, data as any);
+  }),
+  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) =>
+    deleteEquipment(input.id)
+  ),
+  // Booking equipment linkage
+  bookingEquipment: protectedProcedure.input(z.object({ studioBookingId: z.number() })).query(({ input }) =>
+    getEquipmentBookingsByStudioBooking(input.studioBookingId)
+  ),
+  addToBooking: protectedProcedure.input(z.object({
+    equipmentId: z.number(),
+    studioBookingId: z.number(),
+    notes: z.string().optional(),
+  })).mutation(({ input }) => createEquipmentBooking(input)),
+  removeFromBooking: protectedProcedure.input(z.object({ studioBookingId: z.number() })).mutation(({ input }) =>
+    deleteEquipmentBookingsByStudioBooking(input.studioBookingId)
+  ),
+  occupancyReport: protectedProcedure.query(() => getEquipmentOccupancyReport()),
+});
+
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -1635,6 +1722,8 @@ export const appRouter = router({
   portalMagic: portalMagicRouter,
   automations: automationsRouter,
   messageTemplates: messageTemplatesRouter,
+  studioRooms: studioRoomsRouter,
+  equipment: equipmentRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -61,6 +61,12 @@ import {
   type InsertAutomationStep,
   type InsertAutomationExecution,
   type InsertMessageTemplate,
+  studioRooms,
+  equipment,
+  equipmentBookings,
+  type InsertStudioRoom,
+  type InsertEquipment,
+  type InsertEquipmentBooking,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -1305,4 +1311,140 @@ export async function deleteMessageTemplate(id: number) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   await db.delete(messageTemplates).where(eq(messageTemplates.id, id));
+}
+
+// ─── STUDIO ROOMS ─────────────────────────────────────────────────────────────
+export async function getStudioRooms() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(studioRooms).where(eq(studioRooms.isActive, true)).orderBy(studioRooms.name);
+}
+
+export async function getStudioRoomById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(studioRooms).where(eq(studioRooms.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createStudioRoom(data: InsertStudioRoom) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(studioRooms).values(data);
+  return result;
+}
+
+export async function updateStudioRoom(id: number, data: Partial<InsertStudioRoom>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(studioRooms).set({ ...data, updatedAt: new Date() }).where(eq(studioRooms.id, id));
+}
+
+export async function deleteStudioRoom(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(studioRooms).set({ isActive: false, updatedAt: new Date() }).where(eq(studioRooms.id, id));
+}
+
+export async function seedDefaultStudioRooms() {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(studioRooms).limit(1);
+  if (existing.length > 0) return;
+  await db.insert(studioRooms).values([
+    { name: "Estúdio A", description: "Sala principal de gravação", color: "#6366f1", capacity: 4 },
+    { name: "Estúdio B", description: "Sala de podcast e locução", color: "#10b981", capacity: 2 },
+    { name: "Sala de Edição", description: "Pós-produção e mixagem", color: "#f59e0b", capacity: 3 },
+  ]);
+}
+
+// ─── EQUIPMENT ────────────────────────────────────────────────────────────────
+export async function getEquipment(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (category) {
+    return db.select().from(equipment).where(eq(equipment.category, category as any)).orderBy(equipment.name);
+  }
+  return db.select().from(equipment).orderBy(equipment.name);
+}
+
+export async function getEquipmentById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(equipment).where(eq(equipment.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createEquipment(data: InsertEquipment) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(equipment).values(data);
+  return result;
+}
+
+export async function updateEquipment(id: number, data: Partial<InsertEquipment>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(equipment).set({ ...data, updatedAt: new Date() }).where(eq(equipment.id, id));
+}
+
+export async function deleteEquipment(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(equipment).where(eq(equipment.id, id));
+}
+
+// ─── EQUIPMENT BOOKINGS ───────────────────────────────────────────────────────
+export async function getEquipmentBookingsByStudioBooking(studioBookingId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(equipmentBookings).where(eq(equipmentBookings.studioBookingId, studioBookingId));
+}
+
+export async function createEquipmentBooking(data: InsertEquipmentBooking) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(equipmentBookings).values(data);
+  return result;
+}
+
+export async function deleteEquipmentBookingsByStudioBooking(studioBookingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(equipmentBookings).where(eq(equipmentBookings.studioBookingId, studioBookingId));
+}
+
+export async function getEquipmentOccupancyReport() {
+  const db = await getDb();
+  if (!db) return [];
+  const result = await db
+    .select({
+      id: equipment.id,
+      name: equipment.name,
+      category: equipment.category,
+      status: equipment.status,
+      totalBookings: sql<number>`COUNT(${equipmentBookings.id})`,
+    })
+    .from(equipment)
+    .leftJoin(equipmentBookings, eq(equipment.id, equipmentBookings.equipmentId))
+    .groupBy(equipment.id, equipment.name, equipment.category, equipment.status)
+    .orderBy(equipment.name);
+  return result;
+}
+
+export async function getRoomOccupancyReport() {
+  const db = await getDb();
+  if (!db) return [];
+  const result = await db
+    .select({
+      id: studioRooms.id,
+      name: studioRooms.name,
+      color: studioRooms.color,
+      totalBookings: sql<number>`COUNT(${studioBookings.id})`,
+    })
+    .from(studioRooms)
+    .leftJoin(studioBookings, eq(studioRooms.id, studioBookings.roomId))
+    .groupBy(studioRooms.id, studioRooms.name, studioRooms.color)
+    .orderBy(studioRooms.name);
+  return result;
 }

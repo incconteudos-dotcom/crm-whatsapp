@@ -216,6 +216,7 @@ export const studioBookings = mysqlTable("studio_bookings", {
   startAt: timestamp("startAt").notNull(),
   endAt: timestamp("endAt").notNull(),
   studio: varchar("studio", { length: 128 }).default("Estúdio Principal"),
+  roomId: int("room_id"), // references studioRooms
   engineer: varchar("engineer", { length: 255 }),
   notes: text("notes"),
   value: decimal("value", { precision: 12, scale: 2 }),
@@ -578,3 +579,46 @@ export const messageTemplates = mysqlTable("message_templates", {
 });
 export type MessageTemplate = typeof messageTemplates.$inferSelect;
 export type InsertMessageTemplate = typeof messageTemplates.$inferInsert;
+
+// ─── STUDIO ROOMS ─────────────────────────────────────────────────────────────
+export const studioRooms = mysqlTable("studio_rooms", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // "Sala A", "Cabine de Locução", "Sala B"
+  description: text("description"),
+  capacity: int("capacity").default(1),
+  color: varchar("color", { length: 20 }).default("#6366f1"), // for calendar display
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type StudioRoom = typeof studioRooms.$inferSelect;
+export type InsertStudioRoom = typeof studioRooms.$inferInsert;
+
+// ─── EQUIPMENT ────────────────────────────────────────────────────────────────
+export const equipment = mysqlTable("equipment", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull().default("audio"), // audio | video | lighting | accessories | other
+  serialNumber: varchar("serial_number", { length: 100 }),
+  brand: varchar("brand", { length: 100 }),
+  model: varchar("model", { length: 100 }),
+  status: varchar("status", { length: 20 }).notNull().default("available"), // available | in_use | maintenance | retired
+  notes: text("notes"),
+  roomId: int("room_id"), // default room assignment
+  purchaseDate: timestamp("purchase_date"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Equipment = typeof equipment.$inferSelect;
+export type InsertEquipment = typeof equipment.$inferInsert;
+
+// ─── EQUIPMENT BOOKINGS (link equipment to studio bookings) ──────────────────
+export const equipmentBookings = mysqlTable("equipment_bookings", {
+  id: int("id").autoincrement().primaryKey(),
+  equipmentId: int("equipment_id").notNull(),
+  studioBookingId: int("studio_booking_id").notNull(), // references studioBookings
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type EquipmentBooking = typeof equipmentBookings.$inferSelect;
+export type InsertEquipmentBooking = typeof equipmentBookings.$inferInsert;

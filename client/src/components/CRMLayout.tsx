@@ -25,6 +25,8 @@ import {
   ClipboardList,
   Mic2,
   Palette,
+  Wrench,
+  Building2,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -50,6 +52,8 @@ const navItems = [
   { icon: ClipboardList, label: "Rotina Diária", path: "/routine" },
   { icon: Mic2, label: "Podcasts", path: "/podcasts" },
   { icon: Zap, label: "Automações", path: "/automations" },
+  { icon: Building2, label: "Salas", path: "/studio-rooms" },
+  { icon: Wrench, label: "Equipamentos", path: "/equipment" },
 ];
 
 const adminItems = [
