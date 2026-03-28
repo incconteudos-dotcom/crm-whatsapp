@@ -423,12 +423,12 @@
 - [x] Corrigir barra branca/linha sem design no layout
 - [x] Corrigir Equipment.tsx: adicionar CRMLayout wrapper
 - [x] Corrigir StudioRooms.tsx: adicionar CRMLayout wrapper
-- [ ] Adicionar busca global ⌘K (cmdk)
-- [ ] Extrair componentes reutilizáveis: PageHeader, MetricCard, StatusBadge, EmptyState, DeleteConfirmDialog
+- [x] Adicionar busca global ⌘K (cmdk)
+- [x] Extrair componentes reutilizáveis: PageHeader, MetricCard, StatusBadge, EmptyState, DeleteConfirmDialog
 - [x] Agrupar sidebar em categorias com ícones de grupo e contagem de badges
 - [x] Adicionar indicador de status Z-API no rodapé do sidebar
-- [ ] Melhorar hierarquia visual dos cards do Pipeline (valor em destaque)
-- [ ] Adicionar filtros de contexto na lista de chats WhatsApp (Clientes / Leads / Todos)
+- [x] Melhorar hierarquia visual dos cards do Pipeline (valor em destaque, barra de probabilidade, avatar do contato)
+- [x] Adicionar filtros de contexto na lista de chats WhatsApp (Clientes / Leads / Todos)
 
 ## Sprint A — Detalhamento de Implementação
 

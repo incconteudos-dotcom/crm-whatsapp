@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { cn } from "@/lib/utils";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import {
   BarChart3, BookOpen, Calendar, CheckSquare, ChevronLeft, ChevronRight,
   ChevronDown, CreditCard, FileText, FolderOpen, Home, Library, LogOut,
@@ -313,6 +314,12 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
         )}
       </div>
 
+      {/* Global Search */}
+      {!collapsed && (
+        <div className="px-3 py-2 border-b border-sidebar-border">
+          <GlobalSearch />
+        </div>
+      )}
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-sidebar-border">
         {navGroups.map((group) => (

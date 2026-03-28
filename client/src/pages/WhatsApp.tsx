@@ -26,6 +26,7 @@ export default function WhatsApp() {
   const [selectedChat, setSelectedChat] = useState<string | null>(initialChat);
   const [message, setMessage] = useState("");
   const [chatSearch, setChatSearch] = useState("");
+  const [chatFilter, setChatFilter] = useState<"all" | "contacts" | "leads">("all");
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const [analysisType, setAnalysisType] = useState<"summary" | "sentiment" | "opportunities" | "action_items">("summary");
   const [analysisResult, setAnalysisResult] = useState("");
@@ -80,9 +81,30 @@ export default function WhatsApp() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const filteredChats = chats?.filter((c) =>
-    !chatSearch || (c.name ?? c.jid).toLowerCase().includes(chatSearch.toLowerCase())
-  );
+  const { data: contactsList } = trpc.contacts.list.useQuery({});
+  const { data: openLeads } = trpc.pipeline.leads.useQuery({ status: "open" });
+
+  const filteredChats = chats?.filter((c) => {
+    const matchesSearch = !chatSearch || (c.name ?? c.jid).toLowerCase().includes(chatSearch.toLowerCase());
+    if (!matchesSearch) return false;
+    if (chatFilter === "contacts") {
+      return (contactsList ?? []).some(ct => {
+        const phone = (ct.phone ?? "").replace(/\D/g, "");
+        const jid = c.jid.replace(/@.*$/, "");
+        return phone.length > 6 && (jid.includes(phone.slice(-8)) || phone.includes(jid.slice(-8)));
+      });
+    }
+    if (chatFilter === "leads") {
+      return (openLeads ?? []).some(l => {
+        const contact = (contactsList ?? []).find(ct => ct.id === l.contactId);
+        if (!contact) return false;
+        const phone = (contact.phone ?? "").replace(/\D/g, "");
+        const jid = c.jid.replace(/@.*$/, "");
+        return phone.length > 6 && (jid.includes(phone.slice(-8)) || phone.includes(jid.slice(-8)));
+      });
+    }
+    return true;
+  });
 
   const selectedChatData = chats?.find((c) => c.jid === selectedChat);
 
@@ -140,7 +162,7 @@ export default function WhatsApp() {
                 </button>
               </div>
             </div>
-            <div className="relative">
+            <div className="relative mb-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
                 type="text"
@@ -149,6 +171,27 @@ export default function WhatsApp() {
                 onChange={(e) => setChatSearch(e.target.value)}
                 className="w-full bg-input border border-border rounded-lg pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               />
+            </div>
+            {/* Context filters */}
+            <div className="flex gap-1">
+              {([
+                { key: "all" as const, label: "Todos" },
+                { key: "contacts" as const, label: "Clientes" },
+                { key: "leads" as const, label: "Leads" },
+              ]).map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setChatFilter(f.key)}
+                  className={cn(
+                    "flex-1 py-1 text-xs rounded-md font-medium transition-colors",
+                    chatFilter === f.key
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
             </div>
           </div>
 

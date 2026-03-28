@@ -171,30 +171,49 @@ export default function Pipeline() {
                         <div
                           key={lead.id}
                           onClick={() => setSelectedLeadId(lead.id)}
-                          className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-yellow-500/40 hover:shadow-md hover:shadow-yellow-500/5 transition-all group"
+                          className="bg-card border border-border rounded-xl p-3.5 cursor-pointer hover:border-yellow-500/40 hover:shadow-md hover:shadow-yellow-500/5 transition-all group"
                         >
-                          <div className="flex items-start justify-between mb-2">
+                          {/* Title */}
+                          <div className="flex items-start justify-between gap-2 mb-2">
                             <p className="text-sm font-semibold text-foreground leading-tight line-clamp-2 flex-1">{lead.title}</p>
-                            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-yellow-400 transition-colors ml-2 flex-shrink-0 mt-0.5" />
+                            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-yellow-400 transition-colors shrink-0 mt-0.5" />
                           </div>
+                          {/* Value — hero element */}
+                          {lead.value && Number(lead.value) > 0 && (
+                            <div className="mb-2">
+                              <span className="text-lg font-bold text-yellow-400 leading-none">{fmt(lead.value)}</span>
+                            </div>
+                          )}
+                          {/* Contact avatar */}
                           {contact && (
-                            <div className="flex items-center gap-1.5 mb-2">
-                              <User className="w-3 h-3 text-muted-foreground" />
+                            <div className="flex items-center gap-1.5 mb-2.5">
+                              <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                                <span className="text-[9px] font-bold text-primary">{contact.name.charAt(0).toUpperCase()}</span>
+                              </div>
                               <span className="text-xs text-muted-foreground truncate">{contact.name}</span>
                             </div>
                           )}
-                          <div className="flex items-center justify-between">
-                            {lead.value ? (
-                              <span className="text-sm font-bold text-yellow-400">{fmt(lead.value)}</span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">Sem valor</span>
-                            )}
-                            {lead.probability != null && (
-                              <span className="text-xs text-muted-foreground">{lead.probability}%</span>
-                            )}
-                          </div>
+                          {/* Probability bar */}
+                          {lead.probability != null && (
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] text-muted-foreground">Probabilidade</span>
+                                <span className="text-[10px] font-medium text-muted-foreground">{lead.probability}%</span>
+                              </div>
+                              <div className="h-1 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all"
+                                  style={{
+                                    width: `${lead.probability}%`,
+                                    background: Number(lead.probability) >= 70 ? '#22c55e' : Number(lead.probability) >= 40 ? '#eab308' : '#ef4444'
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          {/* Close date */}
                           {lead.expectedCloseDate && (
-                            <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
                               <Calendar className="w-3 h-3" />
                               {format(new Date(lead.expectedCloseDate), "dd/MM/yy", { locale: ptBR })}
                             </div>
