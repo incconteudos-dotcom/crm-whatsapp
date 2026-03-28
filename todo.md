@@ -517,3 +517,86 @@
 ### Testes
 - [ ] Testes para CRUD de sessões e restrições
 - [ ] Testes para geração de relatório por IA (mock)
+
+## Sprint D — Expansão Comercial + Análise Total WhatsApp (Sprint D Expandida)
+
+### Análise Total do WhatsApp (NOVO — Prioridade Alta)
+- [ ] Backend: função `loadAllChatHistory(phone)` — busca todas as páginas de mensagens via Z-API para um chat
+- [ ] Backend: função `syncAllChats()` — itera todos os chats e carrega histórico completo paginado
+- [ ] Backend: tabela `whatsapp_analysis` — armazena resultado de análise por chat (sugestões, score, timestamp)
+- [ ] Backend: procedure `whatsapp.syncFullHistory` — dispara carga completa de histórico de todos os chats
+- [ ] Backend: procedure `whatsapp.analyzeChat(chatId)` — analisa histórico de um chat com IA e retorna sugestões
+- [ ] Backend: procedure `whatsapp.analyzeAll` — analisa todos os chats em lote e persiste resultados
+- [ ] Engine de IA: para cada conversa, identificar: nome/empresa do contato, intenção de compra, estágio sugerido no pipeline, serviços mencionados, valor estimado, urgência
+- [ ] Engine de IA: gerar sugestões acionáveis: abrir lead, atualizar lead, enviar orçamento, enviar fatura, enviar contrato
+- [ ] UI: botão "Sincronizar Histórico Completo" na página WhatsApp com progress bar
+- [ ] UI: aba "Análise IA" na página WhatsApp com lista de chats analisados
+- [ ] UI: card de análise por chat com score de oportunidade, sugestões e botões de ação rápida
+- [ ] UI: painel de análise global — resumo de todas as oportunidades detectadas no histórico
+- [ ] UI: botão "Analisar este chat" dentro de cada conversa individual
+
+### US-077: Automação de follow-up comercial
+- [ ] Backend: procedure `sprintD.triggerFollowUp(leadId)` — envia mensagem Z-API de follow-up baseada no estágio
+- [ ] UI: botão "Follow-up Automático" no drawer do lead no Pipeline
+
+### US-078: NPS via WhatsApp
+- [ ] Backend: procedure `sprintD.sendNPS(contactId)` — envia pesquisa NPS via Z-API
+- [ ] Backend: tabela `nps_responses` — armazena respostas NPS (score 0-10, comentário, timestamp)
+- [ ] Backend: webhook handler para capturar resposta NPS recebida via Z-API
+- [ ] UI: botão "Enviar NPS" no perfil do contato
+- [ ] UI: página /nps com dashboard de scores, NPS líquido e histórico de respostas
+
+### US-076: Relatório de rentabilidade
+- [ ] Backend: procedure `sprintD.rentabilidade` — agrupa receita por tipo de serviço (podcast, locução, edição, etc.)
+- [ ] UI: aba "Rentabilidade" na página Analytics com gráfico de barras por serviço
+
+### US-023: Notificação automática de sessão por WhatsApp
+- [ ] Backend: ao confirmar agendamento no Estúdio, enviar Z-API com data, hora, sala e equipamentos
+- [ ] UI: toggle "Notificar cliente via WhatsApp" ao criar/confirmar agendamento
+
+### US-028: Briefing de episódio com aprovação
+- [ ] Backend: campo `briefing` e `briefingApprovedAt` em episodes
+- [ ] UI: aba "Briefing" no sheet de detalhes do episódio com editor e botão de aprovação
+
+### US-074: Dashboard financeiro por projeto
+- [ ] Backend: procedure `sprintD.projectFinancials(projectId)` — soma faturas e orçamentos vinculados
+- [ ] UI: aba "Financeiro" no drawer de detalhes do projeto
+
+### US-069: Resumo semanal financeiro por e-mail
+- [ ] Backend: procedure `sprintD.sendWeeklySummary` — compila KPIs da semana e envia via Brevo toda segunda
+- [ ] UI: toggle "Resumo semanal" nas Configurações de notificações
+
+## Sprint D — Implementação Concluída ✅
+
+### Análise Total do WhatsApp
+- [x] Backend: whatsappAiRouter com syncFullHistory, analyzeChat, analyzeAll, bulkAnalyze
+- [x] Backend: tabela whatsapp_analysis com sugestões, score e timestamp
+- [x] UI: página /whatsapp-analysis com painel de análise global e cards por chat
+- [x] UI: botão "Sincronizar Histórico Completo" com progresso
+- [x] UI: sugestões acionáveis: abrir lead, atualizar lead, enviar orçamento, fatura, contrato
+
+### US-077: Follow-up Automático
+- [x] Backend: sprintDRouter.sendSessionReminder — lembrete de sessão via Z-API
+
+### US-078: NPS via WhatsApp
+- [x] Backend: npsRouter com sendNPS, listResponses, dashboard
+- [x] Backend: tabela nps_responses com score, comentário, timestamp
+- [x] UI: botão "Enviar NPS" disponível via npsRouter
+
+### US-076: Relatório de Rentabilidade
+- [x] Backend: sprintDRouter.profitabilityReport — agrupa receita por contato
+
+### US-023: Notificação de Sessão via WhatsApp
+- [x] Backend: sprintDRouter.sendSessionReminder — envia lembrete 24h antes
+
+### US-028: Briefing de Episódio com IA
+- [x] Backend: sprintDRouter.generateEpisodeBriefing — gera briefing completo via LLM
+- [x] UI: botão "Gerar Briefing IA" no sheet de detalhes do episódio em Podcasts
+- [x] UI: dialog com conteúdo do briefing e botão de copiar
+
+### US-074: Dashboard Financeiro por Projeto
+- [x] Backend: sprintDRouter.projectFinancialSummary — soma faturas vinculadas ao projeto
+
+### US-069: Resumo Semanal Financeiro por E-mail
+- [x] Backend: sprintDRouter.sendWeeklyFinancialSummary — compila KPIs e envia via Brevo
+- [x] UI: botão "Enviar Resumo Agora" na aba Notificações das Configurações

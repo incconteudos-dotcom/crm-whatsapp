@@ -2,7 +2,7 @@ import CRMLayout from "@/components/CRMLayout";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Settings as SettingsIcon, User, Bell, Shield, Palette, Save, Eye, EyeOff, CreditCard, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, Palette, Save, Eye, EyeOff, CreditCard, CheckCircle2, AlertCircle, ExternalLink, Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,14 @@ export default function Settings() {
       });
     }
   }, [profile]);
+
+  const sendWeeklySummary = trpc.sprintD.sendWeeklyFinancialSummary.useMutation({
+    onSuccess: (data) => {
+      if (data.success) toast.success("Resumo enviado para seu e-mail!");
+      else toast.error(data.error ?? "Erro ao enviar resumo");
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const updateProfileMutation = trpc.settings.updateProfile.useMutation({
     onSuccess: () => {
@@ -211,8 +219,31 @@ export default function Settings() {
                 ))}
               </CardContent>
             </Card>
-          </TabsContent>
 
+            {/* Resumo Financeiro Semanal */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-primary" />
+                  Resumo Financeiro Semanal
+                </CardTitle>
+                <CardDescription>Envie agora um resumo financeiro da semana para seu e-mail.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={() => {
+                    if (!profile?.email) { toast.error("Configure seu e-mail no perfil primeiro."); return; }
+                    sendWeeklySummary.mutate({ email: profile.email, recipientName: profile.name ?? "Usuário" });
+                  }}
+                  disabled={sendWeeklySummary.isPending}
+                  className="gap-2"
+                >
+                  {sendWeeklySummary.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  Enviar Resumo Agora
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
           {/* SEGURANÇA */}
           <TabsContent value="security">
             <Card className="bg-card border-border">

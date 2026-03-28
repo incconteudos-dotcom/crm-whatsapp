@@ -8,7 +8,7 @@ import {
   ChevronDown, CreditCard, FileText, FolderOpen, Home, Library, LogOut,
   MessageSquare, Package, Receipt, Settings, Shield, Users, Wallet, Zap,
   ClipboardList, Mic2, Palette, Wrench, Building2, Menu, X, Circle,
-  Layers, DollarSign, Briefcase, Cog, Target,
+  Layers, DollarSign, Briefcase, Cog, Target, Brain,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -29,6 +29,7 @@ const navGroups = [
     icon: MessageSquare,
     items: [
       { icon: MessageSquare, label: "WhatsApp", path: "/whatsapp", badge: "whatsapp" },
+      { icon: Brain, label: "Análise IA", path: "/whatsapp-analysis" },
       { icon: Users, label: "Contatos", path: "/contacts" },
       { icon: Zap, label: "Pipeline", path: "/pipeline" },
       { icon: Zap, label: "Automações", path: "/automations" },

@@ -59,10 +59,12 @@ import {
   getTocConstraints, createTocConstraint, updateTocConstraint, deleteTocConstraint,
   getTocActionItems, createTocActionItem, updateTocActionItem, deleteTocActionItem,
   getTocDashboard,
+  getWhatsappAnalysisList, getWhatsappAnalysisByChatId, upsertWhatsappAnalysis, deleteWhatsappAnalysis,
+  getNpsResponses, createNpsResponse, updateNpsResponse, getNpsStats,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
-import { sendText, sendDocument, getInstanceStatus, getChats } from "./zapi";
+import { sendText, sendDocument, getInstanceStatus, getChats, getChatMessages } from "./zapi";
 import { STUDIO_PRODUCTS } from "./stripe/products";
 import { getDb } from "./db";
 import { users as usersTable } from "../drizzle/schema";
@@ -1915,6 +1917,368 @@ const tocRouter = router({
     return JSON.parse(content);
   }),
 });
+// ─── SPRINT D ROUTER ────────────────────────────────────────────────────────────
+const sprintDRouter = router({
+  // US-074: Dashboard financeiro por projeto
+  projectFinancialSummary: protectedProcedure.input(z.object({ projectId: z.number() })).query(async ({ input }) => {
+    const db = await getDb();
+    if (!db) return { invoices: [], totalRevenue: 0, totalPaid: 0, totalPending: 0 };
+    const { invoices: invoicesTable, projects: projectsTable } = await import("../drizzle/schema");
+    const { eq: eqOp } = await import("drizzle-orm");
+    const project = await db.select().from(projectsTable).where(eqOp(projectsTable.id, input.projectId)).limit(1);
+    const projectInvoices = await db.select().from(invoicesTable).where(eqOp(invoicesTable.leadId, input.projectId));
+    const totalRevenue = projectInvoices.reduce((s, i) => s + parseFloat(String(i.total ?? 0)), 0);
+    const totalPaid = projectInvoices.filter(i => i.status === "paid").reduce((s, i) => s + parseFloat(String(i.total ?? 0)), 0);
+    const totalPending = projectInvoices.filter(i => i.status !== "paid" && i.status !== "cancelled").reduce((s, i) => s + parseFloat(String(i.total ?? 0)), 0);
+    return { project: project[0] ?? null, invoices: projectInvoices, totalRevenue, totalPaid, totalPending };
+  }),
+
+  // US-023: Notificação de sessão por WhatsApp (lembrete 24h antes)
+  sendSessionReminder: protectedProcedure.input(z.object({
+    bookingId: z.number(),
+    phone: z.string(),
+    contactName: z.string(),
+    sessionTitle: z.string(),
+    sessionDate: z.string(),
+    sessionTime: z.string(),
+  })).mutation(async ({ input }) => {
+    const message = `Olá ${input.contactName}! 🎵\n\nLembrete: você tem uma sessão agendada:\n\n📅 *${input.sessionTitle}*\n🕒 ${input.sessionDate} às ${input.sessionTime}\n\nQualquer dúvida, estamos à disposição! 😊`;
+    await sendText(input.phone, message);
+    return { success: true };
+  }),
+
+  // US-028: Briefing de episódio via IA
+  generateEpisodeBriefing: protectedProcedure.input(z.object({
+    episodeId: z.number(),
+    podcastName: z.string(),
+    episodeTitle: z.string(),
+    episodeDescription: z.string().optional(),
+    guestName: z.string().optional(),
+    topics: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const response = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content: `Você é um produtor de podcast experiente. Crie um briefing completo e profissional para o episódio indicado. O briefing deve incluir: 1) Introdução sugerida para o apresentador, 2) Perguntas principais (5-8 perguntas), 3) Pontos de destaque a explorar, 4) Notas de produção (música de fundo, efeitos), 5) Call-to-action sugerido para o final. Responda em português, formato Markdown.`,
+        },
+        {
+          role: "user",
+          content: `Podcast: ${input.podcastName}\nEpisódio: ${input.episodeTitle}\n${input.episodeDescription ? `Descrição: ${input.episodeDescription}\n` : ""}${input.guestName ? `Convidado: ${input.guestName}\n` : ""}${input.topics ? `Tópicos: ${input.topics}` : ""}`,
+        },
+      ],
+    });
+    const rawContent = response.choices[0]?.message?.content;
+    const content = typeof rawContent === "string" ? rawContent : "";
+    return { briefing: content };
+  }),
+
+  // US-069: Resumo financeiro semanal por email
+  sendWeeklyFinancialSummary: protectedProcedure.input(z.object({
+    email: z.string().email(),
+    recipientName: z.string(),
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) return { success: false, error: "DB not available" };
+    const { invoices: invoicesTable, studioBookings: bookingsTable } = await import("../drizzle/schema");
+    const { gte: gteOp } = await import("drizzle-orm");
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const recentInvoices = await db.select().from(invoicesTable).where(gteOp(invoicesTable.createdAt, weekAgo));
+    const recentBookings = await db.select().from(bookingsTable).where(gteOp(bookingsTable.startAt, weekAgo));
+    const totalRevenue = recentInvoices.filter(i => i.status === "paid").reduce((s, i) => s + parseFloat(String(i.total ?? 0)), 0);
+    const pendingRevenue = recentInvoices.filter(i => i.status === "sent" || i.status === "draft").reduce((s, i) => s + parseFloat(String(i.total ?? 0)), 0);
+    const overdueCount = recentInvoices.filter(i => i.status === "overdue").length;
+    const sessionsCount = recentBookings.length;
+    const { sendEmail } = await import("./email");
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+        <div style="background: linear-gradient(135deg, #7c3aed, #4f46e5); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 22px;">Resumo Financeiro Semanal</h1>
+          <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 13px;">Olá ${input.recipientName}! Aqui está o resumo da semana.</p>
+        </div>
+        <div style="background: white; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div style="background: #f0fdf4; padding: 16px; border-radius: 8px;">
+              <p style="color: #16a34a; font-size: 11px; text-transform: uppercase; margin: 0 0 4px;">Receita Recebida</p>
+              <p style="font-size: 20px; font-weight: 700; color: #111827; margin: 0;">R$ ${totalRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div style="background: #fffbeb; padding: 16px; border-radius: 8px;">
+              <p style="color: #d97706; font-size: 11px; text-transform: uppercase; margin: 0 0 4px;">A Receber</p>
+              <p style="font-size: 20px; font-weight: 700; color: #111827; margin: 0;">R$ ${pendingRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div style="background: #fef2f2; padding: 16px; border-radius: 8px;">
+              <p style="color: #dc2626; font-size: 11px; text-transform: uppercase; margin: 0 0 4px;">Faturas Vencidas</p>
+              <p style="font-size: 20px; font-weight: 700; color: #111827; margin: 0;">${overdueCount}</p>
+            </div>
+            <div style="background: #eff6ff; padding: 16px; border-radius: 8px;">
+              <p style="color: #3b82f6; font-size: 11px; text-transform: uppercase; margin: 0 0 4px;">Sessões Realizadas</p>
+              <p style="font-size: 20px; font-weight: 700; color: #111827; margin: 0;">${sessionsCount}</p>
+            </div>
+          </div>
+          <p style="color: #6b7280; font-size: 13px; text-align: center;">Acesse o CRM para mais detalhes.</p>
+        </div>
+      </div>
+    `;
+    const result = await sendEmail({
+      to: input.email,
+      toName: input.recipientName,
+      subject: `Resumo Financeiro Semanal - ${new Date().toLocaleDateString("pt-BR")}`,
+      htmlContent,
+    });
+    return result;
+  }),
+
+  // US-076: Relatório de rentabilidade por contato
+  profitabilityReport: protectedProcedure.input(z.object({
+    contactId: z.number().optional(),
+    startDate: z.date().optional(),
+    endDate: z.date().optional(),
+  })).query(async ({ input }) => {
+    const db = await getDb();
+    if (!db) return [];
+    const { invoices: invoicesTable, contacts: contactsTable } = await import("../drizzle/schema");
+    const { gte: gteOp, lte: lteOp, and: andOp, eq: eqOp } = await import("drizzle-orm");
+    const conditions = [];
+    if (input.contactId) conditions.push(eqOp(invoicesTable.contactId, input.contactId));
+    if (input.startDate) conditions.push(gteOp(invoicesTable.createdAt, input.startDate));
+    if (input.endDate) conditions.push(lteOp(invoicesTable.createdAt, input.endDate));
+    const query = db
+      .select({
+        contactId: invoicesTable.contactId,
+        total: invoicesTable.total,
+        status: invoicesTable.status,
+        createdAt: invoicesTable.createdAt,
+      })
+      .from(invoicesTable);
+    const allInvoices = conditions.length > 0 ? await query.where(andOp(...conditions)) : await query;
+    // Group by contact
+    const byContact: Record<number, { contactId: number; totalRevenue: number; paidRevenue: number; invoiceCount: number }> = {};
+    for (const inv of allInvoices) {
+      const cid = inv.contactId ?? 0;
+      if (!byContact[cid]) byContact[cid] = { contactId: cid, totalRevenue: 0, paidRevenue: 0, invoiceCount: 0 };
+      byContact[cid].totalRevenue += parseFloat(String(inv.total ?? 0));
+      if (inv.status === "paid") byContact[cid].paidRevenue += parseFloat(String(inv.total ?? 0));
+      byContact[cid].invoiceCount++;
+    }
+    return Object.values(byContact).sort((a, b) => b.totalRevenue - a.totalRevenue);
+  }),
+});
+
+// ─── WHATSAPP AI ANALYSIS ROUTER ───────────────────────────────────────────
+const whatsappAiRouter = router({
+  list: protectedProcedure.query(async () => {
+    return getWhatsappAnalysisList();
+  }),
+  getByChatId: protectedProcedure.input(z.object({ chatId: z.number() })).query(async ({ input }) => {
+    return getWhatsappAnalysisByChatId(input.chatId);
+  }),
+  analyze: protectedProcedure.input(z.object({
+    chatId: z.number(),
+    chatJid: z.string(),
+    contactName: z.string().optional(),
+    contactId: z.number().optional(),
+    forceRefresh: z.boolean().optional(),
+  })).mutation(async ({ input }) => {
+    // Fetch messages from Z-API (up to 100 most recent)
+    const phone = input.chatJid.replace(/@.*/, "");
+    const messages = await getChatMessages(phone, 0, 100);
+    if (!messages || messages.length === 0) {
+      return { error: "Nenhuma mensagem encontrada para este chat." };
+    }
+    // Build conversation text for AI
+    const conversationText = messages
+      .slice(-80) // last 80 messages
+      .map((m) => {
+        const sender = m.fromMe ? "[CRM]" : `[${input.contactName ?? "Contato"}]`;
+        const text = (m.text as { message?: string } | undefined)?.message || "[mídia]";
+        return `${sender}: ${text}`;
+      })
+      .join("\n");
+    const systemPrompt = `Você é um analista de CRM especializado em estúdios de podcast. Analise a conversa de WhatsApp abaixo e retorne um JSON estruturado com as seguintes informações:
+- summary: resumo da conversa em 2-3 frases
+- opportunityScore: pontuação de 0-100 indicando o potencial comercial
+- urgency: "low", "medium" ou "high" baseado na urgência do contato
+- stage: estágio sugerido do pipeline ("Prospecção", "Qualificação", "Proposta", "Negociação", "Fechamento")
+- estimatedValue: valor estimado da oportunidade em BRL (número, pode ser null)
+- servicesDetected: array de strings com serviços mencionados (ex: ["gravação", "mixagem", "masterização"])
+- suggestions: array de objetos com sugestões de ação, cada um com:
+  - type: "create_lead" | "update_lead" | "send_quote" | "send_invoice" | "send_contract" | "schedule_followup" | "send_nps"
+  - title: título curto da sugestão
+  - description: descrição detalhada do que fazer
+  - priority: "high" | "medium" | "low"
+  - estimatedValue: valor estimado se aplicável (número ou null)
+
+Responda APENAS com o JSON, sem markdown ou explicações.`;
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Conversa:\n${conversationText}` },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "whatsapp_analysis",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              summary: { type: "string" },
+              opportunityScore: { type: "number" },
+              urgency: { type: "string", enum: ["low", "medium", "high"] },
+              stage: { type: "string" },
+              estimatedValue: { type: ["number", "null"] },
+              servicesDetected: { type: "array", items: { type: "string" } },
+              suggestions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    type: { type: "string" },
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    priority: { type: "string" },
+                    estimatedValue: { type: ["number", "null"] },
+                  },
+                  required: ["type", "title", "description", "priority", "estimatedValue"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["summary", "opportunityScore", "urgency", "stage", "estimatedValue", "servicesDetected", "suggestions"],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+    const raw = response.choices[0]?.message?.content;
+    const content = typeof raw === "string" ? raw : "{}";
+    let parsed: {
+      summary: string;
+      opportunityScore: number;
+      urgency: string;
+      stage: string;
+      estimatedValue: number | null;
+      servicesDetected: string[];
+      suggestions: Array<{ type: string; title: string; description: string; priority: string; estimatedValue: number | null }>;
+    };
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      return { error: "Falha ao processar resposta da IA." };
+    }
+    // Save to DB
+    await upsertWhatsappAnalysis({
+      chatId: input.chatId,
+      chatJid: input.chatJid,
+      contactId: input.contactId,
+      contactName: input.contactName,
+      messagesAnalyzed: messages.length,
+      opportunityScore: parsed.opportunityScore,
+      stage: parsed.stage,
+      estimatedValue: parsed.estimatedValue ? String(parsed.estimatedValue) : null,
+      urgency: parsed.urgency,
+      summary: parsed.summary,
+      suggestionsJson: JSON.stringify(parsed.suggestions),
+      servicesDetected: JSON.stringify(parsed.servicesDetected),
+      analyzedAt: new Date(),
+    });
+    return { success: true, analysis: parsed, messagesAnalyzed: messages.length };
+  }),
+  delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    await deleteWhatsappAnalysis(input.id);
+    return { success: true };
+  }),
+  bulkAnalyze: protectedProcedure.input(z.object({
+    chatIds: z.array(z.object({ chatId: z.number(), chatJid: z.string(), contactName: z.string().optional(), contactId: z.number().optional() })),
+  })).mutation(async ({ input }) => {
+    const results: Array<{ chatId: number; status: string; error?: string }> = [];
+    for (const chat of input.chatIds) {
+      try {
+        const phone = chat.chatJid.replace(/@.*/, "");
+        const messages = await getChatMessages(phone, 0, 50);
+        if (!messages || messages.length === 0) {
+          results.push({ chatId: chat.chatId, status: "skipped", error: "Sem mensagens" });
+          continue;
+        }
+        const conversationText = messages
+          .slice(-50)
+          .map((m) => {
+            const sender = m.fromMe ? "[CRM]" : `[${chat.contactName ?? "Contato"}]`;
+            const text = (m.text as { message?: string } | undefined)?.message || "[mídia]";
+            return `${sender}: ${text}`;
+          })
+          .join("\n");
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "Analise esta conversa de WhatsApp de um estúdio de podcast e retorne JSON com: summary (string), opportunityScore (0-100), urgency (low/medium/high), stage (string), estimatedValue (number ou null), servicesDetected (array de strings), suggestions (array com type, title, description, priority, estimatedValue). Responda APENAS com JSON válido." },
+            { role: "user", content: conversationText },
+          ],
+        });
+        const rawContent = response.choices[0]?.message?.content;
+        const raw = typeof rawContent === "string" ? rawContent : "{}";
+        let parsed: { summary?: string; opportunityScore?: number; urgency?: string; stage?: string; estimatedValue?: number | null; servicesDetected?: string[]; suggestions?: Array<{ type: string; title: string; description: string; priority: string; estimatedValue: number | null }> };
+        try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+        await upsertWhatsappAnalysis({
+          chatId: chat.chatId,
+          chatJid: chat.chatJid,
+          contactId: chat.contactId,
+          contactName: chat.contactName,
+          messagesAnalyzed: messages.length,
+          opportunityScore: parsed.opportunityScore ?? 0,
+          stage: parsed.stage,
+          estimatedValue: parsed.estimatedValue ? String(parsed.estimatedValue) : null,
+          urgency: parsed.urgency ?? "low",
+          summary: parsed.summary ?? "",
+          suggestionsJson: JSON.stringify(parsed.suggestions ?? []),
+          servicesDetected: JSON.stringify(parsed.servicesDetected ?? []),
+          analyzedAt: new Date(),
+        });
+        results.push({ chatId: chat.chatId, status: "ok" });
+      } catch (e) {
+        results.push({ chatId: chat.chatId, status: "error", error: String(e) });
+      }
+    }
+    return { results };
+  }),
+});
+
+// ─── NPS ROUTER ───────────────────────────────────────────────────────────────
+const npsRouter = router({
+  list: protectedProcedure.input(z.object({ contactId: z.number().optional() })).query(async ({ input }) => {
+    return getNpsResponses(input.contactId);
+  }),
+  stats: protectedProcedure.query(async () => {
+    return getNpsStats();
+  }),
+  send: protectedProcedure.input(z.object({
+    contactId: z.number(),
+    phone: z.string(),
+    contactName: z.string(),
+  })).mutation(async ({ input }) => {
+    const message = `Olá ${input.contactName}! 😊\n\nGostaríamos de saber sua opinião sobre nossos serviços.\n\nEm uma escala de 0 a 10, o quanto você nos recomendaria para um amigo ou colega?\n\n0️⃣ 1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟\n\nResponda com o número da sua nota. Sua opinião é muito importante para nós! 🙏`;
+    await sendText(input.phone, message);
+    const id = await createNpsResponse({
+      contactId: input.contactId,
+      sentAt: new Date(),
+      channel: "whatsapp",
+    });
+    return { success: true, id };
+  }),
+  recordResponse: protectedProcedure.input(z.object({
+    id: z.number(),
+    score: z.number().min(0).max(10),
+    comment: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    await updateNpsResponse(input.id, {
+      score: input.score,
+      comment: input.comment,
+      respondedAt: new Date(),
+    });
+    return { success: true };
+  }),
+});
+
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -1960,5 +2324,8 @@ export const appRouter = router({
   sprintA: sprintARouter,
    notifications: notificationsRouter,
   toc: tocRouter,
+  whatsappAi: whatsappAiRouter,
+  nps: npsRouter,
+  sprintD: sprintDRouter,
 });
 export type AppRouter = typeof appRouter;

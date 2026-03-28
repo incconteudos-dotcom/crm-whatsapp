@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Mic2, Plus, Pencil, Trash2, ExternalLink, ChevronRight, MessageSquare,
-  Radio, Calendar, User, Link2, ArrowRight, MoreHorizontal, FileText
+  Radio, Calendar, User, Link2, ArrowRight, MoreHorizontal, FileText, Brain, Loader2
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -94,6 +94,17 @@ export default function Podcasts() {
   });
   const addComment = trpc.podcasts.addComment.useMutation({
     onSuccess: () => { utils.podcasts.comments.invalidate(); setNewComment(""); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const [showBriefingDialog, setShowBriefingDialog] = useState(false);
+  const [briefingContent, setBriefingContent] = useState("");
+
+  const generateBriefing = trpc.sprintD.generateEpisodeBriefing.useMutation({
+    onSuccess: (data) => {
+      setBriefingContent(data.briefing);
+      setShowBriefingDialog(true);
+    },
     onError: (e) => toast.error(e.message),
   });
 
@@ -383,15 +394,36 @@ export default function Podcasts() {
                 </div>
 
                 {/* Ações */}
-                <div className="flex gap-2 pt-2">
-                  <Button variant="outline" className="flex-1" onClick={() => { openEditEpisode(selectedEpisode); setSelectedEpisode(null); }}>
-                    <Pencil className="h-4 w-4 mr-2" />Editar
+                <div className="flex flex-col gap-2 pt-2">
+                  <Button
+                    variant="default"
+                    className="w-full gap-2"
+                    disabled={generateBriefing.isPending}
+                    onClick={() => {
+                      if (!selectedPodcast) return;
+                      generateBriefing.mutate({
+                        episodeId: selectedEpisode.id,
+                        podcastName: selectedPodcast.name,
+                        episodeTitle: selectedEpisode.title,
+                        episodeDescription: selectedEpisode.description ?? undefined,
+                        guestName: selectedEpisode.guestName ?? undefined,
+                        topics: selectedEpisode.notes ?? undefined,
+                      });
+                    }}
+                  >
+                    {generateBriefing.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
+                    Gerar Briefing IA
                   </Button>
-                  <Button variant="outline" className="text-destructive" onClick={() => {
-                    if (confirm("Remover este episódio?")) deleteEpisode.mutate({ id: selectedEpisode.id });
-                  }}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => { openEditEpisode(selectedEpisode); setSelectedEpisode(null); }}>
+                      <Pencil className="h-4 w-4 mr-2" />Editar
+                    </Button>
+                    <Button variant="outline" className="text-destructive" onClick={() => {
+                      if (confirm("Remover este episódio?")) deleteEpisode.mutate({ id: selectedEpisode.id });
+                    }}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Comentários */}
@@ -553,6 +585,27 @@ export default function Podcasts() {
             <Button onClick={submitEpisode} disabled={createEpisode.isPending || updateEpisode.isPending}>
               {editingEpisode ? "Salvar" : "Criar Episódio"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Dialog de Briefing IA */}
+      <Dialog open={showBriefingDialog} onOpenChange={setShowBriefingDialog}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              Briefing do Episódio
+            </DialogTitle>
+          </DialogHeader>
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed bg-muted/30 p-4 rounded-lg">{briefingContent}</pre>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              navigator.clipboard.writeText(briefingContent);
+              toast.success("Briefing copiado!");
+            }}>Copiar</Button>
+            <Button onClick={() => setShowBriefingDialog(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

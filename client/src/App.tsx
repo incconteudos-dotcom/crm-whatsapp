@@ -33,6 +33,7 @@ import ClientPortalDashboard, { ClientPortalMagicEntry } from "./pages/ClientPor
 import BrandSettings from "./pages/BrandSettings";
 import PaymentHistory from "./pages/PaymentHistory";
 import { ToC } from "./pages/ToC";
+import WhatsAppAnalysis from "./pages/WhatsAppAnalysis";
 
 function Router() {
   return (
@@ -67,6 +68,7 @@ function Router() {
       <Route path="/studio-rooms" component={StudioRooms} />
       <Route path="/payment-history" component={PaymentHistory} />
       <Route path="/toc" component={ToC} />
+      <Route path="/whatsapp-analysis" component={WhatsAppAnalysis} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

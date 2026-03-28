@@ -78,6 +78,10 @@ import {
   type InsertTocSession,
   type InsertTocConstraint,
   type InsertTocActionItem,
+  whatsappAnalysis,
+  npsResponses,
+  type InsertWhatsappAnalysis,
+  type InsertNpsResponse,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -1913,4 +1917,73 @@ export async function getTocDashboard() {
     latestSession: sessions[0] ?? null,
     constraintsByDomain: domainStats,
   };
+}
+
+// ─── WHATSAPP AI ANALYSIS ─────────────────────────────────────────────────────
+export async function getWhatsappAnalysisList() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(whatsappAnalysis).orderBy(desc(whatsappAnalysis.analyzedAt));
+}
+
+export async function getWhatsappAnalysisByChatId(chatId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(whatsappAnalysis).where(eq(whatsappAnalysis.chatId, chatId)).limit(1);
+  return result[0];
+}
+
+export async function upsertWhatsappAnalysis(data: InsertWhatsappAnalysis) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const existing = await db.select().from(whatsappAnalysis).where(eq(whatsappAnalysis.chatId, data.chatId)).limit(1);
+  if (existing.length > 0) {
+    await db.update(whatsappAnalysis).set({ ...data, updatedAt: new Date() }).where(eq(whatsappAnalysis.chatId, data.chatId));
+    return existing[0].id;
+  }
+  const [result] = await db.insert(whatsappAnalysis).values(data);
+  return (result as { insertId: number }).insertId;
+}
+
+export async function deleteWhatsappAnalysis(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(whatsappAnalysis).where(eq(whatsappAnalysis.id, id));
+}
+
+// ─── NPS RESPONSES ────────────────────────────────────────────────────────────
+export async function getNpsResponses(contactId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  if (contactId) {
+    return db.select().from(npsResponses).where(eq(npsResponses.contactId, contactId)).orderBy(desc(npsResponses.sentAt));
+  }
+  return db.select().from(npsResponses).orderBy(desc(npsResponses.sentAt));
+}
+
+export async function createNpsResponse(data: InsertNpsResponse) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(npsResponses).values(data);
+  return (result as { insertId: number }).insertId;
+}
+
+export async function updateNpsResponse(id: number, data: Partial<InsertNpsResponse>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(npsResponses).set(data).where(eq(npsResponses.id, id));
+}
+
+export async function getNpsStats() {
+  const db = await getDb();
+  if (!db) return { total: 0, responded: 0, promoters: 0, passives: 0, detractors: 0, npsScore: 0, avgScore: 0 };
+  const all = await db.select().from(npsResponses).where(sql`score IS NOT NULL`);
+  const total = all.length;
+  if (total === 0) return { total: 0, responded: 0, promoters: 0, passives: 0, detractors: 0, npsScore: 0, avgScore: 0 };
+  const promoters = all.filter(r => (r.score ?? 0) >= 9).length;
+  const passives = all.filter(r => (r.score ?? 0) >= 7 && (r.score ?? 0) <= 8).length;
+  const detractors = all.filter(r => (r.score ?? 0) <= 6).length;
+  const npsScore = Math.round(((promoters - detractors) / total) * 100);
+  const avgScore = Math.round((all.reduce((s, r) => s + (r.score ?? 0), 0) / total) * 10) / 10;
+  return { total, responded: total, promoters, passives, detractors, npsScore, avgScore };
 }

@@ -705,3 +705,39 @@ export const tocActionItems = mysqlTable("toc_action_items", {
 });
 export type TocActionItem = typeof tocActionItems.$inferSelect;
 export type InsertTocActionItem = typeof tocActionItems.$inferInsert;
+
+// ─── WHATSAPP AI ANALYSIS ─────────────────────────────────────────────────────
+export const whatsappAnalysis = mysqlTable("whatsapp_analysis", {
+  id: int("id").autoincrement().primaryKey(),
+  chatId: int("chat_id").notNull(),
+  chatJid: varchar("chat_jid", { length: 128 }).notNull(),
+  contactId: int("contact_id"),
+  contactName: varchar("contact_name", { length: 255 }),
+  messagesAnalyzed: int("messages_analyzed").default(0),
+  opportunityScore: int("opportunity_score").default(0),
+  stage: varchar("stage", { length: 50 }),
+  estimatedValue: decimal("estimated_value", { precision: 12, scale: 2 }),
+  urgency: varchar("urgency", { length: 20 }).default("low"),
+  summary: text("summary"),
+  suggestionsJson: text("suggestions_json"),
+  servicesDetected: text("services_detected"),
+  analyzedAt: timestamp("analyzed_at").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type WhatsappAnalysis = typeof whatsappAnalysis.$inferSelect;
+export type InsertWhatsappAnalysis = typeof whatsappAnalysis.$inferInsert;
+
+// ─── NPS RESPONSES ────────────────────────────────────────────────────────────
+export const npsResponses = mysqlTable("nps_responses", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contact_id").notNull(),
+  score: int("score"),
+  comment: text("comment"),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+  respondedAt: timestamp("responded_at"),
+  channel: varchar("channel", { length: 20 }).default("whatsapp"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type NpsResponse = typeof npsResponses.$inferSelect;
+export type InsertNpsResponse = typeof npsResponses.$inferInsert;
