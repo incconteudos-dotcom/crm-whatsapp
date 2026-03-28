@@ -128,6 +128,11 @@ export default function Contracts() {
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
+  const sendPortalWhatsAppMutation = trpc.portal.sendViaWhatsApp.useMutation({
+    onSuccess: (data: { contactName: string }) => toast.success(`Link enviado via WhatsApp para ${data.contactName}!`),
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
   const filteredContracts = useMemo(() => {
     if (!contracts) return [];
     return (contracts as ContractWithContact[]).filter(c => {
@@ -523,11 +528,31 @@ export default function Contracts() {
                   </Button>
                 </div>
                 {portalLink && (
-                  <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 mb-2">
-                    <p className="text-xs text-purple-300 truncate flex-1">{portalLink}</p>
-                    <Button size="sm" variant="ghost" className="shrink-0 h-7 px-2" onClick={() => { navigator.clipboard.writeText(portalLink); toast.success("Copiado!"); }}>
-                      <Copy className="w-3.5 h-3.5" />
-                    </Button>
+                  <div className="space-y-2 mb-2">
+                    <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
+                      <p className="text-xs text-purple-300 truncate flex-1">{portalLink}</p>
+                      <Button size="sm" variant="ghost" className="shrink-0 h-7 px-2" onClick={() => { navigator.clipboard.writeText(portalLink); toast.success("Copiado!"); }}>
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    {selectedContract.contactId && (
+                      <Button
+                        size="sm"
+                        className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => sendPortalWhatsAppMutation.mutate({
+                          portalUrl: portalLink,
+                          contactId: selectedContract.contactId!,
+                          documentTitle: selectedContract.title,
+                          documentType: "contract",
+                        })}
+                        disabled={sendPortalWhatsAppMutation.isPending}
+                      >
+                        {sendPortalWhatsAppMutation.isPending
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <MessageSquare className="w-3.5 h-3.5" />}
+                        Enviar Link via WhatsApp
+                      </Button>
+                    )}
                   </div>
                 )}
 

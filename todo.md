@@ -289,3 +289,8 @@
 - [x] Ao receber mensagem via webhook, cruzar número com tabela contacts
 - [x] Salvar contactId no whatsappChats quando encontrado
 - [x] Exibir nome do contato na lista de chats WhatsApp
+
+### Envio de Link do Portal via WhatsApp
+- [x] Backend: procedure portal.sendViaWhatsApp (busca telefone do contato, monta mensagem, envia via Z-API)
+- [x] Contracts.tsx: botão "Enviar Link via WhatsApp" aparece após gerar o link do portal
+- [x] Quotes.tsx: botão "Enviar Link via WhatsApp" aparece após gerar o link do portal

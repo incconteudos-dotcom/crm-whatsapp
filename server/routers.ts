@@ -627,6 +627,27 @@ const portalRouter = router({
     if (row.type === "quote") await updateQuote(row.documentId, { status: "accepted" });
     return { success: true };
   }),
+  // Envia o link do portal via WhatsApp para o contato vinculado
+  sendViaWhatsApp: protectedProcedure.input(z.object({
+    portalUrl: z.string(),
+    contactId: z.number(),
+    documentTitle: z.string().optional(),
+    documentType: z.enum(["contract", "invoice", "quote"]),
+  })).mutation(async ({ input }) => {
+    const contact = await getContactById(input.contactId);
+    if (!contact?.phone) throw new TRPCError({ code: "BAD_REQUEST", message: "Contato sem número de telefone cadastrado" });
+    const digits = contact.phone.replace(/\D/g, "");
+    const jid = digits.startsWith("55") ? `${digits}@s.whatsapp.net` : `55${digits}@s.whatsapp.net`;
+    const typeLabel = input.documentType === "contract" ? "contrato" : input.documentType === "invoice" ? "fatura" : "orçamento";
+    const title = input.documentTitle ? `*${input.documentTitle}*` : `seu ${typeLabel}`;
+    const message = `Olá, ${contact.name}! 👋\n\nSegue o link para visualizar e assinar ${title}:\n\n${input.portalUrl}\n\nO link é seguro e exclusivo para você. Qualquer dúvida, estou à disposição! 😊`;
+    try {
+      await sendText(jid, message);
+      return { success: true, jid, contactName: contact.name };
+    } catch {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Falha ao enviar mensagem via WhatsApp" });
+    }
+  }),
 });
 
 // ─── STRIPE ROUTER ───────────────────────────────────────────────────────────
