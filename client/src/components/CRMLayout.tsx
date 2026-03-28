@@ -10,7 +10,9 @@ import {
   ChevronRight,
   CreditCard,
   FileText,
+  FolderOpen,
   Home,
+  Library,
   LogOut,
   MessageSquare,
   Package,
@@ -18,6 +20,7 @@ import {
   Settings,
   Shield,
   Users,
+  Wallet,
   Zap,
 } from "lucide-react";
 import { useState } from "react";
@@ -38,6 +41,9 @@ const navItems = [
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
   { icon: CreditCard, label: "Pagamentos", path: "/payments" },
   { icon: Package, label: "Catálogo", path: "/products" },
+  { icon: FolderOpen, label: "Projetos", path: "/projects" },
+  { icon: Library, label: "Modelos", path: "/contract-templates" },
+  { icon: Wallet, label: "Créditos", path: "/credits" },
 ];
 
 const adminItems = [

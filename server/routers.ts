@@ -22,6 +22,10 @@ import {
   linkChatToContact,
   getProducts, getProductById, createProduct, updateProduct, deleteProduct,
   getBillingReminders, createBillingReminder, cancelBillingReminder,
+  getProjects, getProjectById, createProject, updateProject, deleteProject, getProjectLinks, addProjectLink, removeProjectLink,
+  getContractTemplates, getContractTemplateById, createContractTemplate, updateContractTemplate, deleteContractTemplate, incrementTemplateUsage,
+  getAllContactTags, createContactTag, deleteContactTag, getTagsForContact, assignTagToContact, removeTagFromContact,
+  getCreditBalance, getCreditHistory, addCreditTransaction,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -1043,6 +1047,131 @@ const billingRemindersRouter = router({
   ),
 });
 
+// ─── PROJECTS ROUTER ───────────────────────────────────────────────────────
+const projectsRouter = router({
+  list: protectedProcedure.input(z.object({ contactId: z.number().optional() })).query(({ input }) =>
+    getProjects(input.contactId)
+  ),
+  get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) =>
+    getProjectById(input.id)
+  ),
+  create: protectedProcedure.input(z.object({
+    name: z.string().min(1),
+    contactId: z.number().optional(),
+    status: z.enum(["briefing", "recording", "editing", "review", "published", "archived"]).optional(),
+    type: z.enum(["podcast", "audiobook", "commercial", "voiceover", "music", "other"]).optional(),
+    description: z.string().optional(),
+    startDate: z.date().optional(),
+    deadline: z.date().optional(),
+    totalValue: z.string().optional(),
+    assignedTo: z.number().optional(),
+    notes: z.string().optional(),
+  })).mutation(({ input }) => createProject(input)),
+  update: protectedProcedure.input(z.object({
+    id: z.number(),
+    name: z.string().optional(),
+    contactId: z.number().optional(),
+    status: z.enum(["briefing", "recording", "editing", "review", "published", "archived"]).optional(),
+    type: z.enum(["podcast", "audiobook", "commercial", "voiceover", "music", "other"]).optional(),
+    description: z.string().optional(),
+    startDate: z.date().optional(),
+    deadline: z.date().optional(),
+    totalValue: z.string().optional(),
+    assignedTo: z.number().optional(),
+    notes: z.string().optional(),
+  })).mutation(({ input }) => { const { id, ...data } = input; return updateProject(id, data); }),
+  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => deleteProject(input.id)),
+  links: protectedProcedure.input(z.object({ projectId: z.number() })).query(({ input }) => getProjectLinks(input.projectId)),
+  addLink: protectedProcedure.input(z.object({
+    projectId: z.number(),
+    entityType: z.enum(["booking", "invoice", "contract", "quote", "task"]),
+    entityId: z.number(),
+  })).mutation(({ input }) => addProjectLink(input.projectId, input.entityType, input.entityId)),
+  removeLink: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => removeProjectLink(input.id)),
+});
+
+// ─── CONTRACT TEMPLATES ROUTER ───────────────────────────────────────────────
+const contractTemplatesRouter = router({
+  list: protectedProcedure.query(() => getContractTemplates()),
+  get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) => getContractTemplateById(input.id)),
+  create: protectedProcedure.input(z.object({
+    name: z.string().min(1),
+    category: z.string().optional(),
+    description: z.string().optional(),
+    content: z.string().min(1),
+    variables: z.string().optional(),
+    isDefault: z.boolean().optional(),
+  })).mutation(({ input }) => createContractTemplate(input)),
+  update: protectedProcedure.input(z.object({
+    id: z.number(),
+    name: z.string().optional(),
+    category: z.string().optional(),
+    description: z.string().optional(),
+    content: z.string().optional(),
+    variables: z.string().optional(),
+    isDefault: z.boolean().optional(),
+  })).mutation(({ input }) => { const { id, ...data } = input; return updateContractTemplate(id, data); }),
+  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => deleteContractTemplate(input.id)),
+  useTemplate: protectedProcedure.input(z.object({
+    templateId: z.number(),
+    variables: z.record(z.string(), z.string()).optional(),
+  })).mutation(async ({ input }) => {
+    const template = await getContractTemplateById(input.templateId);
+    if (!template) throw new TRPCError({ code: "NOT_FOUND", message: "Modelo não encontrado" });
+    await incrementTemplateUsage(input.templateId);
+    let content = template.content ?? "";
+    if (input.variables) {
+      for (const [key, value] of Object.entries(input.variables)) {
+        content = content.split(`{{${key}}}`).join(String(value));
+      }
+    }
+    return { content, template };
+  }),
+});
+
+// ─── CONTACT TAGS ROUTER ─────────────────────────────────────────────────────
+const contactTagsRouter = router({
+  list: protectedProcedure.query(() => getAllContactTags()),
+  create: managerProcedure.input(z.object({
+    name: z.string().min(1),
+    color: z.string().optional().default("#6366f1"),
+  })).mutation(({ input }) => createContactTag(input.name, input.color)),
+  delete: managerProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => deleteContactTag(input.id)),
+  getForContact: protectedProcedure.input(z.object({ contactId: z.number() })).query(({ input }) => getTagsForContact(input.contactId)),
+  assign: protectedProcedure.input(z.object({ contactId: z.number(), tagId: z.number() })).mutation(({ input }) => assignTagToContact(input.contactId, input.tagId)),
+  remove: protectedProcedure.input(z.object({ contactId: z.number(), tagId: z.number() })).mutation(({ input }) => removeTagFromContact(input.contactId, input.tagId)),
+});
+
+// ─── CREDITS ROUTER ──────────────────────────────────────────────────────────
+const creditsRouter = router({
+  balance: protectedProcedure.input(z.object({ contactId: z.number() })).query(({ input }) => getCreditBalance(input.contactId)),
+  history: protectedProcedure.input(z.object({ contactId: z.number() })).query(({ input }) => getCreditHistory(input.contactId)),
+  add: managerProcedure.input(z.object({
+    contactId: z.number(),
+    type: z.enum(["credit", "debit", "bonus", "refund"]),
+    amount: z.string(),
+    description: z.string().min(1),
+    referenceType: z.string().optional(),
+    referenceId: z.number().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    const currentBalance = await getCreditBalance(input.contactId);
+    const amount = parseFloat(input.amount);
+    const newBalance = input.type === "debit" ? currentBalance - amount : currentBalance + amount;
+    if (newBalance < 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Saldo insuficiente" });
+    await addCreditTransaction({
+      contactId: input.contactId,
+      type: input.type,
+      amount: input.amount,
+      balance: newBalance.toFixed(2),
+      description: input.description,
+      referenceType: input.referenceType,
+      referenceId: input.referenceId,
+      createdBy: ctx.user.id,
+    });
+    return { success: true, newBalance };
+  }),
+});
+
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -1072,6 +1201,10 @@ export const appRouter = router({
   portal: portalRouter,
   products: productsRouter,
   billingReminders: billingRemindersRouter,
+  projects: projectsRouter,
+  contractTemplates: contractTemplatesRouter,
+  contactTags: contactTagsRouter,
+  credits: creditsRouter,
 });
 
 export type AppRouter = typeof appRouter;

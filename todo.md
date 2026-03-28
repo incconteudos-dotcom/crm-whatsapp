@@ -302,3 +302,16 @@
 - [x] Converter orçamento aceito em contrato (procedure + botão no drawer)
 - [x] Lembretes automáticos de cobrança (agendar, cancelar, listar por fatura)
 - [x] Modal de agendamento de lembrete no drawer de Faturas (canal + data + mensagem)
+
+## Sprint 2 — Projetos, Biblioteca de Contratos e Créditos
+
+- [x] Tabela projects (kanban briefing→gravação→edição→revisão→publicado→arquivado)
+- [x] Tabela contractTemplates (biblioteca de modelos com variáveis)
+- [x] Tabela contactTags (tags de contatos)
+- [x] Tabela creditTransactions (créditos por cliente com saldo)
+- [x] Tabela projectLinks (links de arquivos vinculados a projetos)
+- [x] Página /projects — kanban de projetos com drawer de detalhes e progressão de status
+- [x] Página /contract-templates — biblioteca de modelos com preview, variáveis, copiar e editar
+- [x] Página /credits — saldo por cliente com histórico de transações (crédito/débito/bônus/reembolso)
+- [x] 3 modelos padrão prontos (Podcast, Locução, NDA)
+- [x] Menu lateral atualizado com Projetos, Modelos e Créditos

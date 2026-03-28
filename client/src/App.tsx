@@ -21,6 +21,9 @@ import Settings from "./pages/Settings";
 import ContactProfile from "./pages/ContactProfile";
 import ClientPortal from "./pages/ClientPortal";
 import Products from "./pages/Products";
+import Projects from "./pages/Projects";
+import ContractTemplates from "./pages/ContractTemplates";
+import Credits from "./pages/Credits";
 
 function Router() {
   return (
@@ -42,6 +45,9 @@ function Router() {
       <Route path="/contacts/:id" component={ContactProfile} />
       <Route path="/portal/:token" component={ClientPortal} />
       <Route path="/products" component={Products} />
+      <Route path="/projects" component={Projects} />
+      <Route path="/contract-templates" component={ContractTemplates} />
+      <Route path="/credits" component={Credits} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -306,3 +306,80 @@ export const billingReminders = mysqlTable("billing_reminders", {
 });
 export type BillingReminder = typeof billingReminders.$inferSelect;
 export type InsertBillingReminder = typeof billingReminders.$inferInsert;
+
+// ─── PROJECTS ────────────────────────────────────────────────────────────────
+export const projects = mysqlTable("projects", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  contactId: int("contactId"),
+  status: mysqlEnum("status", ["briefing", "recording", "editing", "review", "published", "archived"]).default("briefing"),
+  type: mysqlEnum("type", ["podcast", "audiobook", "commercial", "voiceover", "music", "other"]).default("podcast"),
+  description: text("description"),
+  startDate: timestamp("startDate"),
+  deadline: timestamp("deadline"),
+  totalValue: decimal("totalValue", { precision: 12, scale: 2 }),
+  assignedTo: int("assignedTo"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = typeof projects.$inferInsert;
+
+// ─── CONTRACT TEMPLATES ──────────────────────────────────────────────────────
+export const contractTemplates = mysqlTable("contract_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }).default("general"),
+  description: text("description"),
+  content: text("content").notNull(),
+  variables: text("variables"),
+  isDefault: boolean("isDefault").default(false),
+  usageCount: int("usageCount").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ContractTemplate = typeof contractTemplates.$inferSelect;
+export type InsertContractTemplate = typeof contractTemplates.$inferInsert;
+
+// ─── CONTACT TAGS ────────────────────────────────────────────────────────────
+export const contactTags = mysqlTable("contact_tags", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  color: varchar("color", { length: 32 }).default("#6366f1"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ContactTag = typeof contactTags.$inferSelect;
+
+export const contactTagAssignments = mysqlTable("contact_tag_assignments", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contactId").notNull(),
+  tagId: int("tagId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── CREDIT TRANSACTIONS ─────────────────────────────────────────────────────
+export const creditTransactions = mysqlTable("credit_transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contactId").notNull(),
+  type: mysqlEnum("type", ["credit", "debit", "bonus", "refund"]).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  balance: decimal("balance", { precision: 12, scale: 2 }).notNull(),
+  description: varchar("description", { length: 500 }).notNull(),
+  referenceType: varchar("referenceType", { length: 50 }),
+  referenceId: int("referenceId"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type InsertCreditTransaction = typeof creditTransactions.$inferInsert;
+
+// ─── PROJECT LINKS ────────────────────────────────────────────────────────────
+export const projectLinks = mysqlTable("project_links", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  entityType: mysqlEnum("entityType", ["booking", "invoice", "contract", "quote", "task"]).notNull(),
+  entityId: int("entityId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ProjectLink = typeof projectLinks.$inferSelect;

@@ -30,6 +30,15 @@ import {
   clientPortalTokens,
   type InsertBillingReminder,
   type InsertClientPortalToken,
+  projects,
+  contractTemplates,
+  contactTags,
+  contactTagAssignments,
+  creditTransactions,
+  projectLinks,
+  type InsertProject,
+  type InsertContractTemplate,
+  type InsertCreditTransaction,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -735,4 +744,142 @@ export async function markReminderFailed(id: number) {
   const db = await getDb();
   if (!db) return;
   await db.update(billingReminders).set({ status: "failed" }).where(eq(billingReminders.id, id));
+}
+
+// ─── PROJECTS ─────────────────────────────────────────────────────────────────
+export async function getProjects(contactId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  if (contactId) return db.select().from(projects).where(eq(projects.contactId, contactId)).orderBy(desc(projects.createdAt));
+  return db.select().from(projects).orderBy(desc(projects.createdAt));
+}
+export async function getProjectById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
+  return result[0];
+}
+export async function createProject(data: InsertProject) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(projects).values(data);
+  return result;
+}
+export async function updateProject(id: number, data: Partial<InsertProject>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(projects).set({ ...data, updatedAt: new Date() }).where(eq(projects.id, id));
+}
+export async function deleteProject(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(projects).where(eq(projects.id, id));
+}
+export async function getProjectLinks(projectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(projectLinks).where(eq(projectLinks.projectId, projectId));
+}
+export async function addProjectLink(projectId: number, entityType: "booking" | "invoice" | "contract" | "quote" | "task", entityId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(projectLinks).values({ projectId, entityType, entityId });
+}
+export async function removeProjectLink(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(projectLinks).where(eq(projectLinks.id, id));
+}
+
+// ─── CONTRACT TEMPLATES ───────────────────────────────────────────────────────
+export async function getContractTemplates() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(contractTemplates).orderBy(desc(contractTemplates.createdAt));
+}
+export async function getContractTemplateById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(contractTemplates).where(eq(contractTemplates.id, id)).limit(1);
+  return result[0];
+}
+export async function createContractTemplate(data: InsertContractTemplate) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(contractTemplates).values(data);
+  return result;
+}
+export async function updateContractTemplate(id: number, data: Partial<InsertContractTemplate>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(contractTemplates).set({ ...data, updatedAt: new Date() }).where(eq(contractTemplates.id, id));
+}
+export async function deleteContractTemplate(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(contractTemplates).where(eq(contractTemplates.id, id));
+}
+export async function incrementTemplateUsage(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(contractTemplates).set({ usageCount: sql`usageCount + 1` }).where(eq(contractTemplates.id, id));
+}
+
+// ─── CONTACT TAGS ─────────────────────────────────────────────────────────────
+export async function getAllContactTags() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(contactTags).orderBy(contactTags.name);
+}
+export async function createContactTag(name: string, color: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(contactTags).values({ name, color });
+  return result;
+}
+export async function deleteContactTag(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(contactTagAssignments).where(eq(contactTagAssignments.tagId, id));
+  await db.delete(contactTags).where(eq(contactTags.id, id));
+}
+export async function getTagsForContact(contactId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: contactTags.id, name: contactTags.name, color: contactTags.color })
+    .from(contactTagAssignments)
+    .innerJoin(contactTags, eq(contactTagAssignments.tagId, contactTags.id))
+    .where(eq(contactTagAssignments.contactId, contactId));
+}
+export async function assignTagToContact(contactId: number, tagId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(contactTagAssignments).values({ contactId, tagId }).onDuplicateKeyUpdate({ set: { contactId } });
+}
+export async function removeTagFromContact(contactId: number, tagId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(contactTagAssignments).where(and(eq(contactTagAssignments.contactId, contactId), eq(contactTagAssignments.tagId, tagId)));
+}
+
+// ─── CREDIT TRANSACTIONS ──────────────────────────────────────────────────────
+export async function getCreditBalance(contactId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ balance: creditTransactions.balance })
+    .from(creditTransactions)
+    .where(eq(creditTransactions.contactId, contactId))
+    .orderBy(desc(creditTransactions.createdAt))
+    .limit(1);
+  return Number(result[0]?.balance ?? 0);
+}
+export async function getCreditHistory(contactId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(creditTransactions).where(eq(creditTransactions.contactId, contactId)).orderBy(desc(creditTransactions.createdAt));
+}
+export async function addCreditTransaction(data: InsertCreditTransaction) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(creditTransactions).values(data);
 }
