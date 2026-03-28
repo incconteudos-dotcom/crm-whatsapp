@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `activities` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int,\n\t`contactId` int,\n\t`leadId` int,\n\t`type` varchar(50) NOT NULL,\n\t`description` text NOT NULL,\n\t`metadata` json,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `activities_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute CREATE TABLE IF NOT EXISTS `activities` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int,\n\t`contactId` int,\n\t`leadId` int,\n\t`type` varchar(50) NOT NULL,\n\t`description` text NOT NULL,\n\t`metadata` json,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `activities_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 98
+}

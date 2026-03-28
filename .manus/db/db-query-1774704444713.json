@@ -1,0 +1,37 @@
+{
+  "query": "SELECT COUNT(*) as studio_rooms_ok FROM studio_rooms;\nSELECT COUNT(*) as podcasts_ok FROM podcasts;\nSELECT COUNT(*) as projects_ok FROM projects;\nSELECT COUNT(*) as equipment_ok FROM equipment;\nSELECT COUNT(*) as equipment_bookings_ok FROM equipment_bookings;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute SELECT COUNT(*) as studio_rooms_ok FROM studio_rooms;\nSELECT COUNT(*) as podcasts_ok FROM podcasts;\nSELECT COUNT(*) as projects_ok FROM projects;\nSELECT COUNT(*) as equipment_ok FROM equipment;\nSELECT COUNT(*) as equipment_bookings_ok FROM equipment_bookings;",
+  "rows": [
+    {
+      "studio_rooms_ok": "0"
+    },
+    {
+      "studio_rooms_ok": "podcasts_ok"
+    },
+    {
+      "studio_rooms_ok": "0"
+    },
+    {
+      "studio_rooms_ok": "projects_ok"
+    },
+    {
+      "studio_rooms_ok": "0"
+    },
+    {
+      "studio_rooms_ok": "equipment_ok"
+    },
+    {
+      "studio_rooms_ok": "1"
+    },
+    {
+      "studio_rooms_ok": "equipment_bookings_ok"
+    },
+    {
+      "studio_rooms_ok": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "studio_rooms_ok\n0\npodcasts_ok\n0\nprojects_ok\n0\nequipment_ok\n1\nequipment_bookings_ok\n0\n",
+  "stderr": "",
+  "execution_time_ms": 91
+}

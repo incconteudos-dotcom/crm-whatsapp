@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `equipment_bookings` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`equipment_id` int NOT NULL,\n\t`booking_id` int NOT NULL,\n\t`notes` text,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `equipment_bookings_id` PRIMARY KEY(`id`)\n);\n\nALTER TABLE `studio_rooms` ADD COLUMN IF NOT EXISTS `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP;\nALTER TABLE `studio_bookings` ADD COLUMN IF NOT EXISTS `room_id` int;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute CREATE TABLE IF NOT EXISTS `equipment_bookings` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`equipment_id` int NOT NULL,\n\t`booking_id` int NOT NULL,\n\t`notes` text,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `equipment_bookings_id` PRIMARY KEY(`id`)\n);\n\nALTER TABLE `studio_rooms` ADD COLUMN IF NOT EXISTS `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP;\nALTER TABLE `studio_bookings` ADD COLUMN IF NOT EXISTS `room_id` int;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 263
+}

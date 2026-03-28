@@ -1,0 +1,118 @@
+{
+  "query": "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name;",
+  "rows": [
+    {
+      "table_name": "__drizzle_migrations"
+    },
+    {
+      "table_name": "activities"
+    },
+    {
+      "table_name": "automation_executions"
+    },
+    {
+      "table_name": "automation_sequences"
+    },
+    {
+      "table_name": "automation_steps"
+    },
+    {
+      "table_name": "billing_reminders"
+    },
+    {
+      "table_name": "brand_settings"
+    },
+    {
+      "table_name": "client_portal_tokens"
+    },
+    {
+      "table_name": "contact_tag_assignments"
+    },
+    {
+      "table_name": "contact_tags"
+    },
+    {
+      "table_name": "contacts"
+    },
+    {
+      "table_name": "contract_templates"
+    },
+    {
+      "table_name": "contracts"
+    },
+    {
+      "table_name": "credit_transactions"
+    },
+    {
+      "table_name": "daily_routines"
+    },
+    {
+      "table_name": "episode_comments"
+    },
+    {
+      "table_name": "equipment"
+    },
+    {
+      "table_name": "equipment_bookings"
+    },
+    {
+      "table_name": "invoices"
+    },
+    {
+      "table_name": "leads"
+    },
+    {
+      "table_name": "message_templates"
+    },
+    {
+      "table_name": "pipeline_stages"
+    },
+    {
+      "table_name": "pj_documents"
+    },
+    {
+      "table_name": "podcasts"
+    },
+    {
+      "table_name": "portal_magic_links"
+    },
+    {
+      "table_name": "products"
+    },
+    {
+      "table_name": "project_links"
+    },
+    {
+      "table_name": "projects"
+    },
+    {
+      "table_name": "quotes"
+    },
+    {
+      "table_name": "routine_templates"
+    },
+    {
+      "table_name": "studio_bookings"
+    },
+    {
+      "table_name": "studio_rooms"
+    },
+    {
+      "table_name": "tasks"
+    },
+    {
+      "table_name": "users"
+    },
+    {
+      "table_name": "whatsapp_chats"
+    },
+    {
+      "table_name": "whatsapp_messages"
+    }
+  ],
+  "messages": [],
+  "stdout": "table_name\n__drizzle_migrations\nactivities\nautomation_executions\nautomation_sequences\nautomation_steps\nbilling_reminders\nbrand_settings\nclient_portal_tokens\ncontact_tag_assignments\ncontact_tags\ncontacts\ncontract_templates\ncontracts\ncredit_transactions\ndaily_routines\nepisode_comments\nequipment\nequipment_bookings\ninvoices\nleads\nmessage_templates\npipeline_stages\npj_documents\npodcasts\nportal_magic_links\nproducts\nproject_links\nprojects\nquotes\nroutine_templates\nstudio_bookings\nstudio_rooms\ntasks\nusers\nwhatsapp_chats\nwhatsapp_messages\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}

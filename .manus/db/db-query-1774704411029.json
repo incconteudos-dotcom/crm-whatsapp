@@ -1,0 +1,31 @@
+{
+  "query": "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('podcasts','projects','studio_rooms','equipment','episodes','products','contract_templates','client_portal_tokens') ORDER BY table_name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('podcasts','projects','studio_rooms','equipment','episodes','products','contract_templates','client_portal_tokens') ORDER BY table_name;",
+  "rows": [
+    {
+      "table_name": "client_portal_tokens"
+    },
+    {
+      "table_name": "contract_templates"
+    },
+    {
+      "table_name": "equipment"
+    },
+    {
+      "table_name": "podcasts"
+    },
+    {
+      "table_name": "products"
+    },
+    {
+      "table_name": "projects"
+    },
+    {
+      "table_name": "studio_rooms"
+    }
+  ],
+  "messages": [],
+  "stdout": "table_name\nclient_portal_tokens\ncontract_templates\nequipment\npodcasts\nproducts\nprojects\nstudio_rooms\n",
+  "stderr": "",
+  "execution_time_ms": 51
+}
