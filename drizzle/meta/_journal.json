@@ -78,6 +78,13 @@
       "when": 1774666308757,
       "tag": "0010_black_ender_wiggin",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1774705080551,
+      "tag": "0011_clammy_stardust",
+      "breakpoints": true
     }
   ]
 }

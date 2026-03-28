@@ -46,6 +46,8 @@ export const contacts = mysqlTable("contacts", {
   avatarUrl: text("avatarUrl"),
   source: mysqlEnum("source", ["manual", "whatsapp", "import", "website"]).default("manual"),
   assignedUserId: int("assignedUserId"),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
+  subscriptionStatus: mysqlEnum("subscriptionStatus", ["active", "cancelled", "past_due", "trialing", "none"]).default("none"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -156,6 +158,7 @@ export const invoices = mysqlTable("invoices", {
   contactId: int("contactId"),
   leadId: int("leadId"),
   contractId: int("contractId"),
+  bookingId: int("bookingId"),
   assignedUserId: int("assignedUserId"),
   status: mysqlEnum("status", ["draft", "sent", "paid", "overdue", "cancelled"]).default("draft"),
   items: json("items").$type<Array<{ description: string; quantity: number; unitPrice: number; total: number }>>().default([]),
@@ -221,6 +224,9 @@ export const studioBookings = mysqlTable("studio_bookings", {
   notes: text("notes"),
   value: decimal("value", { precision: 12, scale: 2 }),
   invoiceId: int("invoiceId"),
+  paymentStatus: mysqlEnum("paymentStatus", ["pending_payment", "paid", "waived"]).default("waived"),
+  entryInvoiceId: int("entryInvoiceId"),
+  reminderSentAt: timestamp("reminderSentAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

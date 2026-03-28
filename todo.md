@@ -367,11 +367,11 @@
 - [x] Página /equipment com CRUD de equipamentos, filtros por categoria/status, cards visuais
 - [x] Itens "Salas" e "Equipamentos" adicionados ao menu lateral
 
-## Sprint A — Fechamento Financeiro Crítico (42 pts)
-- [ ] US-049: Bloqueio de agenda até pagamento da entrada (13 pts)
-- [ ] US-043: Contrato assinado → cobrança automática de faturas (8 pts)
-- [ ] US-050: Lembrete automático do saldo antes da sessão (8 pts)
-- [ ] US-019: Planos e assinaturas recorrentes via Stripe (13 pts)
+## Sprint A — Fechamento Financeiro Crítico (42 pts) ✅
+- [x] US-049: Bloqueio de agenda até pagamento da entrada (13 pts)
+- [x] US-043: Contrato assinado → cobrança automática de faturas (8 pts)
+- [x] US-050: Lembrete automático do saldo antes da sessão (8 pts)
+- [x] US-019: Planos e assinaturas recorrentes via Stripe (13 pts)
 
 ## Sprint B — Dashboard Executivo, Notificações e Qualidade (37 pts)
 - [ ] US-030: Dashboard executivo com KPIs consolidados (8 pts)
@@ -408,7 +408,6 @@
 - [ ] US-071: Pendências com clientes na rotina consolidada (8 pts)
 
 ## Sprint F — WhatsApp Avançado, Assinatura Digital e Complementares (58 pts)
-- [ ] US-005: Integração real com WhatsApp MCP (lharries/whatsapp-mcp) (13 pts)
 - [ ] US-007: Suporte a mídia no WhatsApp (imagens, docs, áudio) (8 pts)
 - [ ] US-015: Exportação de contrato em PDF (8 pts)
 - [ ] US-016: Assinatura digital de contratos com validade jurídica (8 pts)
@@ -430,3 +429,33 @@
 - [x] Adicionar indicador de status Z-API no rodapé do sidebar
 - [ ] Melhorar hierarquia visual dos cards do Pipeline (valor em destaque)
 - [ ] Adicionar filtros de contexto na lista de chats WhatsApp (Clientes / Leads / Todos)
+
+## Sprint A — Detalhamento de Implementação
+
+### US-049: Bloqueio de agenda até pagamento da entrada
+- [ ] Adicionar coluna `paymentStatus` em `studio_bookings` (pending_payment | paid | waived)
+- [ ] Adicionar coluna `entryInvoiceId` em `studio_bookings` (FK para invoices)
+- [ ] Backend: ao criar agendamento, gerar fatura de entrada automaticamente (50% do valor)
+- [ ] Backend: procedure `studio.confirmPayment` para marcar como pago e liberar agenda
+- [ ] UI: badge de status de pagamento no calendário (vermelho=bloqueado, verde=liberado)
+- [ ] UI: modal de confirmação de pagamento no agendamento
+- [ ] UI: bloquear edição/confirmação de sessão enquanto pagamento pendente
+
+### US-043: Contrato assinado → cobrança automática
+- [ ] Backend: ao assinar contrato (status → signed), gerar faturas automaticamente
+- [ ] Backend: respeitar plano de pagamento do contrato (full / 50-50)
+- [ ] Backend: vincular faturas geradas ao contrato via projectLinks
+- [ ] UI: notificação toast ao assinar contrato com link para faturas geradas
+
+### US-050: Lembrete automático do saldo antes da sessão
+- [ ] Backend: job/procedure que busca sessões nas próximas 48h com saldo devedor
+- [ ] Backend: enviar WhatsApp via Z-API com valor do saldo e link de pagamento
+- [ ] Backend: marcar lembrete como enviado para não duplicar
+- [ ] UI: aba "Lembretes Pendentes" na página do Estúdio
+
+### US-019: Planos e assinaturas recorrentes via Stripe
+- [ ] Criar produtos Stripe recorrentes em server/stripe/products.ts (mensal, trimestral, anual)
+- [ ] Backend: procedure `stripe.createSubscription` com checkout session
+- [ ] Backend: webhook para `customer.subscription.created/updated/deleted`
+- [ ] Adicionar coluna `stripeSubscriptionId` na tabela contacts
+- [ ] UI: página /subscriptions com planos disponíveis e status da assinatura do cliente

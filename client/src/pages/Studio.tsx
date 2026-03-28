@@ -1,7 +1,7 @@
 import CRMLayout from "@/components/CRMLayout";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { Calendar, Plus, Clock, User, Mic, CheckCircle, XCircle, Building2, Package, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Plus, Clock, User, Mic, CheckCircle, XCircle, Building2, Package, ChevronLeft, ChevronRight, DollarSign, AlertCircle, Ban } from "lucide-react";
 import { useState, useMemo } from "react";
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -48,6 +48,17 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelado",
 };
 
+const paymentStatusColors: Record<string, string> = {
+  pending_payment: "bg-orange-500/20 text-orange-400 border border-orange-500/30",
+  paid: "bg-green-500/20 text-green-400 border border-green-500/30",
+  waived: "bg-gray-500/20 text-gray-400 border border-gray-500/30",
+};
+const paymentStatusLabels: Record<string, string> = {
+  pending_payment: "Entrada Pendente",
+  paid: "Entrada Paga",
+  waived: "Dispensada",
+};
+
 export default function Studio() {
   const [createOpen, setCreateOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -85,6 +96,21 @@ export default function Studio() {
 
   const updateMutation = trpc.studio.update.useMutation({
     onSuccess: () => { toast.success("Sessão atualizada!"); utils.studio.bookings.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const confirmPaymentMutation = trpc.sprintA.confirmEntryPayment.useMutation({
+    onSuccess: () => { toast.success("Pagamento da entrada confirmado!"); utils.studio.bookings.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const waivePaymentMutation = trpc.sprintA.waiveEntryPayment.useMutation({
+    onSuccess: () => { toast.success("Entrada dispensada."); utils.studio.bookings.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const createEntryInvoiceMutation = trpc.sprintA.createEntryInvoice.useMutation({
+    onSuccess: () => { toast.success("Fatura de entrada gerada!"); utils.studio.bookings.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -267,6 +293,15 @@ export default function Studio() {
                               </div>
                               {b.engineer && <div className="flex items-center gap-1.5"><User className="w-3 h-3" />{b.engineer}</div>}
                             </div>
+                            {/* Payment status badge */}
+                            {(b as any).paymentStatus && (b as any).paymentStatus !== null && (
+                              <div className={cn("inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full mt-2", paymentStatusColors[(b as any).paymentStatus])}>
+                                {(b as any).paymentStatus === "pending_payment" && <AlertCircle className="w-3 h-3" />}
+                                {(b as any).paymentStatus === "paid" && <CheckCircle className="w-3 h-3" />}
+                                {(b as any).paymentStatus === "waived" && <Ban className="w-3 h-3" />}
+                                {paymentStatusLabels[(b as any).paymentStatus]}
+                              </div>
+                            )}
                             {b.status === "scheduled" && (
                               <div className="flex gap-1 mt-2">
                                 <Button size="sm" variant="outline" className="flex-1 h-7 text-xs" onClick={() => updateMutation.mutate({ id: b.id, status: "confirmed" })}>
@@ -276,6 +311,31 @@ export default function Studio() {
                                   <XCircle className="w-3 h-3 mr-1" />Cancelar
                                 </Button>
                               </div>
+                            )}
+                            {/* Payment action buttons */}
+                            {(b as any).paymentStatus === "pending_payment" && b.value && (
+                              <div className="flex gap-1 mt-1">
+                                <Button size="sm" variant="outline" className="flex-1 h-7 text-xs text-green-400 border-green-500/30 hover:bg-green-500/10"
+                                  onClick={() => confirmPaymentMutation.mutate({ bookingId: b.id })}>
+                                  <DollarSign className="w-3 h-3 mr-1" />Confirmar Pagto
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground"
+                                  onClick={() => waivePaymentMutation.mutate({ bookingId: b.id })}>
+                                  <Ban className="w-3 h-3 mr-1" />Dispensar
+                                </Button>
+                              </div>
+                            )}
+                            {/* Generate entry invoice if has value but no paymentStatus */}
+                            {!(b as any).paymentStatus && b.value && Number(b.value) > 0 && (
+                              <Button size="sm" variant="outline" className="w-full h-7 text-xs mt-1 text-orange-400 border-orange-500/30 hover:bg-orange-500/10"
+                                onClick={() => createEntryInvoiceMutation.mutate({
+                                  bookingId: b.id,
+                                  title: b.title,
+                                  value: b.value!,
+                                  contactId: b.contactId ?? undefined,
+                                })}>
+                                <DollarSign className="w-3 h-3 mr-1" />Gerar Fatura de Entrada (50%)
+                              </Button>
                             )}
                           </div>
                         );

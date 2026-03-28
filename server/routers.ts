@@ -43,6 +43,10 @@ import {
   getEquipment, getEquipmentById, createEquipment, updateEquipment, deleteEquipment,
   getEquipmentBookingsByStudioBooking, createEquipmentBooking, deleteEquipmentBookingsByStudioBooking,
   getEquipmentOccupancyReport, getRoomOccupancyReport,
+  createEntryInvoiceForBooking, confirmBookingEntryPayment, waiveBookingEntryPayment,
+  autoGenerateInvoicesOnContractSign,
+  getBookingsWithPendingPaymentIn48h, markBookingReminderSent,
+  updateContactSubscription,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -1682,6 +1686,67 @@ const equipmentRouter = router({
   occupancyReport: protectedProcedure.query(() => getEquipmentOccupancyReport()),
 });
 
+// ─── SPRINT A ROUTER ────────────────────────────────────────────────────────
+const sprintARouter = router({
+  // US-049: Gerar fatura de entrada ao criar agendamento
+  createEntryInvoice: protectedProcedure.input(z.object({
+    bookingId: z.number(),
+    contactId: z.number().optional(),
+    title: z.string(),
+    value: z.union([z.string(), z.number()]),
+    assignedUserId: z.number().optional(),
+  })).mutation(({ input }) =>
+    createEntryInvoiceForBooking(input.bookingId, input)
+  ),
+  // US-049: Confirmar pagamento da entrada
+  confirmEntryPayment: protectedProcedure.input(z.object({
+    bookingId: z.number(),
+  })).mutation(({ input }) => confirmBookingEntryPayment(input.bookingId)),
+  // US-049: Dispensar pagamento da entrada
+  waiveEntryPayment: protectedProcedure.input(z.object({
+    bookingId: z.number(),
+  })).mutation(({ input }) => waiveBookingEntryPayment(input.bookingId)),
+  // US-043: Gerar faturas automaticamente ao assinar contrato
+  autoInvoiceOnSign: protectedProcedure.input(z.object({
+    contractId: z.number(),
+  })).mutation(({ input }) => autoGenerateInvoicesOnContractSign(input.contractId)),
+  // US-050: Buscar agendamentos com pagamento pendente nas próximas 48h
+  pendingPaymentBookings: protectedProcedure.query(() => getBookingsWithPendingPaymentIn48h()),
+  // US-050: Marcar lembrete como enviado
+  markReminderSent: protectedProcedure.input(z.object({
+    bookingId: z.number(),
+  })).mutation(({ input }) => markBookingReminderSent(input.bookingId)),
+  // US-019: Atualizar assinatura Stripe do contato
+  updateSubscription: protectedProcedure.input(z.object({
+    contactId: z.number(),
+    stripeSubscriptionId: z.string().optional(),
+    subscriptionStatus: z.enum(["active", "cancelled", "past_due", "trialing", "none"]).optional(),
+  })).mutation(({ input }) => {
+    const { contactId, ...data } = input;
+    return updateContactSubscription(contactId, data);
+  }),
+  // US-019: Criar sessão de checkout para plano recorrente
+  createSubscriptionCheckout: protectedProcedure.input(z.object({
+    contactId: z.number(),
+    planId: z.string(),
+    origin: z.string(),
+  })).mutation(async ({ input, ctx }) => {
+    const contact = await import("./db").then(m => m.getContactById(input.contactId));
+    if (!contact) throw new TRPCError({ code: "NOT_FOUND", message: "Contato não encontrado" });
+    const customerId = await getOrCreateStripeCustomer({ email: contact.email, name: contact.name, userId: ctx.user.id });
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: "subscription",
+      line_items: [{ price: input.planId, quantity: 1 }],
+      success_url: `${input.origin}/contacts/${input.contactId}?subscription=success`,
+      cancel_url: `${input.origin}/contacts/${input.contactId}?subscription=cancelled`,
+      allow_promotion_codes: true,
+      metadata: { contactId: String(input.contactId), userId: String(ctx.user.id) },
+    });
+    return { url: session.url };
+  }),
+});
+
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -1724,6 +1789,7 @@ export const appRouter = router({
   messageTemplates: messageTemplatesRouter,
   studioRooms: studioRoomsRouter,
   equipment: equipmentRouter,
+  sprintA: sprintARouter,
 });
 
 export type AppRouter = typeof appRouter;

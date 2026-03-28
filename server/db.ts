@@ -1448,3 +1448,144 @@ export async function getRoomOccupancyReport() {
     .orderBy(studioRooms.name);
   return result;
 }
+
+// ─── SPRINT A: FECHAMENTO FINANCEIRO CRÍTICO ──────────────────────────────────
+
+/** US-049: Gera fatura de entrada (50% do valor) ao criar agendamento com valor */
+export async function createEntryInvoiceForBooking(bookingId: number, booking: {
+  contactId?: number | null;
+  title: string;
+  value: string | number;
+  assignedUserId?: number | null;
+}): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const entryValue = (Number(booking.value) * 0.5).toFixed(2);
+  const number = `FAT-${Date.now()}-E`;
+  const [result] = await db.insert(invoices).values({
+    number,
+    contactId: booking.contactId ?? undefined,
+    bookingId,
+    assignedUserId: booking.assignedUserId ?? undefined,
+    status: "draft",
+    items: [{ description: `Entrada 50% — ${booking.title}`, quantity: 1, unitPrice: Number(entryValue), total: Number(entryValue) }],
+    subtotal: entryValue,
+    tax: "0",
+    total: entryValue,
+    currency: "BRL",
+    paymentPlan: "installment_50_50",
+    installmentNumber: 1,
+    notes: `Fatura de entrada gerada automaticamente para o agendamento #${bookingId}`,
+  });
+  const invoiceId = (result as any).insertId as number;
+  await db.update(studioBookings)
+    .set({ entryInvoiceId: invoiceId, paymentStatus: "pending_payment", updatedAt: new Date() })
+    .where(eq(studioBookings.id, bookingId));
+  return invoiceId;
+}
+
+/** US-049: Confirma pagamento da entrada e libera o agendamento */
+export async function confirmBookingEntryPayment(bookingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(studioBookings)
+    .set({ paymentStatus: "paid", updatedAt: new Date() })
+    .where(eq(studioBookings.id, bookingId));
+  const [booking] = await db.select({ entryInvoiceId: studioBookings.entryInvoiceId })
+    .from(studioBookings).where(eq(studioBookings.id, bookingId)).limit(1);
+  if (booking?.entryInvoiceId) {
+    await db.update(invoices)
+      .set({ status: "paid", paidAt: new Date(), updatedAt: new Date() })
+      .where(eq(invoices.id, booking.entryInvoiceId));
+  }
+}
+
+/** US-049: Dispensa o pagamento da entrada */
+export async function waiveBookingEntryPayment(bookingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(studioBookings)
+    .set({ paymentStatus: "waived", updatedAt: new Date() })
+    .where(eq(studioBookings.id, bookingId));
+}
+
+/** US-043: Ao assinar contrato, gera fatura automaticamente */
+export async function autoGenerateInvoicesOnContractSign(contractId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const [contract] = await db.select().from(contracts).where(eq(contracts.id, contractId)).limit(1);
+  if (!contract || !contract.value) return [];
+  const total = Number(contract.value);
+  const createdIds: number[] = [];
+  const number = `FAT-${Date.now()}-C`;
+  const [r1] = await db.insert(invoices).values({
+    number,
+    contactId: contract.contactId ?? undefined,
+    contractId,
+    assignedUserId: contract.assignedUserId ?? undefined,
+    status: "sent",
+    items: [{ description: contract.title, quantity: 1, unitPrice: total, total }],
+    subtotal: total.toFixed(2),
+    tax: "0",
+    total: total.toFixed(2),
+    currency: "BRL",
+    paymentPlan: "full",
+    installmentNumber: 1,
+    notes: `Fatura gerada automaticamente ao assinar contrato #${contractId}`,
+  });
+  createdIds.push((r1 as any).insertId as number);
+  return createdIds;
+}
+
+/** US-050: Busca agendamentos nas próximas 48h com pagamento pendente */
+export async function getBookingsWithPendingPaymentIn48h() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+  return db
+    .select({
+      id: studioBookings.id,
+      title: studioBookings.title,
+      startAt: studioBookings.startAt,
+      value: studioBookings.value,
+      paymentStatus: studioBookings.paymentStatus,
+      entryInvoiceId: studioBookings.entryInvoiceId,
+      reminderSentAt: studioBookings.reminderSentAt,
+      contactId: studioBookings.contactId,
+      contactName: contacts.name,
+      contactPhone: contacts.phone,
+      contactWhatsappJid: contacts.whatsappJid,
+    })
+    .from(studioBookings)
+    .leftJoin(contacts, eq(studioBookings.contactId, contacts.id))
+    .where(
+      and(
+        eq(studioBookings.paymentStatus, "pending_payment"),
+        sql`${studioBookings.startAt} >= ${now}`,
+        sql`${studioBookings.startAt} <= ${in48h}`,
+        sql`${studioBookings.reminderSentAt} IS NULL`
+      )
+    );
+}
+
+/** US-050: Marca lembrete como enviado */
+export async function markBookingReminderSent(bookingId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(studioBookings)
+    .set({ reminderSentAt: new Date(), updatedAt: new Date() })
+    .where(eq(studioBookings.id, bookingId));
+}
+
+/** US-019: Atualiza status de assinatura Stripe no contato */
+export async function updateContactSubscription(contactId: number, data: {
+  stripeSubscriptionId?: string;
+  subscriptionStatus?: "active" | "cancelled" | "past_due" | "trialing" | "none";
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(contacts)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(contacts.id, contactId));
+}

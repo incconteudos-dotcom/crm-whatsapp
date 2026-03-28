@@ -1,0 +1,8 @@
+{
+  "query": "\nALTER TABLE `contacts` ADD `stripeSubscriptionId` varchar(255);\nALTER TABLE `contacts` ADD `subscriptionStatus` enum('active','cancelled','past_due','trialing','none') DEFAULT 'none';\nALTER TABLE `invoices` ADD `bookingId` int;\nALTER TABLE `studio_bookings` ADD `paymentStatus` enum('pending_payment','paid','waived') DEFAULT 'waived';\nALTER TABLE `studio_bookings` ADD `entryInvoiceId` int;\nALTER TABLE `studio_bookings` ADD `reminderSentAt` timestamp;\nALTER TABLE `studio_rooms` ADD `updatedAt` timestamp DEFAULT (now()) NOT NULL ON UPDATE CURRENT_TIMESTAMP;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute \nALTER TABLE `contacts` ADD `stripeSubscriptionId` varchar(255);\nALTER TABLE `contacts` ADD `subscriptionStatus` enum('active','cancelled','past_due','trialing','none') DEFAULT 'none';\nALTER TABLE `invoices` ADD `bookingId` int;\nALTER TABLE `studio_bookings` ADD `paymentStatus` enum('pending_payment','paid','waived') DEFAULT 'waived';\nALTER TABLE `studio_bookings` ADD `entryInvoiceId` int;\nALTER TABLE `studio_bookings` ADD `reminderSentAt` timestamp;\nALTER TABLE `studio_rooms` ADD `updatedAt` timestamp DEFAULT (now()) NOT NULL ON UPDATE CURRENT_TIMESTAMP;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1060 (42S21) at line 8: Duplicate column name 'updatedAt'"
+  ]
+}
