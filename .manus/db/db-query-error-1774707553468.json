@@ -1,0 +1,8 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `toc_configs` (`id` int AUTO_INCREMENT NOT NULL, `business_context` text, `domains` text NOT NULL DEFAULT '[\"comercial\",\"financeiro\",\"producao\",\"pessoas\",\"tecnologia\"]', `weekly_day` varchar(20) NOT NULL DEFAULT 'monday', `weekly_time` varchar(10) NOT NULL DEFAULT '08:00', `auto_generate` boolean NOT NULL DEFAULT true, `createdAt` timestamp NOT NULL DEFAULT (now()), `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `toc_configs_id` PRIMARY KEY(`id`))",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute CREATE TABLE IF NOT EXISTS `toc_configs` (`id` int AUTO_INCREMENT NOT NULL, `business_context` text, `domains` text NOT NULL DEFAULT '[\"comercial\",\"financeiro\",\"producao\",\"pessoas\",\"tecnologia\"]', `weekly_day` varchar(20) NOT NULL DEFAULT 'monday', `weekly_time` varchar(10) NOT NULL DEFAULT '08:00', `auto_generate` boolean NOT NULL DEFAULT true, `createdAt` timestamp NOT NULL DEFAULT (now()), `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `toc_configs_id` PRIMARY KEY(`id`))",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1101 (42000) at line 1: BLOB/TEXT/JSON column 'domains' can't have a default value"
+  ]
+}

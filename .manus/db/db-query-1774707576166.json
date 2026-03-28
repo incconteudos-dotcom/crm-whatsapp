@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `toc_action_items` (`id` int AUTO_INCREMENT NOT NULL, `constraint_id` int NOT NULL, `session_id` int, `title` varchar(255) NOT NULL, `description` text, `assigned_to` int, `status` varchar(20) NOT NULL DEFAULT 'pending', `priority` varchar(20) NOT NULL DEFAULT 'medium', `due_date` timestamp NULL, `completed_at` timestamp NULL, `createdAt` timestamp NOT NULL DEFAULT (now()), `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `toc_action_items_id` PRIMARY KEY(`id`))",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute CREATE TABLE IF NOT EXISTS `toc_action_items` (`id` int AUTO_INCREMENT NOT NULL, `constraint_id` int NOT NULL, `session_id` int, `title` varchar(255) NOT NULL, `description` text, `assigned_to` int, `status` varchar(20) NOT NULL DEFAULT 'pending', `priority` varchar(20) NOT NULL DEFAULT 'medium', `due_date` timestamp NULL, `completed_at` timestamp NULL, `createdAt` timestamp NOT NULL DEFAULT (now()), `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `toc_action_items_id` PRIMARY KEY(`id`))",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 113
+}

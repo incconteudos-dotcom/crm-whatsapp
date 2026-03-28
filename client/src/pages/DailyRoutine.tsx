@@ -5,8 +5,69 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle2, ClipboardList, RefreshCw, Trophy } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardList, RefreshCw, Target, Trophy } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "wouter";
+
+// ─── ToC Widget (US-072) ─────────────────────────────────────────────────────
+function ToCWidget() {
+  const { data: dashboard } = trpc.toc.dashboard.useQuery();
+
+  if (!dashboard) return null;
+
+  const criticalCount = dashboard.criticalConstraints ?? 0;
+  const pendingCount = dashboard.pendingActions ?? 0;
+  const constraintsByDomain = ("constraintsByDomain" in dashboard ? dashboard.constraintsByDomain : []) as { domain: string; count: number }[];
+
+  return (
+    <Card className="border-orange-500/30 bg-orange-500/5">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Target className="h-4 w-4 text-orange-400" />
+          Theory of Constraints
+          {criticalCount > 0 && (
+            <Badge variant="outline" className="bg-red-500/20 text-red-300 border-red-500/30 text-xs">
+              {criticalCount} crítica{criticalCount > 1 ? "s" : ""}
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {criticalCount === 0 && pendingCount === 0 ? (
+          <div className="flex items-center gap-2 text-sm text-green-400">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Nenhuma restrição crítica ativa no momento.</span>
+          </div>
+        ) : (
+          <>
+            {criticalCount > 0 && (
+              <div className="flex items-start gap-2 text-sm">
+                <AlertTriangle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                <span className="text-foreground">{criticalCount} restrição{criticalCount > 1 ? "ões" : ""} crítica{criticalCount > 1 ? "s" : ""} ativa{criticalCount > 1 ? "s" : ""}</span>
+              </div>
+            )}
+            {constraintsByDomain.slice(0, 2).map((d) => (
+              <div key={d.domain} className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="capitalize">{d.domain}:</span>
+                <span>{d.count} restrição{d.count > 1 ? "ões" : ""}</span>
+              </div>
+            ))}
+            {pendingCount > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {pendingCount} ação{pendingCount > 1 ? "ões" : ""} pendente{pendingCount > 1 ? "s" : ""} de sessões ToC
+              </p>
+            )}
+          </>
+        )}
+        <Link href="/toc">
+          <Button variant="outline" size="sm" className="w-full text-xs">
+            Ver painel completo
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
 
 const roleLabels: Record<string, string> = {
   admin: "Administrador",
@@ -173,6 +234,9 @@ export default function DailyRoutine() {
             )}
           </CardContent>
         </Card>
+
+        {/* ToC Widget (US-072) */}
+        <ToCWidget />
 
         {/* Tip */}
         <p className="text-xs text-muted-foreground text-center">

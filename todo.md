@@ -380,13 +380,13 @@
 - [x] US-035: Testes automatizados abrangentes >80% cobertura (8 pts)
 - [x] US-073: Histórico de pagamentos e recibos (5 pts)
 
-## Sprint C — Theory of Constraints (37 pts)
-- [ ] US-037: Sessão semanal automatizada ToC (13 pts)
-- [ ] US-038: Dashboard ToC com relatório estruturado (8 pts)
-- [ ] US-039: Mapeamento de restrições por domínio (5 pts)
-- [ ] US-041: Integração itens de ação ToC com CRM (8 pts)
-- [ ] US-040: Configuração e personalização ToC (5 pts)
-- [ ] US-072: Relatório ToC integrado à rotina diária (3 pts)
+## Sprint C — Theory of Constraints (37 pts) ✅
+- [x] US-037: Sessão semanal automatizada ToC (13 pts)
+- [x] US-038: Dashboard ToC com relatório estruturado (8 pts)
+- [x] US-039: Mapeamento de restrições por domínio (5 pts)
+- [x] US-041: Integração itens de ação ToC com CRM (8 pts)
+- [x] US-040: Configuração e personalização ToC (5 pts)
+- [x] US-072: Relatório ToC integrado à rotina diária (3 pts)
 
 ## Sprint D — Expansão Comercial: NPS, Follow-up e Rentabilidade (42 pts)
 - [ ] US-077: Automação de follow-up comercial por estágio (8 pts)
@@ -490,3 +490,30 @@
 - [ ] Adicionar testes para módulo de Contratos (create, sign, autoInvoice)
 - [ ] Adicionar testes para módulo de Portal do Cliente (generateToken, validateToken)
 - [ ] Adicionar testes para Sprint A (generateEntryInvoice, confirmPayment, sendBalanceReminder)
+
+## Sprint C — Detalhamento de Implementação (Theory of Constraints)
+
+### Schema
+- [ ] Tabela toc_sessions (sessões semanais ToC com status e relatório)
+- [ ] Tabela toc_constraints (restrições mapeadas por domínio com severidade)
+- [ ] Tabela toc_action_items (itens de ação vinculados a restrições)
+- [ ] Tabela toc_configs (configurações de domínios e personalização)
+
+### Backend
+- [ ] CRUD de sessões ToC com geração de relatório por IA
+- [ ] CRUD de restrições por domínio (comercial, financeiro, produção, pessoas, tecnologia)
+- [ ] CRUD de itens de ação com status e responsável
+- [ ] Procedure de agendamento automático semanal (cron-like)
+- [ ] Integração com rotinas diárias (US-072)
+
+### UI
+- [ ] Página /toc com dashboard de restrições ativas
+- [ ] Aba Sessões: histórico de sessões semanais com relatório IA
+- [ ] Aba Restrições: mapa visual por domínio com severidade
+- [ ] Aba Itens de Ação: lista com status e responsável
+- [ ] Aba Configurações: domínios, contexto do negócio, frequência
+- [ ] Item "ToC" no menu lateral (seção Gestão)
+
+### Testes
+- [ ] Testes para CRUD de sessões e restrições
+- [ ] Testes para geração de relatório por IA (mock)

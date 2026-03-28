@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `toc_constraints` (`id` int AUTO_INCREMENT NOT NULL, `session_id` int, `domain` varchar(50) NOT NULL, `title` varchar(255) NOT NULL, `description` text, `severity` varchar(20) NOT NULL DEFAULT 'medium', `status` varchar(20) NOT NULL DEFAULT 'active', `root_cause` text, `impact` text, `resolved_at` timestamp NULL, `createdAt` timestamp NOT NULL DEFAULT (now()), `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `toc_constraints_id` PRIMARY KEY(`id`))",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3txBsc7RzZ6puht.faa1fd724e39 --database Cy2Gc9yd7vWL7aTK7BRymU --execute CREATE TABLE IF NOT EXISTS `toc_constraints` (`id` int AUTO_INCREMENT NOT NULL, `session_id` int, `domain` varchar(50) NOT NULL, `title` varchar(255) NOT NULL, `description` text, `severity` varchar(20) NOT NULL DEFAULT 'medium', `status` varchar(20) NOT NULL DEFAULT 'active', `root_cause` text, `impact` text, `resolved_at` timestamp NULL, `createdAt` timestamp NOT NULL DEFAULT (now()), `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT `toc_constraints_id` PRIMARY KEY(`id`))",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 119
+}

@@ -70,6 +70,14 @@ import {
   type InsertEquipmentBooking,
   type InsertNotification,
   type Notification,
+  tocConfigs,
+  tocSessions,
+  tocConstraints,
+  tocActionItems,
+  type InsertTocConfig,
+  type InsertTocSession,
+  type InsertTocConstraint,
+  type InsertTocActionItem,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import crypto from "crypto";
@@ -1752,5 +1760,157 @@ export async function getDashboardKpis() {
     activeLeads: Number(activeLeads?.count ?? 0),
     conversionRate,
     weekSessions: Number(weekSessions?.count ?? 0),
+  };
+}
+
+// ─── THEORY OF CONSTRAINTS ────────────────────────────────────────────────────
+export async function getTocConfig() {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(tocConfigs).limit(1);
+  return result[0] ?? null;
+}
+
+export async function upsertTocConfig(data: Partial<InsertTocConfig>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const existing = await db.select().from(tocConfigs).limit(1);
+  if (existing.length > 0) {
+    await db.update(tocConfigs).set({ ...data, updatedAt: new Date() }).where(eq(tocConfigs.id, existing[0].id));
+    return existing[0].id;
+  } else {
+    const [result] = await db.insert(tocConfigs).values({
+      businessContext: data.businessContext ?? null,
+      domains: data.domains ?? '["comercial","financeiro","producao","pessoas","tecnologia"]',
+      weeklyDay: data.weeklyDay ?? "monday",
+      weeklyTime: data.weeklyTime ?? "08:00",
+      autoGenerate: data.autoGenerate ?? true,
+    });
+    return (result as { insertId: number }).insertId;
+  }
+}
+
+export async function getTocSessions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(tocSessions).orderBy(desc(tocSessions.weekDate));
+}
+
+export async function getTocSessionById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(tocSessions).where(eq(tocSessions.id, id)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function createTocSession(data: InsertTocSession) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(tocSessions).values(data);
+  return (result as { insertId: number }).insertId;
+}
+
+export async function updateTocSession(id: number, data: Partial<InsertTocSession>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(tocSessions).set({ ...data, updatedAt: new Date() }).where(eq(tocSessions.id, id));
+}
+
+export async function deleteTocSession(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(tocActionItems).where(eq(tocActionItems.sessionId, id));
+  await db.delete(tocConstraints).where(eq(tocConstraints.sessionId, id));
+  await db.delete(tocSessions).where(eq(tocSessions.id, id));
+}
+
+export async function getTocConstraints(sessionId?: number, domain?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (sessionId) conditions.push(eq(tocConstraints.sessionId, sessionId));
+  if (domain) conditions.push(eq(tocConstraints.domain, domain));
+  const query = db.select().from(tocConstraints).orderBy(desc(tocConstraints.createdAt));
+  if (conditions.length > 0) return query.where(and(...conditions));
+  return query;
+}
+
+export async function createTocConstraint(data: InsertTocConstraint) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(tocConstraints).values(data);
+  return (result as { insertId: number }).insertId;
+}
+
+export async function updateTocConstraint(id: number, data: Partial<InsertTocConstraint>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(tocConstraints).set({ ...data, updatedAt: new Date() }).where(eq(tocConstraints.id, id));
+}
+
+export async function deleteTocConstraint(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(tocActionItems).where(eq(tocActionItems.constraintId, id));
+  await db.delete(tocConstraints).where(eq(tocConstraints.id, id));
+}
+
+export async function getTocActionItems(constraintId?: number, sessionId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (constraintId) conditions.push(eq(tocActionItems.constraintId, constraintId));
+  if (sessionId) conditions.push(eq(tocActionItems.sessionId, sessionId));
+  const query = db.select().from(tocActionItems).orderBy(desc(tocActionItems.createdAt));
+  if (conditions.length > 0) return query.where(and(...conditions));
+  return query;
+}
+
+export async function createTocActionItem(data: InsertTocActionItem) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(tocActionItems).values(data);
+  return (result as { insertId: number }).insertId;
+}
+
+export async function updateTocActionItem(id: number, data: Partial<InsertTocActionItem>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(tocActionItems).set({ ...data, updatedAt: new Date() }).where(eq(tocActionItems.id, id));
+}
+
+export async function deleteTocActionItem(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(tocActionItems).where(eq(tocActionItems.id, id));
+}
+
+export async function getTocDashboard() {
+  const db = await getDb();
+  if (!db) return { activeConstraints: 0, criticalConstraints: 0, pendingActions: 0, latestSession: null, constraintsByDomain: [] };
+  const [activeResult] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(tocConstraints)
+    .where(eq(tocConstraints.status, "active"));
+  const [criticalResult] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(tocConstraints)
+    .where(and(eq(tocConstraints.severity, "critical"), eq(tocConstraints.status, "active")));
+  const [pendingResult] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(tocActionItems)
+    .where(eq(tocActionItems.status, "pending"));
+  const sessions = await db.select().from(tocSessions).orderBy(desc(tocSessions.weekDate)).limit(1);
+  const domainStats = await db
+    .select({ domain: tocConstraints.domain, count: sql<number>`COUNT(*)` })
+    .from(tocConstraints)
+    .where(eq(tocConstraints.status, "active"))
+    .groupBy(tocConstraints.domain);
+  return {
+    activeConstraints: Number(activeResult?.count ?? 0),
+    criticalConstraints: Number(criticalResult?.count ?? 0),
+    pendingActions: Number(pendingResult?.count ?? 0),
+    latestSession: sessions[0] ?? null,
+    constraintsByDomain: domainStats,
   };
 }

@@ -54,6 +54,11 @@ import {
   markAllNotificationsRead,
   getDashboardActionItems,
   getDashboardKpis,
+  getTocConfig, upsertTocConfig,
+  getTocSessions, getTocSessionById, createTocSession, updateTocSession, deleteTocSession,
+  getTocConstraints, createTocConstraint, updateTocConstraint, deleteTocConstraint,
+  getTocActionItems, createTocActionItem, updateTocActionItem, deleteTocActionItem,
+  getTocDashboard,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOrCreateStripeCustomer } from "./stripe/stripe";
@@ -1774,6 +1779,142 @@ const sprintARouter = router({
   }),
 });
 
+// ─── TOC ROUTER ────────────────────────────────────────────────────────────
+const tocRouter = router({
+  dashboard: protectedProcedure.query(() => getTocDashboard()),
+  getConfig: protectedProcedure.query(() => getTocConfig()),
+  saveConfig: protectedProcedure.input(z.object({
+    businessContext: z.string().optional(),
+    domains: z.string().optional(),
+    weeklyDay: z.string().optional(),
+    weeklyTime: z.string().optional(),
+    autoGenerate: z.boolean().optional(),
+  })).mutation(({ input }) => upsertTocConfig(input)),
+
+  // Sessions
+  listSessions: protectedProcedure.query(() => getTocSessions()),
+  getSession: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) => getTocSessionById(input.id)),
+  createSession: protectedProcedure.input(z.object({
+    title: z.string().min(1),
+    weekDate: z.date(),
+    status: z.enum(["draft", "active", "completed"]).optional(),
+    summary: z.string().optional(),
+    mainConstraint: z.string().optional(),
+    recommendations: z.string().optional(),
+  })).mutation(({ input }) => createTocSession(input)),
+  updateSession: protectedProcedure.input(z.object({
+    id: z.number(),
+    title: z.string().optional(),
+    status: z.enum(["draft", "active", "completed"]).optional(),
+    summary: z.string().optional(),
+    mainConstraint: z.string().optional(),
+    recommendations: z.string().optional(),
+    completedAt: z.date().optional(),
+  })).mutation(({ input }) => { const { id, ...data } = input; return updateTocSession(id, data); }),
+  deleteSession: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => deleteTocSession(input.id)),
+
+  // Constraints
+  listConstraints: protectedProcedure.input(z.object({
+    sessionId: z.number().optional(),
+    domain: z.string().optional(),
+  })).query(({ input }) => getTocConstraints(input.sessionId, input.domain)),
+  createConstraint: protectedProcedure.input(z.object({
+    sessionId: z.number().optional(),
+    domain: z.string().min(1),
+    title: z.string().min(1),
+    description: z.string().optional(),
+    severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+    rootCause: z.string().optional(),
+    impact: z.string().optional(),
+  })).mutation(({ input }) => createTocConstraint(input)),
+  updateConstraint: protectedProcedure.input(z.object({
+    id: z.number(),
+    domain: z.string().optional(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+    status: z.enum(["active", "resolved", "monitoring"]).optional(),
+    rootCause: z.string().optional(),
+    impact: z.string().optional(),
+    resolvedAt: z.date().optional(),
+  })).mutation(({ input }) => { const { id, ...data } = input; return updateTocConstraint(id, data); }),
+  deleteConstraint: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => deleteTocConstraint(input.id)),
+
+  // Action Items
+  listActionItems: protectedProcedure.input(z.object({
+    constraintId: z.number().optional(),
+    sessionId: z.number().optional(),
+  })).query(({ input }) => getTocActionItems(input.constraintId, input.sessionId)),
+  createActionItem: protectedProcedure.input(z.object({
+    constraintId: z.number(),
+    sessionId: z.number().optional(),
+    title: z.string().min(1),
+    description: z.string().optional(),
+    assignedTo: z.number().optional(),
+    priority: z.enum(["low", "medium", "high"]).optional(),
+    dueDate: z.date().optional(),
+  })).mutation(({ input }) => createTocActionItem(input)),
+  updateActionItem: protectedProcedure.input(z.object({
+    id: z.number(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    status: z.enum(["pending", "in_progress", "done", "cancelled"]).optional(),
+    priority: z.enum(["low", "medium", "high"]).optional(),
+    dueDate: z.date().optional(),
+    completedAt: z.date().optional(),
+  })).mutation(({ input }) => { const { id, ...data } = input; return updateTocActionItem(id, data); }),
+  deleteActionItem: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => deleteTocActionItem(input.id)),
+
+  // AI generation
+  generateSession: protectedProcedure.input(z.object({
+    businessContext: z.string().optional(),
+    domains: z.array(z.string()).optional(),
+  })).mutation(async ({ input }) => {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: "Você é um especialista em Theory of Constraints (TOC) aplicada a negócios de produção de podcast e estúdio. Gere uma análise semanal estruturada em JSON." },
+        { role: "user", content: `Analise as restrições do negócio com contexto: ${input.businessContext ?? "Estúdio de podcast com clientes B2B"}. Domínios: ${(input.domains ?? ["comercial", "financeiro", "producao", "pessoas", "tecnologia"]).join(", ")}. Retorne JSON com: { title, summary, mainConstraint, recommendations, constraints: [{ domain, title, description, severity, rootCause, impact }] }` },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "toc_analysis",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              summary: { type: "string" },
+              mainConstraint: { type: "string" },
+              recommendations: { type: "string" },
+              constraints: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    domain: { type: "string" },
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    severity: { type: "string", enum: ["low", "medium", "high", "critical"] },
+                    rootCause: { type: "string" },
+                    impact: { type: "string" },
+                  },
+                  required: ["domain", "title", "description", "severity", "rootCause", "impact"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["title", "summary", "mainConstraint", "recommendations", "constraints"],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+     const raw = response.choices[0]?.message?.content;
+    const content = typeof raw === "string" ? raw : "{}";
+    return JSON.parse(content);
+  }),
+});
 // ─── APP ROUTER ────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -1817,7 +1958,7 @@ export const appRouter = router({
   studioRooms: studioRoomsRouter,
   equipment: equipmentRouter,
   sprintA: sprintARouter,
-  notifications: notificationsRouter,
+   notifications: notificationsRouter,
+  toc: tocRouter,
 });
-
 export type AppRouter = typeof appRouter;

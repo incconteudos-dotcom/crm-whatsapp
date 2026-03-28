@@ -8,7 +8,7 @@ import {
   ChevronDown, CreditCard, FileText, FolderOpen, Home, Library, LogOut,
   MessageSquare, Package, Receipt, Settings, Shield, Users, Wallet, Zap,
   ClipboardList, Mic2, Palette, Wrench, Building2, Menu, X, Circle,
-  Layers, DollarSign, Briefcase, Cog,
+  Layers, DollarSign, Briefcase, Cog, Target,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -74,6 +74,7 @@ const navGroups = [
     items: [
       { icon: CheckSquare, label: "Tarefas", path: "/tasks" },
       { icon: ClipboardList, label: "Rotina Diária", path: "/routine" },
+      { icon: Target, label: "Theory of Constraints", path: "/toc" },
       { icon: BarChart3, label: "Analytics", path: "/analytics" },
     ],
   },

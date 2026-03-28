@@ -642,3 +642,66 @@ export const notifications = mysqlTable("notifications", {
 });
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+// ─── THEORY OF CONSTRAINTS ────────────────────────────────────────────────────
+export const tocConfigs = mysqlTable("toc_configs", {
+  id: int("id").autoincrement().primaryKey(),
+  businessContext: text("business_context"),
+  domains: text("domains").notNull().default('["comercial","financeiro","producao","pessoas","tecnologia"]'),
+  weeklyDay: varchar("weekly_day", { length: 20 }).notNull().default("monday"),
+  weeklyTime: varchar("weekly_time", { length: 10 }).notNull().default("08:00"),
+  autoGenerate: boolean("auto_generate").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TocConfig = typeof tocConfigs.$inferSelect;
+export type InsertTocConfig = typeof tocConfigs.$inferInsert;
+
+export const tocSessions = mysqlTable("toc_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("draft"),
+  weekDate: timestamp("week_date").notNull(),
+  summary: text("summary"),
+  mainConstraint: text("main_constraint"),
+  recommendations: text("recommendations"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TocSession = typeof tocSessions.$inferSelect;
+export type InsertTocSession = typeof tocSessions.$inferInsert;
+
+export const tocConstraints = mysqlTable("toc_constraints", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("session_id"),
+  domain: varchar("domain", { length: 50 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  severity: varchar("severity", { length: 20 }).notNull().default("medium"),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  rootCause: text("root_cause"),
+  impact: text("impact"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TocConstraint = typeof tocConstraints.$inferSelect;
+export type InsertTocConstraint = typeof tocConstraints.$inferInsert;
+
+export const tocActionItems = mysqlTable("toc_action_items", {
+  id: int("id").autoincrement().primaryKey(),
+  constraintId: int("constraint_id").notNull(),
+  sessionId: int("session_id"),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  assignedTo: int("assigned_to"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  priority: varchar("priority", { length: 20 }).notNull().default("medium"),
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TocActionItem = typeof tocActionItems.$inferSelect;
+export type InsertTocActionItem = typeof tocActionItems.$inferInsert;
