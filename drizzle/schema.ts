@@ -787,3 +787,24 @@ export const leadActivities = mysqlTable("lead_activities", {
 });
 export type LeadActivity = typeof leadActivities.$inferSelect;
 export type InsertLeadActivity = typeof leadActivities.$inferInsert;
+
+// ─── WHATSAPP AGENT CONFIG ────────────────────────────────────────────────────
+// Per-chat opt-in/out for the LLM automation agent.
+// When enabled, the agent reads incoming messages and auto-replies based on
+// the contact's pipeline stage and conversation history.
+export const whatsappAgentConfigs = mysqlTable("whatsapp_agent_configs", {
+  id: int("id").autoincrement().primaryKey(),
+  chatJid: varchar("chatJid", { length: 128 }).notNull().unique(),
+  enabled: boolean("enabled").default(false).notNull(),
+  // Agent personality / system prompt override (null = use default)
+  systemPrompt: text("systemPrompt"),
+  // Last time the agent sent a message (rate-limit: max 1 per 10 min)
+  lastAgentMessageAt: timestamp("lastAgentMessageAt"),
+  // Stage context injected into agent prompt
+  stageHint: varchar("stageHint", { length: 128 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WhatsappAgentConfig = typeof whatsappAgentConfigs.$inferSelect;
+export type InsertWhatsappAgentConfig = typeof whatsappAgentConfigs.$inferInsert;

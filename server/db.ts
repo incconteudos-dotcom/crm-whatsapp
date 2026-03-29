@@ -2369,3 +2369,16 @@ export async function getLeadsWithContact(stageId?: number, status?: string) {
   if (conditions.length > 0) return query.where(and(...conditions));
   return query;
 }
+
+// ─── WHATSAPP — getLeadWithContact (alias for compatibility) ──────────────────
+export async function getLeadWithContact(leadId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(leads)
+    .leftJoin(contacts, eq(leads.contactId, contacts.id))
+    .where(eq(leads.id, leadId))
+    .limit(1);
+  return result[0];
+}

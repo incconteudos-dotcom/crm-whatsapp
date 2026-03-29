@@ -88,6 +88,7 @@ import {
   getQRCode, restartInstance, disconnectInstance, getCellphoneData,
   normalizePhone, setWebhookUrl,
 } from "./zapi";
+import { whatsappRouter as whatsappRouterNew } from "./whatsapp/router";
 import { STUDIO_PRODUCTS } from "./stripe/products";
 import { getDb } from "./db";
 import { users as usersTable, products as productsTable } from "../drizzle/schema";
@@ -3551,7 +3552,7 @@ export const appRouter = router({
   users: usersRouter,
   contacts: contactsRouter,
   pipeline: pipelineRouter,
-  whatsapp: whatsappRouter,
+  whatsapp: whatsappRouterNew,
   contracts: contractsRouter,
   invoices: invoicesRouter,
   quotes: quotesRouter,
