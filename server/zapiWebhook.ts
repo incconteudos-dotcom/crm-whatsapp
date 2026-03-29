@@ -98,7 +98,9 @@ export async function zapiWebhookHandler(req: Request, res: Response) {
     const content = extractContent(payload);
     const mediaUrl = extractMediaUrl(payload);
     const mediaType = extractMediaType(payload);
-    const timestamp = payload.momment ?? Date.now();
+    // payload.momment é timestamp em milissegundos (Z-API), mas pode ser 0 ou inválido
+    const rawTs = payload.momment ?? 0;
+    const timestamp = rawTs > 1000 ? rawTs : Date.now();
     const isFromMe = payload.fromMe ?? false;
     const messageId = payload.messageId ?? `zapi_${chatJid}_${timestamp}`;
     const isGroup = chatJid.endsWith("@g.us") || chatJid.includes("-");

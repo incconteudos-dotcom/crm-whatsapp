@@ -94,6 +94,23 @@ import { users as usersTable, products as productsTable } from "../drizzle/schem
 import { eq, sql } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+/**
+ * Converte um timestamp Unix (segundos) para Date de forma segura.
+ * MySQL TIMESTAMP aceita apenas datas entre 1970-01-01 00:00:01 e 2038-01-19.
+ * Timestamps 0, negativos ou inválidos retornam new Date() (agora).
+ */
+function safeTimestampToDate(unixSeconds: number | undefined | null): Date {
+  if (!unixSeconds || unixSeconds <= 0) return new Date();
+  const ms = unixSeconds * 1000;
+  const d = new Date(ms);
+  // MySQL TIMESTAMP range: 1970-01-01 00:00:01 UTC to 2038-01-19 03:14:07 UTC
+  const MIN_TS = 1000; // 1970-01-01 00:00:01 UTC in ms
+  const MAX_TS = 2147483647000; // 2038-01-19 in ms
+  if (ms < MIN_TS || ms > MAX_TS || isNaN(d.getTime())) return new Date();
+  return d;
+}
+
 // ─── AI ROUTER ───────────────────────────────────────────────────────────────
 const aiRouter = router({
   chat: protectedProcedure.input(z.object({
@@ -351,7 +368,7 @@ const whatsappRouter = router({
       await upsertWhatsappChat({
         jid: chat.phone,
         name: chat.name,
-        lastMessageAt: chat.lastMessageTimestamp ? new Date(chat.lastMessageTimestamp * 1000) : new Date(),
+        lastMessageAt: safeTimestampToDate(chat.lastMessageTimestamp),
         lastMessagePreview: chat.lastMessage?.slice(0, 100),
         unreadCount: chat.unreadMessages ?? 0,
         isGroup: chat.isGroup ?? false,
@@ -633,7 +650,7 @@ const whatsappRouter = router({
       await upsertWhatsappChat({
         jid: chat.phone,
         name: chat.name,
-        lastMessageAt: chat.lastMessageTimestamp ? new Date(chat.lastMessageTimestamp * 1000) : new Date(),
+        lastMessageAt: safeTimestampToDate(chat.lastMessageTimestamp),
         lastMessagePreview: chat.lastMessage?.slice(0, 100),
         unreadCount: chat.unreadMessages ?? 0,
         isGroup: chat.isGroup ?? false,
@@ -674,7 +691,7 @@ const whatsappRouter = router({
             mediaType,
             mediaUrl,
             isFromMe: m.fromMe,
-            timestamp: m.timestamp * 1000, // Z-API returns seconds, we store ms
+            timestamp: m.timestamp > 0 ? m.timestamp * 1000 : Date.now(), // Z-API returns seconds, we store ms
           });
           messagesSynced++;
         } catch {
@@ -725,7 +742,7 @@ const whatsappRouter = router({
               mediaType,
               mediaUrl,
               isFromMe: m.fromMe,
-              timestamp: m.timestamp * 1000,
+              timestamp: m.timestamp > 0 ? m.timestamp * 1000 : Date.now(),
             });
             totalMessages++;
           } catch { /* skip duplicates */ }
