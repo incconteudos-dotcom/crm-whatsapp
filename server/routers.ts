@@ -613,6 +613,130 @@ const whatsappRouter = router({
     }
     return { synced, total: contacts.length };
   }),
+
+  // ── Sincronização completa: todos os chats + mensagens ──────────────────────
+  syncAllChats: whatsappProcedure.mutation(async () => {
+    // Paginate through ALL chats (not just first 50)
+    const allChats: import("./zapi").ZApiChat[] = [];
+    let page = 0;
+    const pageSize = 100;
+    while (true) {
+      const batch = await getChats(page, pageSize);
+      if (!batch || batch.length === 0) break;
+      allChats.push(...batch);
+      if (batch.length < pageSize) break;
+      page++;
+    }
+
+    let chatsSynced = 0;
+    for (const chat of allChats) {
+      await upsertWhatsappChat({
+        jid: chat.phone,
+        name: chat.name,
+        lastMessageAt: chat.lastMessageTimestamp ? new Date(chat.lastMessageTimestamp * 1000) : new Date(),
+        lastMessagePreview: chat.lastMessage?.slice(0, 100),
+        unreadCount: chat.unreadMessages ?? 0,
+        isGroup: chat.isGroup ?? false,
+      });
+      chatsSynced++;
+    }
+    return { chatsSynced, total: allChats.length, message: `${chatsSynced} conversas sincronizadas.` };
+  }),
+
+  syncChatMessages: whatsappProcedure.input(z.object({
+    phone: z.string(),
+    pages: z.number().min(1).max(20).default(5), // up to 20 pages × 50 msgs = 1000 msgs
+  })).mutation(async ({ input }) => {
+    let messagesSynced = 0;
+    let page = 0;
+    while (page < input.pages) {
+      const msgs = await getChatMessages(input.phone, page, 50);
+      if (!msgs || msgs.length === 0) break;
+      for (const m of msgs) {
+        // Determine content and media type
+        let content = m.text?.message ?? "";
+        let mediaType: "text" | "image" | "video" | "audio" | "document" | "sticker" = "text";
+        let mediaUrl: string | undefined;
+        if (m.image) { mediaType = "image"; mediaUrl = m.image.url; content = m.image.caption ?? "[Imagem]"; }
+        else if (m.video) { mediaType = "video"; mediaUrl = m.video.url; content = m.video.caption ?? "[Vídeo]"; }
+        else if (m.audio) { mediaType = "audio"; mediaUrl = m.audio.url; content = "[Áudio]"; }
+        else if (m.document) { mediaType = "document"; mediaUrl = m.document.url; content = m.document.fileName ?? "[Documento]"; }
+        else if (m.sticker) { mediaType = "sticker"; mediaUrl = m.sticker.url; content = "[Sticker]"; }
+        else if (m.location) { content = `[Localização: ${m.location.name ?? `${m.location.latitude},${m.location.longitude}`}]`; }
+        else if (m.reaction) { content = `[Reação: ${m.reaction.value}]`; }
+        if (!content && !mediaUrl) continue; // skip empty
+        try {
+          await upsertWhatsappMessage({
+            messageId: m.messageId,
+            chatJid: input.phone,
+            senderName: m.senderName,
+            content,
+            mediaType,
+            mediaUrl,
+            isFromMe: m.fromMe,
+            timestamp: m.timestamp * 1000, // Z-API returns seconds, we store ms
+          });
+          messagesSynced++;
+        } catch {
+          // Skip duplicates silently
+        }
+      }
+      if (msgs.length < 50) break;
+      page++;
+    }
+    // Update chat last message preview
+    await upsertWhatsappChat({ jid: input.phone, lastMessageAt: new Date() });
+    return { messagesSynced, pagesScanned: page + 1 };
+  }),
+
+  syncAllMessages: whatsappProcedure.input(z.object({
+    pagesPerChat: z.number().min(1).max(10).default(3),
+  })).mutation(async () => {
+    // Get all chats from DB and sync messages for each
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const chats = await getWhatsappChats();
+    let totalMessages = 0;
+    let chatsProcessed = 0;
+    for (const chat of chats) {
+      let page = 0;
+      const maxPages = 3;
+      while (page < maxPages) {
+        const msgs = await getChatMessages(chat.jid, page, 50);
+        if (!msgs || msgs.length === 0) break;
+        for (const m of msgs) {
+          let content = m.text?.message ?? "";
+          let mediaType: "text" | "image" | "video" | "audio" | "document" | "sticker" = "text";
+          let mediaUrl: string | undefined;
+          if (m.image) { mediaType = "image"; mediaUrl = m.image.url; content = m.image.caption ?? "[Imagem]"; }
+          else if (m.video) { mediaType = "video"; mediaUrl = m.video.url; content = m.video.caption ?? "[Vídeo]"; }
+          else if (m.audio) { mediaType = "audio"; mediaUrl = m.audio.url; content = "[Áudio]"; }
+          else if (m.document) { mediaType = "document"; mediaUrl = m.document.url; content = m.document.fileName ?? "[Documento]"; }
+          else if (m.sticker) { mediaType = "sticker"; mediaUrl = m.sticker.url; content = "[Sticker]"; }
+          else if (m.location) { content = `[Localização: ${m.location.name ?? `${m.location.latitude},${m.location.longitude}`}]`; }
+          else if (m.reaction) { content = `[Reação: ${m.reaction.value}]`; }
+          if (!content && !mediaUrl) continue;
+          try {
+            await upsertWhatsappMessage({
+              messageId: m.messageId,
+              chatJid: chat.jid,
+              senderName: m.senderName,
+              content,
+              mediaType,
+              mediaUrl,
+              isFromMe: m.fromMe,
+              timestamp: m.timestamp * 1000,
+            });
+            totalMessages++;
+          } catch { /* skip duplicates */ }
+        }
+        if (msgs.length < 50) break;
+        page++;
+      }
+      chatsProcessed++;
+    }
+    return { totalMessages, chatsProcessed };
+  }),
 });
 
 // ─── CONTRACTS ROUTER ─────────────────────────────────────────────────────────

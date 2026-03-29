@@ -134,6 +134,28 @@ export default function WhatsApp() {
     onSuccess: (d) => { toast.success(d.message); refetchChats(); },
     onError: (e) => toast.error(e.message),
   });
+  const syncAllChatsMutation = trpc.whatsapp.syncAllChats.useMutation({
+    onSuccess: (d) => {
+      toast.success(`${d.chatsSynced} conversas sincronizadas do Z-API!`);
+      refetchChats();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const syncChatMessagesMutation = trpc.whatsapp.syncChatMessages.useMutation({
+    onSuccess: (d) => {
+      toast.success(`${d.messagesSynced} mensagens sincronizadas!`);
+      refetchMessages();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const syncAllMessagesMutation = trpc.whatsapp.syncAllMessages.useMutation({
+    onSuccess: (d) => {
+      toast.success(`${d.totalMessages} mensagens de ${d.chatsProcessed} conversas sincronizadas!`);
+      refetchChats();
+      if (selectedChat) refetchMessages();
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const syncContactsMutation = trpc.whatsapp.syncZapiContacts.useMutation({
     onSuccess: (d) => toast.success(d.synced + " contatos importados."),
     onError: (e) => toast.error(e.message),
@@ -227,7 +249,7 @@ export default function WhatsApp() {
           <div className="p-3 border-b border-border space-y-2">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">WhatsApp CRM</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {instanceStatus?.connected ? (
                   <span className="flex items-center gap-1 text-xs text-green-400">
                     <Wifi className="w-3 h-3" />Online
@@ -237,13 +259,27 @@ export default function WhatsApp() {
                     <WifiOff className="w-3 h-3" />Offline
                   </span>
                 ) : null}
+                {/* Sync all messages button */}
                 <button
-                  onClick={() => syncMutation.mutate()}
-                  disabled={syncMutation.isPending}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  title="Sincronizar"
+                  onClick={() => syncAllMessagesMutation.mutate({ pagesPerChat: 3 })}
+                  disabled={syncAllMessagesMutation.isPending || syncAllChatsMutation.isPending}
+                  className="text-muted-foreground hover:text-blue-400 transition-colors"
+                  title="Sincronizar todas as mensagens"
                 >
-                  <RefreshCw className={cn("w-4 h-4", syncMutation.isPending && "animate-spin")} />
+                  {syncAllMessagesMutation.isPending ? (
+                    <span className="text-xs text-blue-400 animate-pulse">...</span>
+                  ) : (
+                    <MessageSquare className="w-3.5 h-3.5" />
+                  )}
+                </button>
+                {/* Sync chats button */}
+                <button
+                  onClick={() => syncAllChatsMutation.mutate()}
+                  disabled={syncAllChatsMutation.isPending || syncAllMessagesMutation.isPending}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  title="Buscar todas as conversas do Z-API"
+                >
+                  <RefreshCw className={cn("w-4 h-4", (syncAllChatsMutation.isPending || syncMutation.isPending) && "animate-spin")} />
                 </button>
               </div>
             </div>
@@ -636,6 +672,19 @@ export default function WhatsApp() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs gap-1.5"
+                    onClick={() => syncChatMessagesMutation.mutate({ phone: selectedChat!, pages: 5 })}
+                    disabled={syncChatMessagesMutation.isPending}
+                    title="Buscar histórico completo de mensagens do Z-API"
+                  >
+                    <RefreshCw className={cn("w-3.5 h-3.5 text-blue-400", syncChatMessagesMutation.isPending && "animate-spin")} />
+                    <span className="hidden sm:inline">
+                      {syncChatMessagesMutation.isPending ? "Buscando..." : "Histórico"}
+                    </span>
+                  </Button>
                   <Button
                     size="sm"
                     variant="ghost"

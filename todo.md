@@ -918,3 +918,14 @@
 - [ ] Adicionar link "Visualizar como cliente" em cada card de contato (Contacts.tsx)
 - [ ] Adicionar botão "Abrir Portal do Cliente" no ContactProfile (/contacts/:id)
 - [ ] Gerar e enviar magic link diretamente do ContactProfile via email e WhatsApp
+
+## Sprint Sincronização WhatsApp Z-API
+
+- [ ] Procedure syncAllChats: busca todos os chats do Z-API e salva no banco
+- [ ] Procedure syncChatMessages: busca histórico completo de mensagens de um chat
+- [ ] Procedure syncAllMessages: sincroniza mensagens de todos os chats em lote
+- [ ] UI: botão "Sincronizar Chats" com progress bar e status por chat
+- [ ] UI: exibir chats sincronizados com contagem de mensagens e última mensagem
+- [ ] UI: botão "Analisar com IA" por conversa no painel de chat
+- [ ] UI: modal de análise de IA com resumo, sentimento e ações sugeridas
+- [ ] Integrar análise de IA com histórico de mensagens do banco
