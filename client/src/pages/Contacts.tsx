@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import {
   Users, Search, Plus, Phone, Mail, Building2,
-  MessageSquare, MoreHorizontal, Tag, Trash2, Edit, ExternalLink
+  MessageSquare, MoreHorizontal, Tag, Trash2, Edit, ExternalLink, Eye
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -153,6 +153,13 @@ export default function Contacts() {
                           Abrir WhatsApp
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => { e.stopPropagation(); window.open(`/portal/client/${contact.id}`, "_blank"); }}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-violet-400" />
+                        Visualizar como cliente
+                      </DropdownMenuItem>
                       {isManager && (
                         <DropdownMenuItem
                           onClick={() => deleteMutation.mutate({ id: contact.id })}
@@ -191,9 +198,18 @@ export default function Contacts() {
                   <span className={cn("text-xs px-2 py-0.5 rounded-full", sourceColors[contact.source ?? "manual"])}>
                     {sourceLabels[contact.source ?? "manual"]}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(contact.createdAt), { addSuffix: true, locale: ptBR })}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); window.open(`/portal/client/${contact.id}`, "_blank"); }}
+                      className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors"
+                      title="Visualizar como cliente"
+                    >
+                      <Eye className="w-3 h-3" /> Portal
+                    </button>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(contact.createdAt), { addSuffix: true, locale: ptBR })}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

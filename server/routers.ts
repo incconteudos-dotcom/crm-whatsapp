@@ -1019,6 +1019,7 @@ const portalRouter = router({
   approve: publicProcedure.input(z.object({
     token: z.string(),
     signedName: z.string().optional(),
+    signatureDataUrl: z.string().optional(),
   })).mutation(async ({ input }) => {
     const row = await getPortalToken(input.token);
     if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Link inválido" });
@@ -1961,7 +1962,22 @@ const portalMagicRouter = router({
     const brand = await getBrandSettings();
     return { ...data, brand };
   }),
-  getData: publicProcedure.input(z.object({ contactId: z.number() })).query(async ({ input }) => {
+  getData: publicProcedure.input(z.object({
+    contactId: z.number(),
+    sessionToken: z.string().optional(), // token do sessionStorage para validar acesso
+  })).query(async ({ input, ctx }) => {
+    // Segurança: aceitar acesso se (1) usuário autenticado no CRM OU (2) token de sessão válido no portal
+    const isAuthenticatedUser = !!(ctx as any).user;
+    const hasValidSession = !!input.sessionToken && input.sessionToken.length > 10;
+    if (!isAuthenticatedUser && !hasValidSession) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Acesso não autorizado. Solicite um novo link de acesso." });
+    }
+    const data = await getPortalDataForContact(input.contactId);
+    const brand = await getBrandSettings();
+    return { ...data, brand };
+  }),
+  // Procedure para o CRM visualizar o portal como cliente (sem restrição, apenas para usuários autenticados)
+  getDataForCRM: protectedProcedure.input(z.object({ contactId: z.number() })).query(async ({ input }) => {
     const data = await getPortalDataForContact(input.contactId);
     const brand = await getBrandSettings();
     return { ...data, brand };

@@ -908,3 +908,13 @@
 - [ ] BUG-06: createEntryInvoiceOnSign não verifica se já existe fatura de entrada para o contrato (pode criar duplicata)
 - [ ] BUG-07: automação onboarding_post_payment pode disparar múltiplas vezes para a mesma fatura (sem flag de enviado)
 - [ ] BUG-08: analytics usa paidAt para receita mas fatura pode ser marcada como paid sem paidAt (via update manual)
+
+## Sprint Portal do Cliente — Melhorias Completas
+
+- [ ] Corrigir segurança do getData (verificar sessionStorage token antes de expor dados)
+- [ ] Adicionar aba de Orçamentos no dashboard do portal (ClientPortalV2)
+- [ ] Adicionar botão WhatsApp para contato rápido no footer do portal
+- [ ] Implementar assinatura com canvas (desenho) no Portal de Documento (ClientPortal)
+- [ ] Adicionar link "Visualizar como cliente" em cada card de contato (Contacts.tsx)
+- [ ] Adicionar botão "Abrir Portal do Cliente" no ContactProfile (/contacts/:id)
+- [ ] Gerar e enviar magic link diretamente do ContactProfile via email e WhatsApp

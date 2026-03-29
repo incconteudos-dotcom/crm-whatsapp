@@ -1,15 +1,15 @@
-import { trpc } from "@/lib/trpc";
 import { useParams } from "wouter";
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { trpc } from "@/lib/trpc";
 import {
   CheckCircle, FileText, Receipt, BookOpen, Loader2, AlertCircle,
-  Clock, User, DollarSign, Calendar, Shield, PenLine,
+  Clock, User, DollarSign, Calendar, Shield, PenLine, Trash2, RotateCcw,
+  Download, CreditCard,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -22,11 +22,131 @@ const fmt = (v: string | number | null | undefined) =>
 const fmtDate = (d: Date | string | null | undefined) =>
   d ? format(new Date(d), "dd/MM/yyyy", { locale: ptBR }) : "—";
 
+// ─── Canvas Signature Component ───────────────────────────────────────────────
+function SignatureCanvas({ onSave }: { onSave: (dataUrl: string | null) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawing = useRef(false);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const [hasDrawing, setHasDrawing] = useState(false);
+
+  const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    if ("touches" in e) {
+      const touch = e.touches[0];
+      return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY,
+      };
+    }
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
+  const startDrawing = useCallback((e: MouseEvent | TouchEvent) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    isDrawing.current = true;
+    lastPos.current = getPos(e, canvas);
+  }, []);
+
+  const draw = useCallback((e: MouseEvent | TouchEvent) => {
+    e.preventDefault();
+    if (!isDrawing.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const pos = getPos(e, canvas);
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current!.x, lastPos.current!.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    lastPos.current = pos;
+    setHasDrawing(true);
+  }, []);
+
+  const stopDrawing = useCallback(() => {
+    isDrawing.current = false;
+    if (hasDrawing && canvasRef.current) {
+      onSave(canvasRef.current.toDataURL("image/png"));
+    }
+  }, [hasDrawing, onSave]);
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasDrawing(false);
+    onSave(null);
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.addEventListener("mousedown", startDrawing);
+    canvas.addEventListener("mousemove", draw);
+    canvas.addEventListener("mouseup", stopDrawing);
+    canvas.addEventListener("mouseleave", stopDrawing);
+    canvas.addEventListener("touchstart", startDrawing, { passive: false });
+    canvas.addEventListener("touchmove", draw, { passive: false });
+    canvas.addEventListener("touchend", stopDrawing);
+    return () => {
+      canvas.removeEventListener("mousedown", startDrawing);
+      canvas.removeEventListener("mousemove", draw);
+      canvas.removeEventListener("mouseup", stopDrawing);
+      canvas.removeEventListener("mouseleave", stopDrawing);
+      canvas.removeEventListener("touchstart", startDrawing);
+      canvas.removeEventListener("touchmove", draw);
+      canvas.removeEventListener("touchend", stopDrawing);
+    };
+  }, [startDrawing, draw, stopDrawing]);
+
+  return (
+    <div className="space-y-2">
+      <div className="relative border-2 border-dashed border-border rounded-xl overflow-hidden bg-white">
+        <canvas
+          ref={canvasRef}
+          width={600}
+          height={160}
+          className="w-full cursor-crosshair touch-none"
+          style={{ display: "block" }}
+        />
+        {!hasDrawing && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <p className="text-muted-foreground text-sm flex items-center gap-2">
+              <PenLine className="w-4 h-4" /> Assine aqui com o mouse ou dedo
+            </p>
+          </div>
+        )}
+      </div>
+      {hasDrawing && (
+        <Button variant="outline" size="sm" onClick={clearCanvas} className="gap-1.5 text-xs">
+          <Trash2 className="w-3.5 h-3.5" /> Limpar assinatura
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Portal Component ────────────────────────────────────────────────────
 export default function ClientPortal() {
   const { token } = useParams<{ token: string }>();
   const [signedName, setSignedName] = useState("");
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [approved, setApproved] = useState(false);
   const [showSignForm, setShowSignForm] = useState(false);
+  const [signMode, setSignMode] = useState<"canvas" | "text">("canvas");
 
   const { data, isLoading, error } = trpc.portal.getDocument.useQuery(
     { token: token ?? "" },
@@ -43,7 +163,20 @@ export default function ClientPortal() {
 
   const handleApprove = () => {
     if (!token) return;
-    approveMutation.mutate({ token, signedName: signedName || undefined });
+    // Validar assinatura
+    if (signMode === "canvas" && !signatureDataUrl) {
+      toast.error("Por favor, assine no campo acima antes de confirmar.");
+      return;
+    }
+    if (signMode === "text" && !signedName.trim()) {
+      toast.error("Por favor, digite seu nome para confirmar.");
+      return;
+    }
+    approveMutation.mutate({
+      token,
+      signedName: signedName || undefined,
+      signatureDataUrl: signatureDataUrl || undefined,
+    });
   };
 
   if (!token) {
@@ -80,6 +213,7 @@ export default function ClientPortal() {
   const TypeIcon = type === "contract" ? FileText : type === "invoice" ? Receipt : BookOpen;
   const accentColor = type === "contract" ? "text-orange-400" : type === "invoice" ? "text-green-400" : "text-cyan-400";
   const accentBg = type === "contract" ? "bg-orange-500/10" : type === "invoice" ? "bg-green-500/10" : "bg-cyan-500/10";
+  const accentBorder = type === "contract" ? "border-orange-500/30" : type === "invoice" ? "border-green-500/30" : "border-cyan-500/30";
 
   return (
     <div className="min-h-screen bg-background">
@@ -184,7 +318,7 @@ export default function ClientPortal() {
         {type === "contract" && (doc as any).content && (
           <div className="bg-card border border-border rounded-xl p-6">
             <h2 className="text-sm font-semibold text-foreground mb-4">Conteúdo do Contrato</h2>
-            <div className="prose prose-sm prose-invert max-w-none text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+            <div className="prose prose-sm max-w-none text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
               {(doc as any).content}
             </div>
           </div>
@@ -195,6 +329,23 @@ export default function ClientPortal() {
           <div className="bg-card border border-border rounded-xl p-6">
             <h2 className="text-sm font-semibold text-foreground mb-2">Observações</h2>
             <p className="text-sm text-muted-foreground">{(doc as any).notes}</p>
+          </div>
+        )}
+
+        {/* Payment button for invoices */}
+        {type === "invoice" && (doc as any).stripePaymentUrl && (doc as any).status !== "paid" && (
+          <div className={`bg-card border ${accentBorder} rounded-xl p-6`}>
+            <h2 className="text-sm font-semibold text-foreground mb-1">Pagamento</h2>
+            <p className="text-xs text-muted-foreground mb-4">
+              Pague sua fatura de forma segura via cartão de crédito ou débito.
+            </p>
+            <Button
+              className="w-full gap-2 bg-green-600 hover:bg-green-700"
+              onClick={() => window.open((doc as any).stripePaymentUrl, "_blank")}
+            >
+              <CreditCard className="w-4 h-4" />
+              Pagar {fmt((doc as any).total)}
+            </Button>
           </div>
         )}
 
@@ -220,22 +371,60 @@ export default function ClientPortal() {
               </Button>
             ) : (
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Seu nome completo (opcional)</Label>
-                  <Input
-                    placeholder="Digite seu nome para confirmar"
-                    value={signedName}
-                    onChange={e => setSignedName(e.target.value)}
-                  />
+                {/* Mode toggle */}
+                <div className="flex gap-2 p-1 bg-muted rounded-lg">
+                  <button
+                    className={`flex-1 py-1.5 text-xs rounded-md transition-all ${signMode === "canvas" ? "bg-background shadow text-foreground font-medium" : "text-muted-foreground"}`}
+                    onClick={() => setSignMode("canvas")}
+                  >
+                    ✍️ Assinar com desenho
+                  </button>
+                  <button
+                    className={`flex-1 py-1.5 text-xs rounded-md transition-all ${signMode === "text" ? "bg-background shadow text-foreground font-medium" : "text-muted-foreground"}`}
+                    onClick={() => setSignMode("text")}
+                  >
+                    🔤 Assinar com nome
+                  </button>
                 </div>
+
+                {signMode === "canvas" ? (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Assine no campo abaixo</Label>
+                    <SignatureCanvas onSave={setSignatureDataUrl} />
+                    <div className="space-y-1.5 mt-3">
+                      <Label className="text-xs text-muted-foreground">Nome completo (opcional)</Label>
+                      <Input
+                        placeholder="Seu nome para registro"
+                        value={signedName}
+                        onChange={e => setSignedName(e.target.value)}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label>Seu nome completo</Label>
+                    <Input
+                      placeholder="Digite seu nome completo para confirmar"
+                      value={signedName}
+                      onChange={e => setSignedName(e.target.value)}
+                      className="text-lg font-medium"
+                      style={{ fontFamily: "cursive" }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Ao digitar seu nome, você confirma a assinatura deste documento.
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setShowSignForm(false)}>
-                    Cancelar
+                  <Button variant="outline" className="flex-1" onClick={() => { setShowSignForm(false); setSignatureDataUrl(null); }}>
+                    <RotateCcw className="w-3.5 h-3.5 mr-1.5" /> Cancelar
                   </Button>
                   <Button
                     className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
                     onClick={handleApprove}
-                    disabled={approveMutation.isPending}
+                    disabled={approveMutation.isPending || (signMode === "canvas" && !signatureDataUrl) || (signMode === "text" && !signedName.trim())}
                   >
                     {approveMutation.isPending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -262,7 +451,7 @@ export default function ClientPortal() {
               </p>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {type === "contract"
-                  ? "Sua assinatura foi registrada. Obrigado!"
+                  ? "Sua assinatura foi registrada com sucesso. Obrigado!"
                   : "Sua aprovação foi registrada. Entraremos em contato em breve."}
               </p>
             </div>
@@ -279,17 +468,18 @@ export default function ClientPortal() {
   );
 }
 
+// ─── Error Page ───────────────────────────────────────────────────────────────
 function ErrorPage({ title, message }: { title: string; message: string }) {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="max-w-sm w-full text-center space-y-4">
-        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="max-w-md w-full mx-4 text-center">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
           <AlertCircle className="w-8 h-8 text-red-400" />
         </div>
-        <h1 className="text-xl font-bold text-foreground">{title}</h1>
-        <p className="text-sm text-muted-foreground">{message}</p>
-        <p className="text-xs text-muted-foreground">
-          Se você acredita que isso é um erro, entre em contato com quem enviou este link.
+        <h2 className="text-xl font-bold text-foreground mb-2">{title}</h2>
+        <p className="text-muted-foreground text-sm">{message}</p>
+        <p className="text-muted-foreground text-xs mt-4">
+          Entre em contato com a equipe para obter um novo link de acesso.
         </p>
       </div>
     </div>
