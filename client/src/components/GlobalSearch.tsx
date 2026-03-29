@@ -10,6 +10,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import {
   LayoutDashboard, MessageSquare, Users, Zap, FileText,
   DollarSign, Receipt, Calendar, CheckSquare, BarChart2,
@@ -20,7 +21,8 @@ import {
 
 const NAV_ITEMS = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, group: "Navegação" },
-  { label: "WhatsApp", path: "/whatsapp", icon: MessageSquare, group: "Navegação" },
+  { label: "WhatsApp", path: "/whatsapp", icon: MessageSquare, group: "Navegação", adminOnly: true },
+  { label: "Análise IA WhatsApp", path: "/whatsapp-analysis", icon: MessageSquare, group: "Navegação", adminOnly: true },
   { label: "Contatos", path: "/contacts", icon: Users, group: "Navegação" },
   { label: "Pipeline de Vendas", path: "/pipeline", icon: Zap, group: "Navegação" },
   { label: "Automações", path: "/automations", icon: Zap, group: "Navegação" },
@@ -56,6 +58,9 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [, navigate] = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
 
   // Toggle with ⌘K / Ctrl+K
   useEffect(() => {
@@ -96,12 +101,12 @@ export function GlobalSearch() {
     [navigate]
   );
 
-  // Filter nav items by query
+  // Filter nav items by query (respecting admin-only visibility)
   const filteredNav = query.length >= 1
-    ? NAV_ITEMS.filter((item) =>
+    ? visibleNavItems.filter((item) =>
         item.label.toLowerCase().includes(query.toLowerCase())
       )
-    : NAV_ITEMS.slice(0, 8); // show top 8 when no query
+    : visibleNavItems.slice(0, 8); // show top 8 when no query
 
   // contacts.list returns array directly
   const contactResults: SearchResult[] = (Array.isArray(contacts) ? contacts : []).slice(0, 5).map((c) => ({

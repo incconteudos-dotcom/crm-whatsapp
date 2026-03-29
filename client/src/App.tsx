@@ -1,9 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { useAuth } from "./_core/hooks/useAuth";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import WhatsApp from "./pages/WhatsApp";
@@ -38,12 +39,24 @@ import TimeTracking from "./pages/TimeTracking";
 import ExportData from "./pages/ExportData";
 import PlaybookAutomations from "./pages/PlaybookAutomations";
 
+function AdminRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, loading } = useAuth();
+  const [, navigate] = useLocation();
+  if (loading) return null;
+  if (user?.role !== "admin") {
+    navigate("/dashboard");
+    return null;
+  }
+  return <Component />;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
-      <Route path="/whatsapp" component={WhatsApp} />
+      <Route path="/whatsapp">{() => <AdminRoute component={WhatsApp} />}</Route>
+      <Route path="/whatsapp-analysis">{() => <AdminRoute component={WhatsAppAnalysis} />}</Route>
       <Route path="/contacts" component={Contacts} />
       <Route path="/pipeline" component={Pipeline} />
       <Route path="/contracts" component={Contracts} />

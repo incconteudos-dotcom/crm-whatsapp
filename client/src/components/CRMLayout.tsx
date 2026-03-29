@@ -28,8 +28,8 @@ const navGroups = [
     label: "Comercial",
     icon: MessageSquare,
     items: [
-      { icon: MessageSquare, label: "WhatsApp", path: "/whatsapp", badge: "whatsapp" },
-      { icon: Brain, label: "Análise IA", path: "/whatsapp-analysis" },
+      { icon: MessageSquare, label: "WhatsApp", path: "/whatsapp", badge: "whatsapp", adminOnly: true },
+      { icon: Brain, label: "Análise IA", path: "/whatsapp-analysis", adminOnly: true },
       { icon: Users, label: "Contatos", path: "/contacts" },
       { icon: Zap, label: "Pipeline", path: "/pipeline" },
       { icon: Zap, label: "Automações", path: "/automations" },
@@ -148,14 +148,18 @@ function NavItem({
 
 // ─── NavGroup Component ───────────────────────────────────────────────────────
 function NavGroup({
-  group, location, collapsed, totalUnread,
+  group, location, collapsed, totalUnread, isAdmin,
 }: {
   group: typeof navGroups[0];
   location: string;
   collapsed: boolean;
   totalUnread: number;
+  isAdmin: boolean;
 }) {
-  const hasActive = group.items.some(
+  const visibleItems = group.items.filter(
+    (item) => !(item as { adminOnly?: boolean }).adminOnly || isAdmin
+  );
+  const hasActive = visibleItems.some(
     (item) => location === item.path || location.startsWith(item.path + "/")
   );
   const [open, setOpen] = useState(true);
@@ -165,10 +169,13 @@ function NavGroup({
     if (hasActive) setOpen(true);
   }, [hasActive]);
 
+  // Hide entire group if no visible items
+  if (visibleItems.length === 0) return null;
+
   if (!group.label) {
     return (
       <div className="space-y-0.5">
-        {group.items.map((item) => (
+        {visibleItems.map((item) => (
           <NavItem
             key={item.path}
             item={item}
@@ -196,7 +203,7 @@ function NavGroup({
 
       {(open || collapsed) && (
         <div className="space-y-0.5">
-          {group.items.map((item) => {
+          {visibleItems.map((item) => {
             const isWhatsApp = (item as { badge?: string }).badge === "whatsapp";
             return (
               <NavItem
@@ -299,6 +306,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const isAdmin = user?.role === "admin";
   const isManager = user?.role === "admin" || user?.role === "gerente";
 
   // ─── Sidebar Content (shared between desktop and mobile) ──────────────────
@@ -335,6 +343,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
             location={location}
             collapsed={collapsed}
             totalUnread={totalUnread}
+            isAdmin={isAdmin}
           />
         ))}
 
