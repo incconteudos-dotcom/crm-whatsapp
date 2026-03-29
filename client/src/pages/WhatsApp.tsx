@@ -59,10 +59,10 @@ export default function WhatsApp() {
     enabled: activeTab === "status" && instanceStatus?.connected === false,
     refetchInterval: 15000,
   });
-  const { data: chats, isLoading: chatsLoading, refetch: refetchChats } = trpc.whatsapp.chats.useQuery();
+  const { data: chats, isLoading: chatsLoading, refetch: refetchChats } = trpc.whatsapp.chats.useQuery(undefined, { refetchInterval: 10000 });
   const { data: messages, isLoading: messagesLoading, refetch: refetchMessages } = trpc.whatsapp.messages.useQuery(
     { chatJid: selectedChat ?? "", limit: 100 },
-    { enabled: selectedChat !== null && selectedChat !== "" }
+    { enabled: selectedChat !== null && selectedChat !== "", refetchInterval: 3000 }
   );
   const { data: zapiContacts, isLoading: contactsLoading } = trpc.whatsapp.zapiContacts.useQuery(undefined, { enabled: activeTab === "contacts" });
   const { data: groups, isLoading: groupsLoading } = trpc.whatsapp.groups.useQuery(undefined, { enabled: activeTab === "groups" });
@@ -157,6 +157,10 @@ export default function WhatsApp() {
       if (selectedChat) refetchMessages();
     },
     onError: (e) => toast.error(e.message),
+  });
+  const configureWebhookMutation = trpc.whatsapp.configureWebhook.useMutation({
+    onSuccess: (d) => toast.success(`Webhook configurado! URL: ${d.webhookUrl}`),
+    onError: (e) => toast.error(`Erro ao configurar webhook: ${e.message}`),
   });
   const syncContactsMutation = trpc.whatsapp.syncZapiContacts.useMutation({
     onSuccess: (d) => toast.success(d.synced + " contatos importados."),
@@ -628,6 +632,31 @@ export default function WhatsApp() {
               <p className="text-xs text-muted-foreground">Abra o WhatsApp e escaneie o QR Code</p>
             </div>
           )}
+
+          {/* Webhook Configuration */}
+          <div className="bg-background border border-border rounded-xl p-4 space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Webhook em Tempo Real</p>
+            <p className="text-xs text-muted-foreground">
+              Configure o Z-API para enviar mensagens recebidas automaticamente para o CRM.
+              Clique abaixo para registrar a URL do webhook.
+            </p>
+            <Button
+              size="sm"
+              className="w-full text-xs"
+              onClick={() => {
+                const origin = window.location.origin;
+                const webhookUrl = `${origin}/api/zapi/webhook`;
+                configureWebhookMutation.mutate({ webhookUrl });
+              }}
+              disabled={configureWebhookMutation.isPending}
+            >
+              <Wifi className="w-3 h-3 mr-1" />
+              {configureWebhookMutation.isPending ? "Configurando..." : "Configurar Webhook Automático"}
+            </Button>
+            <p className="text-xs text-muted-foreground/60">
+              URL: {window.location.origin}/api/zapi/webhook
+            </p>
+          </div>
 
           <div className="bg-background border border-border rounded-xl p-4 space-y-3">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Verificar Número</p>

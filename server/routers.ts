@@ -86,7 +86,7 @@ import {
   getContacts as zapiGetContacts, getContactInfo, checkNumberExists, getProfilePicture,
   getGroups, getGroupInfo,
   getQRCode, restartInstance, disconnectInstance, getCellphoneData,
-  normalizePhone,
+  normalizePhone, setWebhookUrl,
 } from "./zapi";
 import { STUDIO_PRODUCTS } from "./stripe/products";
 import { getDb } from "./db";
@@ -607,8 +607,15 @@ const whatsappRouter = router({
   restart: whatsappProcedure.mutation(() => restartInstance()),
 
   disconnect: whatsappProcedure.mutation(() => disconnectInstance()),
-
   cellphone: whatsappProcedure.query(() => getCellphoneData()),
+
+  // Configure Z-API webhook URL automatically
+  configureWebhook: whatsappProcedure.input(z.object({
+    webhookUrl: z.string().url(),
+  })).mutation(async ({ input }) => {
+    await setWebhookUrl(input.webhookUrl);
+    return { success: true, webhookUrl: input.webhookUrl };
+  }),
 
   syncZapiContacts: whatsappProcedure.mutation(async () => {
     const contacts = await zapiGetContacts(0, 500);
