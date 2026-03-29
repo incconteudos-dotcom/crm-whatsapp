@@ -35,11 +35,11 @@ async function startServer() {
   const server = createServer(app);
   // Stripe webhook MUST be registered BEFORE express.json() to allow raw body access
   app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhookHandler);
-  // Z-API webhook — receives real-time WhatsApp events (registered before json() is fine, Z-API sends JSON)
-  app.post("/api/zapi/webhook", zapiWebhookHandler);
-  // Configure body parser with larger size limit for file uploads
+  // Configure body parser BEFORE other routes so req.body is available
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // Z-API webhook — receives real-time WhatsApp events (needs express.json() to parse req.body)
+  app.post("/api/zapi/webhook", zapiWebhookHandler);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API
