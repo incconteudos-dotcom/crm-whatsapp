@@ -30,7 +30,6 @@ vi.mock("./zapi", () => ({
   sendDocument: vi.fn().mockResolvedValue({ success: true }),
   getInstanceStatus: vi.fn().mockResolvedValue({ connected: true }),
   getChats: vi.fn().mockResolvedValue([]),
-  getChatMessages: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("./_core/notification", () => ({

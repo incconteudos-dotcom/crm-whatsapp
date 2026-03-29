@@ -145,14 +145,18 @@ export default function WhatsApp() {
   });
   const syncChatMessagesMutation = trpc.whatsapp.syncChatMessages.useMutation({
     onSuccess: (d) => {
-      toast.success(`${d.messagesSynced} mensagens sincronizadas!`);
+      if (d.existingInDb > 0) {
+        toast.success(`${d.existingInDb} mensagens já armazenadas neste chat.`);
+      } else {
+        toast.info("Nenhuma mensagem ainda. As mensagens chegam automaticamente via webhook quando há troca pelo WhatsApp.");
+      }
       refetchMessages();
     },
     onError: (e) => toast.error(e.message),
   });
   const syncAllMessagesMutation = trpc.whatsapp.syncAllMessages.useMutation({
     onSuccess: (d) => {
-      toast.success(`${d.totalMessages} mensagens de ${d.chatsProcessed} conversas sincronizadas!`);
+      toast.success(`${d.totalMessages} mensagens armazenadas em ${d.chatsProcessed} conversas.`);
       refetchChats();
       if (selectedChat) refetchMessages();
     },
@@ -182,14 +186,6 @@ export default function WhatsApp() {
     { phone: checkNumberInput },
     { enabled: false }
   );
-
-  // Sincronizar mensagens automaticamente ao abrir um chat que não tem mensagens
-  useEffect(() => {
-    if (selectedChat && messages !== undefined && messages.length === 0 && !messagesLoading && !syncChatMessagesMutation.isPending) {
-      syncChatMessagesMutation.mutate({ phone: selectedChat, pages: 5 });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChat, messages]);
 
   useEffect(() => {
     const p = new URLSearchParams(search).get("chat");
@@ -283,23 +279,18 @@ export default function WhatsApp() {
                 <WifiOff className="w-3 h-3" />Offline
               </span>
             ) : null}
-            {/* Sync all messages button */}
+            {/* Webhook status indicator */}
             <button
-              onClick={() => syncAllMessagesMutation.mutate({ pagesPerChat: 3 })}
-              disabled={syncAllMessagesMutation.isPending || syncAllChatsMutation.isPending}
+              onClick={() => refetchMessages()}
               className="text-muted-foreground hover:text-blue-400 transition-colors p-1"
-              title="Sincronizar todas as mensagens"
+              title="Mensagens são capturadas automaticamente via webhook Z-API em tempo real"
             >
-              {syncAllMessagesMutation.isPending ? (
-                <span className="text-xs text-blue-400 animate-pulse">...</span>
-              ) : (
-                <MessageSquare className="w-3.5 h-3.5" />
-              )}
+              <MessageSquare className="w-3.5 h-3.5" />
             </button>
             {/* Sync chats button */}
             <button
               onClick={() => syncAllChatsMutation.mutate()}
-              disabled={syncAllChatsMutation.isPending || syncAllMessagesMutation.isPending}
+              disabled={syncAllChatsMutation.isPending}
               className="text-muted-foreground hover:text-foreground transition-colors p-1"
               title="Buscar todas as conversas do Z-API"
             >
@@ -731,14 +722,11 @@ export default function WhatsApp() {
                 size="sm"
                 variant="ghost"
                 className="text-xs gap-1 px-2"
-                onClick={() => syncChatMessagesMutation.mutate({ phone: selectedChat!, pages: 5 })}
-                disabled={syncChatMessagesMutation.isPending}
-                title="Buscar histórico completo de mensagens do Z-API"
+                onClick={() => refetchMessages()}
+                title="Atualizar mensagens"
               >
-                <RefreshCw className={cn("w-3.5 h-3.5 text-blue-400", syncChatMessagesMutation.isPending && "animate-spin")} />
-                <span className="hidden sm:inline text-xs">
-                  {syncChatMessagesMutation.isPending ? "Buscando..." : "Histórico"}
-                </span>
+                <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
+                <span className="hidden sm:inline text-xs">Atualizar</span>
               </Button>
               <Button
                 size="sm"
@@ -785,7 +773,7 @@ export default function WhatsApp() {
 
           {/* MESSAGES */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {(messagesLoading || syncChatMessagesMutation.isPending) ? (
+            {messagesLoading ? (
               <div className="space-y-3">
                 <div className="flex justify-center py-2">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-full px-3 py-1.5">
@@ -840,18 +828,13 @@ export default function WhatsApp() {
                 </div>
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+              <div className="flex flex-col items-center justify-center h-full py-12 text-center px-6">
                 <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground mb-3">Nenhuma mensagem ainda.</p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => syncChatMessagesMutation.mutate({ phone: selectedChat!, pages: 5 })}
-                  disabled={syncChatMessagesMutation.isPending}
-                >
-                  <RefreshCw className="w-3.5 h-3.5 mr-2" />
-                  Buscar histórico
-                </Button>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Nenhuma mensagem registrada ainda.</p>
+                <p className="text-xs text-muted-foreground/70 max-w-xs">
+                  As mensagens são capturadas automaticamente em tempo real via webhook Z-API.
+                  Troque uma mensagem nesta conversa pelo WhatsApp para que ela apareça aqui.
+                </p>
               </div>
             )}
             <div ref={messagesEndRef} />

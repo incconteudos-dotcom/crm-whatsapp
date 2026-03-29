@@ -22,7 +22,7 @@ function buildUrl(path: string): string {
 }
 
 async function zapiRequest<T = unknown>(
-  method: "GET" | "POST" | "DELETE" | "PATCH",
+  method: "GET" | "POST" | "DELETE" | "PATCH" | "PUT",
   path: string,
   body?: unknown
 ): Promise<T> {
@@ -334,26 +334,11 @@ export async function getChats(page: number = 0, pageSize: number = 50): Promise
 }
 
 /**
- * Get messages from a specific chat
+ * NOTE: Z-API does NOT provide a historical message retrieval endpoint.
+ * Messages can only be captured in real-time via the webhook (on-message-received).
+ * This function is intentionally removed to prevent misleading empty-array calls.
+ * All message history is built by persisting webhook events to the database.
  */
-export async function getChatMessages(
-  phone: string,
-  page: number = 0,
-  pageSize: number = 50
-): Promise<ZApiMessage[]> {
-  try {
-    const normalized = normalizePhone(phone);
-    const data = await zapiRequest<ZApiMessage[] | { value: ZApiMessage[] }>(
-      "GET",
-      `/chat-messages/${normalized}?page=${page}&pageSize=${pageSize}`
-    );
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object" && "value" in data) return (data as { value: ZApiMessage[] }).value;
-    return [];
-  } catch {
-    return [];
-  }
-}
 
 export async function readChat(phone: string): Promise<{ success: boolean }> {
   try {
@@ -502,12 +487,25 @@ export async function getGroupInfo(groupId: string): Promise<ZApiGroup | null> {
 // ─── WEBHOOK ─────────────────────────────────────────────────────────────────
 
 /**
- * Update the webhook URL for receiving messages
+ * Update the webhook URL for receiving messages.
+ * Z-API docs: PUT /update-webhook-received
+ * Also registers the "sent by me" delivery webhook so outgoing messages are captured.
  */
 export async function setWebhookUrl(webhookUrl: string): Promise<void> {
-  await zapiRequest("POST", "/update-webhook-received", {
+  // Register webhook for incoming messages (PUT — not POST)
+  await zapiRequest("PUT", "/update-webhook-received", {
     value: webhookUrl,
   });
+  // Also register webhook for messages sent FROM the connected number
+  // This ensures the CRM captures outgoing messages as well
+  try {
+    await zapiRequest("PUT", "/update-webhook-received-delivery", {
+      value: webhookUrl,
+    });
+  } catch {
+    // Non-fatal: some plans may not support this endpoint
+    console.warn("[Z-API] Could not register sent-by-me webhook (non-fatal)");
+  }
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────

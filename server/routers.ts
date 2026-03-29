@@ -81,7 +81,7 @@ import { stripe, createInvoiceCheckoutSession, createSplitPaymentSessions, getOr
 import {
   sendText, sendDocument, sendImage, sendAudio, sendVideo, sendLocation, sendLink,
   sendReaction, sendPoll, deleteMessage as zapiDeleteMessage, replyMessage,
-  getInstanceStatus, getChats, getChatMessages,
+  getInstanceStatus, getChats,
   readChat, archiveChat, pinChat, muteChat, clearChat, deleteChat, getTotalUnread,
   getContacts as zapiGetContacts, getContactInfo, checkNumberExists, getProfilePicture,
   getGroups, getGroupInfo,
@@ -669,97 +669,36 @@ const whatsappRouter = router({
 
   syncChatMessages: whatsappProcedure.input(z.object({
     phone: z.string(),
-    pages: z.number().min(1).max(20).default(5), // up to 20 pages × 50 msgs = 1000 msgs
+    pages: z.number().min(1).max(20).default(5),
   })).mutation(async ({ input }) => {
-    let messagesSynced = 0;
-    let page = 0;
-    while (page < input.pages) {
-      const msgs = await getChatMessages(input.phone, page, 50);
-      if (!msgs || msgs.length === 0) break;
-      for (const m of msgs) {
-        // Determine content and media type
-        let content = m.text?.message ?? "";
-        let mediaType: "text" | "image" | "video" | "audio" | "document" | "sticker" = "text";
-        let mediaUrl: string | undefined;
-        if (m.image) { mediaType = "image"; mediaUrl = m.image.url; content = m.image.caption ?? "[Imagem]"; }
-        else if (m.video) { mediaType = "video"; mediaUrl = m.video.url; content = m.video.caption ?? "[Vídeo]"; }
-        else if (m.audio) { mediaType = "audio"; mediaUrl = m.audio.url; content = "[Áudio]"; }
-        else if (m.document) { mediaType = "document"; mediaUrl = m.document.url; content = m.document.fileName ?? "[Documento]"; }
-        else if (m.sticker) { mediaType = "sticker"; mediaUrl = m.sticker.url; content = "[Sticker]"; }
-        else if (m.location) { content = `[Localização: ${m.location.name ?? `${m.location.latitude},${m.location.longitude}`}]`; }
-        else if (m.reaction) { content = `[Reação: ${m.reaction.value}]`; }
-        if (!content && !mediaUrl) continue; // skip empty
-        try {
-          await upsertWhatsappMessage({
-            messageId: m.messageId,
-            chatJid: input.phone,
-            senderName: m.senderName,
-            content,
-            mediaType,
-            mediaUrl,
-            isFromMe: m.fromMe,
-            timestamp: m.timestamp > 0 ? m.timestamp * 1000 : Date.now(), // Z-API returns seconds, we store ms
-          });
-          messagesSynced++;
-        } catch {
-          // Skip duplicates silently
-        }
-      }
-      if (msgs.length < 50) break;
-      page++;
-    }
-    // Update chat last message preview
-    await upsertWhatsappChat({ jid: input.phone, lastMessageAt: new Date() });
-    return { messagesSynced, pagesScanned: page + 1 };
+    // Z-API does not provide a historical message retrieval endpoint.
+    // Messages are captured in real-time via the webhook (on-message-received).
+    // This mutation now returns the count of messages already stored in the DB for this chat.
+    const existing = await getWhatsappMessages(input.phone, 200);
+    return {
+      messagesSynced: 0,
+      pagesScanned: 0,
+      existingInDb: existing.length,
+      note: "O histórico de mensagens é capturado automaticamente pelo webhook Z-API em tempo real. Mensagens anteriores à ativação do webhook não estão disponíveis via API.",
+    };
   }),
 
   syncAllMessages: whatsappProcedure.input(z.object({
     pagesPerChat: z.number().min(1).max(10).default(3),
   })).mutation(async () => {
-    // Get all chats from DB and sync messages for each
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    // Z-API does not provide a historical message retrieval endpoint.
+    // This mutation now returns a summary of messages currently stored in the DB.
     const chats = await getWhatsappChats();
     let totalMessages = 0;
-    let chatsProcessed = 0;
     for (const chat of chats) {
-      let page = 0;
-      const maxPages = 3;
-      while (page < maxPages) {
-        const msgs = await getChatMessages(chat.jid, page, 50);
-        if (!msgs || msgs.length === 0) break;
-        for (const m of msgs) {
-          let content = m.text?.message ?? "";
-          let mediaType: "text" | "image" | "video" | "audio" | "document" | "sticker" = "text";
-          let mediaUrl: string | undefined;
-          if (m.image) { mediaType = "image"; mediaUrl = m.image.url; content = m.image.caption ?? "[Imagem]"; }
-          else if (m.video) { mediaType = "video"; mediaUrl = m.video.url; content = m.video.caption ?? "[Vídeo]"; }
-          else if (m.audio) { mediaType = "audio"; mediaUrl = m.audio.url; content = "[Áudio]"; }
-          else if (m.document) { mediaType = "document"; mediaUrl = m.document.url; content = m.document.fileName ?? "[Documento]"; }
-          else if (m.sticker) { mediaType = "sticker"; mediaUrl = m.sticker.url; content = "[Sticker]"; }
-          else if (m.location) { content = `[Localização: ${m.location.name ?? `${m.location.latitude},${m.location.longitude}`}]`; }
-          else if (m.reaction) { content = `[Reação: ${m.reaction.value}]`; }
-          if (!content && !mediaUrl) continue;
-          try {
-            await upsertWhatsappMessage({
-              messageId: m.messageId,
-              chatJid: chat.jid,
-              senderName: m.senderName,
-              content,
-              mediaType,
-              mediaUrl,
-              isFromMe: m.fromMe,
-              timestamp: m.timestamp > 0 ? m.timestamp * 1000 : Date.now(),
-            });
-            totalMessages++;
-          } catch { /* skip duplicates */ }
-        }
-        if (msgs.length < 50) break;
-        page++;
-      }
-      chatsProcessed++;
+      const msgs = await getWhatsappMessages(chat.jid, 9999);
+      totalMessages += msgs.length;
     }
-    return { totalMessages, chatsProcessed };
+    return {
+      totalMessages,
+      chatsProcessed: chats.length,
+      note: "Mensagens são capturadas em tempo real via webhook. Este número reflete o histórico já armazenado no banco.",
+    };
   }),
 });
 
@@ -2671,18 +2610,23 @@ const whatsappAiRouter = router({
     contactId: z.number().optional(),
     forceRefresh: z.boolean().optional(),
   })).mutation(async ({ input }) => {
-    // Fetch messages from Z-API (up to 100 most recent)
+    // Fetch messages from DB (captured by webhook)
     const phone = input.chatJid.replace(/@.*/, "");
-    const messages = await getChatMessages(phone, 0, 100);
-    if (!messages || messages.length === 0) {
-      return { error: "Nenhuma mensagem encontrada para este chat." };
+    const messages = await getWhatsappMessages(input.chatJid, 100);
+    // fallback to phone-only jid format
+    const fallbackMessages = messages.length === 0
+      ? await getWhatsappMessages(phone, 100)
+      : messages;
+    const allMessages = fallbackMessages.length > 0 ? fallbackMessages : messages;
+    if (!allMessages || allMessages.length === 0) {
+      return { error: "Nenhuma mensagem encontrada para este chat. As mensagens são capturadas em tempo real via webhook — abra esta conversa no WhatsApp para as próximas mensagens serem armazenadas automaticamente." };
     }
     // Build conversation text for AI
-    const conversationText = messages
+    const conversationText = allMessages
       .slice(-80) // last 80 messages
       .map((m) => {
-        const sender = m.fromMe ? "[CRM]" : `[${input.contactName ?? "Contato"}]`;
-        const text = (m.text as { message?: string } | undefined)?.message || "[mídia]";
+        const sender = m.isFromMe ? "[CRM]" : `[${input.contactName ?? m.senderName ?? "Contato"}]`;
+        const text = m.content || "[mídia]";
         return `${sender}: ${text}`;
       })
       .join("\n");
@@ -2764,8 +2708,7 @@ Responda APENAS com o JSON, sem markdown ou explicações.`;
       chatJid: input.chatJid,
       contactId: input.contactId,
       contactName: input.contactName,
-      messagesAnalyzed: messages.length,
-      opportunityScore: parsed.opportunityScore,
+      messagesAnalyzed: allMessages.length,
       stage: parsed.stage,
       estimatedValue: parsed.estimatedValue ? String(parsed.estimatedValue) : null,
       urgency: parsed.urgency,
@@ -2774,7 +2717,7 @@ Responda APENAS com o JSON, sem markdown ou explicações.`;
       servicesDetected: JSON.stringify(parsed.servicesDetected),
       analyzedAt: new Date(),
     });
-    return { success: true, analysis: parsed, messagesAnalyzed: messages.length };
+    return { success: true, analysis: parsed, messagesAnalyzed: allMessages.length };
   }),
   delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
     await deleteWhatsappAnalysis(input.id);
@@ -2786,17 +2729,17 @@ Responda APENAS com o JSON, sem markdown ou explicações.`;
     const results: Array<{ chatId: number; status: string; error?: string }> = [];
     for (const chat of input.chatIds) {
       try {
-        const phone = chat.chatJid.replace(/@.*/, "");
-        const messages = await getChatMessages(phone, 0, 50);
+        // Use messages stored in DB (captured by webhook)
+        const messages = await getWhatsappMessages(chat.chatJid, 50);
         if (!messages || messages.length === 0) {
-          results.push({ chatId: chat.chatId, status: "skipped", error: "Sem mensagens" });
+          results.push({ chatId: chat.chatId, status: "skipped", error: "Sem mensagens no banco. As mensagens são capturadas via webhook em tempo real." });
           continue;
         }
         const conversationText = messages
           .slice(-50)
           .map((m) => {
-            const sender = m.fromMe ? "[CRM]" : `[${chat.contactName ?? "Contato"}]`;
-            const text = (m.text as { message?: string } | undefined)?.message || "[mídia]";
+            const sender = m.isFromMe ? "[CRM]" : `[${chat.contactName ?? m.senderName ?? "Contato"}]`;
+            const text = m.content || "[mídia]";
             return `${sender}: ${text}`;
           })
           .join("\n");

@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { stripeWebhookHandler } from "../stripe/webhook";
 import { zapiWebhookHandler } from "../zapiWebhook";
+import { setWebhookUrl } from "../zapi";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -65,6 +66,17 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+
+    // Auto-register Z-API webhook so messages are captured from the start
+    const zapiWebhookBase = process.env.ZAPI_WEBHOOK_BASE_URL;
+    if (zapiWebhookBase && process.env.ZAPI_INSTANCE_ID && process.env.ZAPI_TOKEN) {
+      const webhookUrl = `${zapiWebhookBase.replace(/\/$/, "")}/api/zapi/webhook`;
+      setWebhookUrl(webhookUrl)
+        .then(() => console.log(`[Z-API] Webhook registrado: ${webhookUrl}`))
+        .catch((err) => console.warn("[Z-API] Não foi possível registrar webhook automaticamente:", err.message));
+    } else {
+      console.log("[Z-API] ZAPI_WEBHOOK_BASE_URL não definido — registre o webhook manualmente pelo painel.");
+    }
   });
 }
 
