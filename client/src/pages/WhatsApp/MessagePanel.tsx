@@ -70,13 +70,39 @@ export function MessagePanel({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Queries & Mutations ───────────────────────────────────────────────────
+
+  const utils = trpc.useUtils();
 
   const { data: messages = [], isLoading, refetch } = trpc.whatsapp.messages.useQuery(
     { chatJid, limit: 150 },
     { enabled: !!chatJid, staleTime: 30_000 }
   );
+
+  // Agent status for this chat
+  const { data: agentStatus, refetch: refetchAgent } = trpc.whatsapp.agentStatus.useQuery(
+    { chatJid },
+    { enabled: !!chatJid }
+  );
+
+  const enableAgentMutation = trpc.whatsapp.enableAgent.useMutation({
+    onSuccess: () => { refetchAgent(); toast.success("Agente IA ativado para esta conversa."); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const disableAgentMutation = trpc.whatsapp.disableAgent.useMutation({
+    onSuccess: () => { refetchAgent(); toast.success("Agente IA desativado."); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const readChatMutation = trpc.whatsapp.readChat.useMutation({
+    onSuccess: () => {
+      // Invalidate totalUnread badge in sidebar
+      utils.whatsapp.totalUnread.invalidate();
+    },
+  });
 
   const sendMutation = trpc.whatsapp.sendMessage.useMutation({
     onSuccess: (d) => {
@@ -162,7 +188,19 @@ export function MessagePanel({
     })),
   ].sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
 
-  // ── Auto-scroll ───────────────────────────────────────────────────────────
+  // ── Auto-read when chat opens ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!chatJid) return;
+    // Debounce 1s so fast switching doesn't spam Z-API
+    if (readTimerRef.current) clearTimeout(readTimerRef.current);
+    readTimerRef.current = setTimeout(() => {
+      readChatMutation.mutate({ phone: chatJid.split("@")[0] });
+    }, 1000);
+    return () => {
+      if (readTimerRef.current) clearTimeout(readTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatJid]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -302,7 +340,15 @@ export function MessagePanel({
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-foreground truncate">{chatName}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-sm text-foreground truncate">{chatName}</p>
+            {agentStatus?.enabled && (
+              <span className="flex items-center gap-1 text-xs bg-purple-500/15 text-purple-500 border border-purple-500/30 rounded-full px-2 py-0.5 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                Agente IA
+              </span>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">+{phone}</p>
         </div>
 
@@ -315,17 +361,38 @@ export function MessagePanel({
             <RefreshCw className="w-4 h-4" />
           </button>
 
+          {/* Agent toggle */}
           <button
-            onClick={() => { setAnalysisOpen(true); setAnalysisResult(""); }}
-            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-purple-400"
-            title="Análise IA"
+            onClick={() => {
+              if (agentStatus?.enabled) {
+                disableAgentMutation.mutate({ chatJid });
+              } else {
+                enableAgentMutation.mutate({ chatJid });
+              }
+            }}
+            disabled={enableAgentMutation.isPending || disableAgentMutation.isPending}
+            className={cn(
+              "p-1.5 rounded hover:bg-muted transition-colors",
+              agentStatus?.enabled
+                ? "text-purple-500 hover:text-purple-400"
+                : "text-muted-foreground hover:text-purple-400"
+            )}
+            title={agentStatus?.enabled ? "Desativar agente IA" : "Ativar agente IA para esta conversa"}
           >
             <Sparkles className="w-4 h-4" />
           </button>
 
+          <button
+            onClick={() => { setAnalysisOpen(true); setAnalysisResult(""); }}
+            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-purple-400"
+            title="Análise IA da conversa"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+
           {onOpenContactPanel && (
             <button onClick={onOpenContactPanel} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground" title="Contexto do contato">
-              <MoreVertical className="w-4 h-4" />
+              <Users className="w-4 h-4" />
             </button>
           )}
         </div>

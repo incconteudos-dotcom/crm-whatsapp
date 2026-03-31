@@ -330,9 +330,15 @@ export async function getWhatsappChats() {
 export async function upsertWhatsappChat(data: InsertWhatsappChat) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(whatsappChats).values(data).onDuplicateKeyUpdate({
-    set: { name: data.name, lastMessageAt: data.lastMessageAt, lastMessagePreview: data.lastMessagePreview, unreadCount: data.unreadCount, updatedAt: new Date() },
-  });
+  // Build update set — only include defined fields so partial updates don't overwrite good data
+  const updateSet: Record<string, unknown> = { updatedAt: new Date() };
+  if (data.name !== undefined) updateSet.name = data.name;
+  if (data.lastMessageAt !== undefined) updateSet.lastMessageAt = data.lastMessageAt;
+  if (data.lastMessagePreview !== undefined) updateSet.lastMessagePreview = data.lastMessagePreview;
+  if (data.unreadCount !== undefined) updateSet.unreadCount = data.unreadCount;
+  if (data.isGroup !== undefined) updateSet.isGroup = data.isGroup;
+  if (data.contactId !== undefined) updateSet.contactId = data.contactId; // ← fix: persist contactId
+  await db.insert(whatsappChats).values(data).onDuplicateKeyUpdate({ set: updateSet });
 }
 
 export async function getWhatsappMessages(chatJid: string, limit = 50) {

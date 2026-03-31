@@ -516,6 +516,35 @@ export const whatsappRouter = router({
         ],
       });
 
-      return { analysis: response.choices[0]?.message?.content ?? "Análise não disponível." };
+      return { analysis: typeof response.choices[0]?.message?.content === "string"
+        ? response.choices[0].message.content
+        : "Análise não disponível." };
+    }),
+
+  // ── Automation Agent ──────────────────────────────────────────────────────
+
+  agentStatus: whatsappProcedure
+    .input(z.object({ chatJid: z.string() }))
+    .query(({ input }) => getAgentStatus(input.chatJid)),
+
+  enableAgent: whatsappProcedure
+    .input(z.object({
+      chatJid: z.string(),
+      stageHint: z.string().optional(),
+      systemPrompt: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      await enableAgent(input.chatJid, {
+        stageHint: input.stageHint,
+        systemPrompt: input.systemPrompt,
+      });
+      return { success: true };
+    }),
+
+  disableAgent: whatsappProcedure
+    .input(z.object({ chatJid: z.string() }))
+    .mutation(async ({ input }) => {
+      await disableAgent(input.chatJid);
+      return { success: true };
     }),
 });

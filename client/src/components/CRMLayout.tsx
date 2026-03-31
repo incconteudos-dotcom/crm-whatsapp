@@ -221,6 +221,133 @@ function NavGroup({
   );
 }
 
+// ─── SidebarContent — componente FORA do CRMLayout ───────────────────────────
+// CRÍTICO: deve ficar fora do CRMLayout para evitar remount a cada re-render,
+// que causaria reset do scroll position do menu lateral.
+function SidebarContent({
+  collapsed,
+  totalUnread,
+  isAdmin,
+  isManager,
+  location,
+  user,
+  onLogout,
+}: {
+  collapsed: boolean;
+  totalUnread: number;
+  isAdmin: boolean;
+  isManager: boolean;
+  location: string;
+  user: { name?: string | null; role?: string | null } | null;
+  onLogout: () => void;
+}) {
+  return (
+    <>
+      {/* Logo */}
+      <div className={cn(
+        "flex items-center h-14 px-4 border-b border-sidebar-border shrink-0",
+        collapsed ? "justify-center" : "gap-3"
+      )}>
+        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
+          <MessageSquare className="w-4 h-4 text-primary-foreground" />
+        </div>
+        {!collapsed && (
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-sidebar-foreground leading-none">CRM Studio</p>
+            <p className="text-xs text-muted-foreground mt-0.5">WhatsApp CRM</p>
+          </div>
+        )}
+      </div>
+
+      {/* Global Search */}
+      {!collapsed && (
+        <div className="px-3 py-2 border-b border-sidebar-border">
+          <GlobalSearch />
+        </div>
+      )}
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-sidebar-border">
+        {navGroups.map((group) => (
+          <NavGroup
+            key={group.id}
+            group={group}
+            location={location}
+            collapsed={collapsed}
+            totalUnread={totalUnread}
+            isAdmin={isAdmin}
+          />
+        ))}
+
+        {/* Admin section */}
+        {isManager && (
+          <div className="space-y-0.5">
+            {!collapsed ? (
+              <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Administração
+              </p>
+            ) : (
+              <div className="border-t border-sidebar-border/50 my-2" />
+            )}
+            {adminItems.map((item) => (
+              <NavItem
+                key={item.path}
+                item={item}
+                active={location === item.path || location.startsWith(item.path + "/")}
+                collapsed={collapsed}
+              />
+            ))}
+          </div>
+        )}
+      </nav>
+
+      {/* Z-API Status indicator */}
+      {!collapsed && (
+        <div className="px-3 py-2 border-t border-sidebar-border/50">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Circle className="w-2 h-2 fill-green-500 text-green-500 shrink-0" />
+            <span>WhatsApp conectado</span>
+          </div>
+        </div>
+      )}
+
+      {/* User info */}
+      <div className="border-t border-sidebar-border p-3 shrink-0">
+        {!collapsed ? (
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+              <span className="text-xs font-semibold text-primary">
+                {(user?.name ?? "U").charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name ?? "Usuário"}</p>
+              <span className={cn("text-xs px-1.5 py-0.5 rounded border", roleBadgeColors[user?.role ?? "assistente"])}>
+                {roleLabels[user?.role ?? "assistente"]}
+              </span>
+            </div>
+            <button
+              onClick={onLogout}
+              className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-sidebar-accent/50"
+              title="Sair"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onLogout}
+            className="w-full flex justify-center text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-sidebar-accent/50"
+            title="Sair"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ─── Main Layout ──────────────────────────────────────────────────────────────
 export default function CRMLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, isAuthenticated } = useAuth();
@@ -232,10 +359,37 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
     onSuccess: () => { window.location.href = "/"; },
   });
 
-  const { data: unreadData } = trpc.whatsapp.totalUnread.useQuery(undefined, {
-    refetchInterval: 30_000,
+  const utils = trpc.useUtils();
+
+  const { data: unreadData, refetch: refetchUnread } = trpc.whatsapp.totalUnread.useQuery(undefined, {
+    // Reduced interval — SSE handles most updates in real-time
+    refetchInterval: 60_000,
     enabled: isAuthenticated && user?.status === "active",
   });
+
+  // Listen to SSE chat_updated events to bump the badge instantly
+  useEffect(() => {
+    if (!isAuthenticated || user?.status !== "active") return;
+
+    const es = new EventSource("/api/whatsapp/events", { withCredentials: true });
+
+    es.addEventListener("chat_updated", (e) => {
+      try {
+        const data = JSON.parse((e as MessageEvent).data);
+        if (data.unreadCount && data.unreadCount > 0) {
+          // Invalidate the totalUnread query so the badge refreshes immediately
+          utils.whatsapp.totalUnread.invalidate();
+        }
+      } catch { /* ignore */ }
+    });
+
+    // Keep-alive pings are ignored silently
+    es.onerror = () => es.close();
+
+    return () => es.close();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.status]);
+
   const totalUnread = unreadData ?? 0;
 
   // Close mobile sidebar on route change
@@ -309,111 +463,15 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === "admin";
   const isManager = user?.role === "admin" || user?.role === "gerente";
 
-  // ─── Sidebar Content (shared between desktop and mobile) ──────────────────
-  const SidebarContent = () => (
-    <>
-      {/* Logo */}
-      <div className={cn(
-        "flex items-center h-14 px-4 border-b border-sidebar-border shrink-0",
-        collapsed ? "justify-center" : "gap-3"
-      )}>
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
-          <MessageSquare className="w-4 h-4 text-primary-foreground" />
-        </div>
-        {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-sidebar-foreground leading-none">CRM Studio</p>
-            <p className="text-xs text-muted-foreground mt-0.5">WhatsApp CRM</p>
-          </div>
-        )}
-      </div>
-
-      {/* Global Search */}
-      {!collapsed && (
-        <div className="px-3 py-2 border-b border-sidebar-border">
-          <GlobalSearch />
-        </div>
-      )}
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-sidebar-border">
-        {navGroups.map((group) => (
-          <NavGroup
-            key={group.id}
-            group={group}
-            location={location}
-            collapsed={collapsed}
-            totalUnread={totalUnread}
-            isAdmin={isAdmin}
-          />
-        ))}
-
-        {/* Admin section */}
-        {isManager && (
-          <div className="space-y-0.5">
-            {!collapsed ? (
-              <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Administração
-              </p>
-            ) : (
-              <div className="border-t border-sidebar-border/50 my-2" />
-            )}
-            {adminItems.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                active={location === item.path || location.startsWith(item.path + "/")}
-                collapsed={collapsed}
-              />
-            ))}
-          </div>
-        )}
-      </nav>
-
-      {/* Z-API Status indicator */}
-      {!collapsed && (
-        <div className="px-3 py-2 border-t border-sidebar-border/50">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Circle className="w-2 h-2 fill-green-500 text-green-500 shrink-0" />
-            <span>WhatsApp conectado</span>
-          </div>
-        </div>
-      )}
-
-      {/* User info */}
-      <div className="border-t border-sidebar-border p-3 shrink-0">
-        {!collapsed ? (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-              <span className="text-xs font-semibold text-primary">
-                {(user?.name ?? "U").charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name ?? "Usuário"}</p>
-              <span className={cn("text-xs px-1.5 py-0.5 rounded border", roleBadgeColors[user?.role ?? "assistente"])}>
-                {roleLabels[user?.role ?? "assistente"]}
-              </span>
-            </div>
-            <button
-              onClick={() => logoutMutation.mutate()}
-              className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-sidebar-accent/50"
-              title="Sair"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => logoutMutation.mutate()}
-            className="w-full flex justify-center text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-sidebar-accent/50"
-            title="Sair"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-    </>
-  );
+  const sidebarProps = {
+    collapsed,
+    totalUnread,
+    isAdmin,
+    isManager,
+    location,
+    user,
+    onLogout: () => logoutMutation.mutate(),
+  };
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -424,7 +482,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
           collapsed ? "w-[60px]" : "w-[220px]"
         )}
       >
-        <SidebarContent />
+        <SidebarContent {...sidebarProps} />
 
         {/* Collapse toggle */}
         <button
@@ -451,7 +509,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <SidebarContent />
+        <SidebarContent {...sidebarProps} />
       </aside>
 
       {/* ── Main content ── */}
