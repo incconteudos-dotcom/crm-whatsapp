@@ -3,12 +3,14 @@ import { getLoginUrl } from "@/const";
 import { cn } from "@/lib/utils";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import NotificationBell from "@/components/NotificationBell";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   BarChart3, BookOpen, Calendar, CheckSquare, ChevronLeft, ChevronRight,
   ChevronDown, CreditCard, FileText, FolderOpen, Home, Library, LogOut,
   MessageSquare, Package, Receipt, Settings, Shield, Users, Wallet, Zap,
   ClipboardList, Mic2, Palette, Wrench, Building2, Menu, X, Circle,
   Layers, DollarSign, Briefcase, Cog, Target, Brain, Clock, DownloadCloud,
+  Sun, Moon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -241,6 +243,7 @@ function SidebarContent({
   user: { name?: string | null; role?: string | null } | null;
   onLogout: () => void;
 }) {
+  const { theme, toggleTheme } = useTheme();
   return (
     <>
       {/* Logo */}
@@ -327,6 +330,13 @@ function SidebarContent({
               </span>
             </div>
             <button
+              onClick={toggleTheme}
+              className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-sidebar-accent/50"
+              title={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button
               onClick={onLogout}
               className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-sidebar-accent/50"
               title="Sair"
@@ -335,13 +345,22 @@ function SidebarContent({
             </button>
           </div>
         ) : (
-          <button
-            onClick={onLogout}
-            className="w-full flex justify-center text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-sidebar-accent/50"
-            title="Sair"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          <div className="flex flex-col items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-sidebar-accent/50"
+              title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={onLogout}
+              className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-sidebar-accent/50"
+              title="Sair"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </div>
     </>
