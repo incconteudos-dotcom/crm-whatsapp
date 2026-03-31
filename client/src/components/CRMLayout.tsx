@@ -270,7 +270,7 @@ function SidebarContent({
       )}
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-sidebar-border">
+      <nav className="flex-1 min-h-0 overflow-y-auto py-3 px-2 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-sidebar-border">
         {navGroups.map((group) => (
           <NavGroup
             key={group.id}
@@ -497,7 +497,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       {/* ── Desktop Sidebar ── */}
       <aside
         className={cn(
-          "relative hidden md:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0",
+          "relative hidden md:flex flex-col overflow-hidden bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0",
           collapsed ? "w-[60px]" : "w-[220px]"
         )}
       >
