@@ -268,14 +268,8 @@ function SidebarContent({
           <GlobalSearch />
         </div>
       )}
-<<<<<<< Updated upstream
-
       {/* Nav — scrollable region */}
-      <nav className="flex-1 min-h-0 overflow-y-auto py-3 px-2 space-y-3">
-=======
-      {/* Nav */}
       <nav className="flex-1 min-h-0 overflow-y-auto py-3 px-2 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-sidebar-border">
->>>>>>> Stashed changes
         {navGroups.map((group) => (
           <NavGroup
             key={group.id}
@@ -502,11 +496,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       {/* ── Desktop Sidebar ── */}
       <aside
         className={cn(
-<<<<<<< Updated upstream
           "relative hidden md:flex flex-col h-screen overflow-hidden bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0",
-=======
-          "relative hidden md:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0 overflow-hidden",
->>>>>>> Stashed changes
           collapsed ? "w-[60px]" : "w-[220px]"
         )}
       >
