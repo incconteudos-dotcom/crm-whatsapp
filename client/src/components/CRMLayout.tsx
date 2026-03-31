@@ -268,9 +268,14 @@ function SidebarContent({
           <GlobalSearch />
         </div>
       )}
+<<<<<<< Updated upstream
 
       {/* Nav — scrollable region */}
       <nav className="flex-1 min-h-0 overflow-y-auto py-3 px-2 space-y-3">
+=======
+      {/* Nav */}
+      <nav className="flex-1 min-h-0 overflow-y-auto py-3 px-2 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-sidebar-border">
+>>>>>>> Stashed changes
         {navGroups.map((group) => (
           <NavGroup
             key={group.id}
@@ -497,7 +502,11 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       {/* ── Desktop Sidebar ── */}
       <aside
         className={cn(
+<<<<<<< Updated upstream
           "relative hidden md:flex flex-col h-screen overflow-hidden bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0",
+=======
+          "relative hidden md:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0 overflow-hidden",
+>>>>>>> Stashed changes
           collapsed ? "w-[60px]" : "w-[220px]"
         )}
       >
@@ -524,7 +533,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       {/* ── Mobile Sidebar ── */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full w-[260px] flex flex-col bg-sidebar border-r border-sidebar-border z-50 transition-transform duration-300 md:hidden",
+          "fixed top-0 left-0 h-full w-[260px] flex flex-col bg-sidebar border-r border-sidebar-border z-50 transition-transform duration-300 md:hidden overflow-hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
