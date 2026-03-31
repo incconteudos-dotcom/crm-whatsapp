@@ -245,7 +245,7 @@ function SidebarContent({
 }) {
   const { theme, toggleTheme } = useTheme();
   return (
-    <>
+    <div className="flex flex-col h-full">
       {/* Logo */}
       <div className={cn(
         "flex items-center h-14 px-4 border-b border-sidebar-border shrink-0",
@@ -264,13 +264,13 @@ function SidebarContent({
 
       {/* Global Search */}
       {!collapsed && (
-        <div className="px-3 py-2 border-b border-sidebar-border">
+        <div className="px-3 py-2 border-b border-sidebar-border shrink-0">
           <GlobalSearch />
         </div>
       )}
 
-      {/* Nav */}
-      <nav className="flex-1 min-h-0 overflow-y-auto py-3 px-2 space-y-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-sidebar-border">
+      {/* Nav — scrollable region */}
+      <nav className="flex-1 min-h-0 overflow-y-auto py-3 px-2 space-y-3">
         {navGroups.map((group) => (
           <NavGroup
             key={group.id}
@@ -306,7 +306,7 @@ function SidebarContent({
 
       {/* Z-API Status indicator */}
       {!collapsed && (
-        <div className="px-3 py-2 border-t border-sidebar-border/50">
+        <div className="px-3 py-2 border-t border-sidebar-border/50 shrink-0">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Circle className="w-2 h-2 fill-green-500 text-green-500 shrink-0" />
             <span>WhatsApp conectado</span>
@@ -363,7 +363,7 @@ function SidebarContent({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -497,7 +497,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       {/* ── Desktop Sidebar ── */}
       <aside
         className={cn(
-          "relative hidden md:flex flex-col overflow-hidden bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0",
+          "relative hidden md:flex flex-col h-screen overflow-hidden bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0",
           collapsed ? "w-[60px]" : "w-[220px]"
         )}
       >
